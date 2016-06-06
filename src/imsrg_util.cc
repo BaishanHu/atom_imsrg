@@ -326,6 +326,9 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    int A = modelspace.GetTargetMass();
    Operator TcmOp = Operator(modelspace);
    TcmOp.SetHermitian();
+   double Mu = A; // to avoid /0
+   if (modelspace.GetSystemType() == "nuclear") Mu = A; // Can clean this up later
+   else if (modelspace.GetSystemType() == "atomic") Mu = A*(1836); // scale of nucleon to electron masses
    // One body piece = p**2/(2mA)
    int norb = modelspace.GetNumberOrbits();
    for (int i=0; i<norb; ++i)
@@ -336,8 +339,9 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          Orbit & oj = modelspace.GetOrbit(j);
          if (j<i) continue;
          double tij = 0;
-         if (oi.n == oj.n) tij = 0.5*(2*oi.n+oi.l + 1.5) * hw/A;
-         else if (oi.n == oj.n-1) tij = 0.5*sqrt(oj.n*(oj.n+oj.l + 0.5)) * hw/A;
+         if (oi.n == oj.n) tij = 0.5*(2*oi.n+oi.l + 1.5) * hw/Mu;
+         else if (oi.n == oj.n-1) tij = 0.5*sqrt(oj.n*(oj.n+oj.l + 0.5)) * hw/Mu;
+	 else if (oi.n == oj.n+1) tij = 0.5*sqrt(oi.n*(oi.n+oi.l + 0.5)) * hw/Mu;
          TcmOp.OneBody(i,j) = tij;
          TcmOp.OneBody(j,i) = tij;
       }
@@ -364,7 +368,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
             Orbit & ok = modelspace.GetOrbit(ket.p);
             Orbit & ol = modelspace.GetOrbit(ket.q);
             if ( 2*(ok.n+ol.n)+ok.l+ol.l > E2max) continue;
-            double p1p2 = Calculate_p1p2(modelspace,bra,ket,tbc.J) * hw/A;
+            double p1p2 = Calculate_p1p2(modelspace,bra,ket,tbc.J) * hw/(A*1836);
             if (abs(p1p2)>1e-7)
             {
               TcmOp.TwoBody.SetTBME(ch,ibra,iket,p1p2);

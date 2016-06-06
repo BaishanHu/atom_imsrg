@@ -12,6 +12,7 @@
 
 #define HBARC 197.3269718 // hc in MeV * fm
 #define M_NUCLEON 938.9185 // average nucleon mass in MeV
+#define M_ELECTRON 0.510998910 // average electron mass in MeV; scale to eV?
 #define BOHR_RADIUS 0.0529 // Bohr Radius in nm
 
 namespace imsrg_util
