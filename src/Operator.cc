@@ -64,8 +64,11 @@ Operator::Operator(ModelSpace& ms, int Jrank, int Trank, int p, int part_rank) :
     hermitian(true), antihermitian(false),  
     nChannels(ms.GetNumberTwoBodyChannels()) 
 {
+  cout << "Inside simple constructor, setting OneBodyChannels." << endl;
   SetUpOneBodyChannels();
+  cout << "Set One body, checking p_rank and allocating for 3body." << endl;
   if (particle_rank >=3) ThreeBody.Allocate();
+  cout << "Three body allocated (or not), adding to N_Operators, and exiting." << endl;
   profiler.counter["N_Operators"] ++;
 }
 

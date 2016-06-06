@@ -242,31 +242,35 @@ double HO_Radial_psi(int n, int l, double hw, double r)
 // In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
 Operator InverseR_Op(ModelSpace& modelspace)
 {
-   cout << "About to make V" << endl;
+   cout << "Entering InverseR_Op" << endl;
    Operator InvR(modelspace);
    int norbits = modelspace.GetNumberOrbits();
+   //cout << "About to make V for norbits=" << norbits << endl;
    for (int i=0; i<norbits; i++)
    {
      Orbit& oi = modelspace.GetOrbit(i);
      for (int j=0; j<norbits; j++)
      {
-	cout << "i=" << i << " j=" << j << endl;
+	//cout << "i=" << i << " j=" << j << endl;
 	//if (i==j) InvR.OneBody(i,j) = oi.occ/((oi.n+1) * (oi.n+1));
 	Orbit& oj = modelspace.GetOrbit(j);
-	cout << "oi.n=" << oi.n << " oi.l=" << oi.l << endl;
-	cout << "oj.n=" << oj.n << " oj.l=" << oj.l << endl;
-	InvR.OneBody(i,j) = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1); // consider n +/- 1; selection rules
+	//cout << "oi.n=" << oi.n << " oi.l=" << oi.l << " oi.j2=" << oi.j2 << " oi.tz2=" << oi.tz2 << endl;
+	//cout << "oj.n=" << oj.n << " oj.l=" << oj.l << " oj.j2=" << oj.j2 << " oj.tz2=" << oj.tz2 << endl;
+	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1) * modelspace.GetTargetZ() * HBARC/(137.); // consider n +/- 1; selection rules
+	InvR.OneBody(i,j) = temp;
+	//cout << "InvR.OneBody(" << i << "," << j << ")=" << temp << endl;
      }
    }
    // 1/137 comes from fine struct const {alpha} = 1/137 = e^2/(4pi{epsilon}{hbar}c)
-   // Therefore Ze^2/(4pi{epsilon}) = Z{hbar}{c}{alpha}; I can't recall why I put Bohr rad in there...
+   // Therefore Ze^2/(4pi{epsilon}) = Z{hbar}{c}{alpha}; Bohr Rad from R^L_ab = b^L * ~R^L_ab; b = BohrRad
    cout << "Made V, moving on." << endl;
-   return InvR * modelspace.GetTargetZ() * HBARC/(137);// * BOHR_RADIUS);
+   return InvR / BOHR_RADIUS;
 }
 
 
 Operator KineticEnergy_Op(ModelSpace& modelspace)
 {
+   cout << "Entering KineticEnergy_Op" << endl;
    Operator T(modelspace);
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
@@ -274,6 +278,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    {
       Orbit & oa = modelspace.GetOrbit(a);
       T.OneBody(a,a) = 0.5 * hw * (2*oa.n + oa.l +3./2); 
+      //cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
       for ( int b : T.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
       {
          if (b<=a) continue;
@@ -285,6 +290,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
+   cout << "Leaving KE." << endl;
    return T;
 }
 

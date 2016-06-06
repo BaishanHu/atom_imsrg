@@ -67,6 +67,7 @@ TwoBodyME::TwoBodyME(ModelSpace* ms, int rJ, int rT, int p)
 
 void TwoBodyME::Allocate()
 {
+  //cout << "Allocating TwoBody." << endl;
   MatEl.clear();
   for (int ch_bra=0; ch_bra<nChannels;++ch_bra)
   {

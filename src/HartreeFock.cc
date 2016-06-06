@@ -17,6 +17,9 @@ HartreeFock::HartreeFock(Operator& hbare)
     tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0)
 {
    int norbits = modelspace->GetNumberOrbits();
+   cout << "norbits=" << norbits << endl;
+   //norbits = 2;
+   cout << "now norbits=" << norbits << endl;
 
    C             = arma::mat(norbits,norbits,arma::fill::eye);
    Vij           = arma::mat(norbits,norbits,arma::fill::zeros);
