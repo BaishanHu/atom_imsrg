@@ -12,6 +12,7 @@
 
 #define HBARC 197.3269718 // hc in MeV * fm
 #define M_NUCLEON 938.9185 // average nucleon mass in MeV
+#define BOHR_RADIUS 0.0529 // Bohr Radius in nm
 
 namespace imsrg_util
 {
@@ -29,6 +30,8 @@ namespace imsrg_util
  Operator Trel_Op(ModelSpace& modelspace);
  Operator TCM_Op(ModelSpace& modelspace);
  Operator HCM_Op(ModelSpace& modelspace);
+ Operator InverseR_Op(ModelSpace& modelspace);
+ Operator KineticEnergy_Op(ModelSpace& modelspace)
 
  Operator R2CM_Op(ModelSpace& modelspace);
  Operator Rp2_corrected_Op(ModelSpace& modelspace, int A, int Z);

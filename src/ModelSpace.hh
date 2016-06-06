@@ -217,6 +217,8 @@ class ModelSpace
    void SetReference(vector<index_t>);
    void SetReference(map<index_t,double>);
    void SetReference(string);
+   string GetSystemType(){return SystemType};
+   void SetSystemType(string newSystemType){SystemType=newSystemType};
 
    int GetEmax(){return Emax;};
    int GetE2max(){return E2max;};
@@ -282,6 +284,7 @@ class ModelSpace
    int TwoBodyJmax;
    int ThreeBodyJmax;
    map<array<int,3>,vector<index_t> > OneBodyChannels;
+   string SystemType;
 
    vector<unsigned int> SortedTwoBodyChannels;
    vector<unsigned int> SortedTwoBodyChannels_CC;

@@ -237,6 +237,34 @@ double HO_Radial_psi(int n, int l, double hw, double r)
    return rho;
  }
 
+// Creates an operator that performs <Z/r>, using Kramers Relation for an atomic system
+// In oscillator basis: RadialIntegral() with L=-1
+// In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
+Operator InverseR_Op(ModelSpace& modelspace)
+{
+   cout << "About to make V" << endl;
+   Operator InvR(modelspace);
+   int norbits = modelspace.GetNumberOrbits();
+   for (int i=0; i<norbits; i++)
+   {
+     Orbit& oi = modelspace.GetOrbit(i);
+     for (int j=0; j<norbits; j++)
+     {
+	cout << "i=" << i << " j=" << j << endl;
+	//if (i==j) InvR.OneBody(i,j) = oi.occ/((oi.n+1) * (oi.n+1));
+	Orbit& oj = modelspace.GetOrbit(j);
+	cout << "oi.n=" << oi.n << " oi.l=" << oi.l << endl;
+	cout << "oj.n=" << oj.n << " oj.l=" << oj.l << endl;
+	InvR.OneBody(i,j) = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1); // consider n +/- 1; selection rules
+     }
+   }
+   // 1/137 comes from fine struct const {alpha} = 1/137 = e^2/(4pi{epsilon}{hbar}c)
+   // Therefore Ze^2/(4pi{epsilon}) = Z{hbar}{c}{alpha}; I can't recall why I put Bohr rad in there...
+   cout << "Made V, moving on." << endl;
+   return InvR * modelspace.GetTargetZ() * HBARC/(137);// * BOHR_RADIUS);
+}
+
+
 Operator KineticEnergy_Op(ModelSpace& modelspace)
 {
    Operator T(modelspace);
