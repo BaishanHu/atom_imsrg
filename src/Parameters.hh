@@ -1,3 +1,5 @@
+#ifndef PARAM
+#define PARAM
 
 #include <map>
 #include <string>
@@ -33,21 +35,22 @@ class Parameters
 map<string,string> Parameters::string_par = {
   {"2bme",			"/itch/exch/BlockGen/me2j/chi2b_srg0800_eMax12_lMax10_hwHO020.me2j.gz"},
   {"3bme",			"none"},
-  {"core_generator",		"atan"},	// generator used for core part of 2-step decoupling
+  {"core_generator",		"atan"},		// generator used for core part of 2-step decoupling
   {"valence_generator",		"shell-model-atan"},	// generator used for valence decoupling and 1-step (also single-ref)
-  {"flowfile",			"default"},  // name of output flow file
-  {"intfile",			"default"},  // name of output interaction fille
-  {"fmt2",			"me2j"},	 // can also be navratil or Navratil to read Petr's TBME format
+  {"flowfile",			"default"},		// name of output flow file
+  {"intfile",			"default"},  	// name of output interaction fille
+  {"fmt2",			"me2j"},	// can also be navratil or Navratil to read Petr's TBME format
   {"reference",			"default"},	// nucleus used for HF and normal ordering.
-  {"valence_space",		"O16"},	// either valence space or nucleus for single reference
-  {"basis",			"HF"},	 // use HF basis or oscillator basis. HF is better.
+  {"valence_space",		"O16"},		// either valence space or nucleus for single reference
+  {"basis",			"HF"},	 	// use HF basis or oscillator basis. HF is better.
   {"method",			"magnus"},	// can be magnus or flow or a few other things
   {"denominator_delta_orbit",	"none"},	// pick specific orbit to apply the delta
-  {"LECs",			"EM2.0_2.0"}, // low energy constants for the interaction, only used with Johannes' hdf5 file format
-  {"scratch",			""},    // scratch directory for writing operators in binary format
-  {"use_brueckner_bch",          "false"}, // switch to Brueckner version of BCH
-  {"valence_file_format",       "nushellx"}, // file format for valence space interaction
-  {"occ_file",			"none"}, // name of file containing orbit occupations
+  {"LECs",			"EM2.0_2.0"}, 	// low energy constants for the interaction, only used with Johannes' hdf5 file format
+  {"scratch",			""},    	// scratch directory for writing operators in binary format
+  {"use_brueckner_bch",          "false"}, 	// switch to Brueckner version of BCH
+  {"valence_file_format",       "nushellx"}, 	// file format for valence space interaction
+  {"occ_file",			"none"}, 	// name of file containing orbit occupations
+  {"systemtype",		"nuclear"},	// nuclear, atomic, etc.
 };
 
 
@@ -57,17 +60,18 @@ map<string,double> Parameters::double_par = {
   {"dsmax",		0.5},	// maximum step size
   {"ds_0",		0.5},	// initial step size
   {"domega",		0.5},	// max for norm of eta * ds
-  {"omega_norm_max",	0.25},	 // norm of omega before we do the splitting
+  {"omega_norm_max",	0.25},	// norm of omega before we do the splitting
   {"ode_tolerance",	1e-6},	// error tolerance for the ode solver
   {"denominator_delta",	0},	// offset added to the denominator in the generator
-  {"BetaCM",0}, // Prefactor for Lawson-Glockner term
+  {"BetaCM",		0},	// Prefactor for Lawson-Glockner term
 
 };
 
 map<string,int> Parameters::int_par = {
-  {"A",	-1},	// Aeff for kinetic energy. -1 means take A of reference
+  {"A",			-1},	// Aeff for kinetic energy. -1 means take A of reference
   {"e3max",		12},	
   {"emax",		6},
+  {"Lmax",		6}, // lmax for orbitals
   {"lmax3",		-1}, // lmax for the 3body interaction
   {"nsteps",		-1},	// do the decoupling in 1 step or core-then-valence. -1 means default
   {"file2e1max",	12},
@@ -76,6 +80,7 @@ map<string,int> Parameters::int_par = {
   {"file3e1max",	12},
   {"file3e2max",	24},
   {"file3e3max",	12},
+  {"state",		0}, // Which state, 0= ground, 1= first excited, etc
 };
 
 map<string,vector<string>> Parameters::vec_par = {
@@ -200,4 +205,4 @@ void Parameters::PrintOptions()
 
 }
 
-
+#endif

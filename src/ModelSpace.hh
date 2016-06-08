@@ -41,7 +41,10 @@ class Orbit
    Orbit(const Orbit&);
 //   void swap(Orbit&) throw();
 //   Orbit& operator=( const Orbit& );
+
    // Methods
+   void SetOcc(double occupation){occ = occupation;};
+   double GetOcc(){return occ;};
 };
 
 
@@ -164,10 +167,10 @@ class ModelSpace
    ModelSpace();
    ModelSpace(const ModelSpace&); // copy constructor
    ModelSpace( ModelSpace&&); // move constructor
-   ModelSpace(int emax, vector<string> hole_list, vector<string> valence_list);
-   ModelSpace(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list);
-   ModelSpace(int emax, string reference, string valence);
-   ModelSpace(int emax, string reference);
+   ModelSpace(int emax, vector<string> hole_list, vector<string> valence_list, int Lmax=-1);
+   ModelSpace(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax=-1);
+   ModelSpace(int emax, string reference, string valence, int Lmax=-1);
+   ModelSpace(int emax, string reference, int Lmax=-1);
 
    // Overloaded operators
    ModelSpace operator=(const ModelSpace&); 
@@ -175,11 +178,11 @@ class ModelSpace
 
    // Methods
 
-   void Init(int emax, string reference, string valence);
-   void Init(int emax, map<index_t,double> hole_list, string valence);
-   void Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list);
-   void Init(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list);
-   void Init_occ_from_file(int emax, string valence, string occ_file);
+   void Init(int emax, string reference, string valence, int Lmax=-1);
+   void Init(int emax, map<index_t,double> hole_list, string valence, int Lmax=-1);
+   void Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list, int Lmax=-1);
+   void Init(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax=-1);
+   void Init_occ_from_file(int emax, string valence, string occ_file, int Lmax=-1);
 
 //   vector<index_t> GetOrbitsAZ(int A, int Z);
    map<index_t,double> GetOrbitsAZ(int A, int Z);
@@ -223,11 +226,13 @@ class ModelSpace
    int GetEmax(){return Emax;};
    int GetE2max(){return E2max;};
    int GetE3max(){return E3max;};
+   int GetLmax(){return Lmax;};
    int GetLmax2(){return Lmax2;};
    int GetLmax3(){return Lmax3;};
    void SetEmax(int e){Emax=e;};
    void SetE2max(int e){E2max=e;};
    void SetE3max(int e){E3max=e;};
+   void SetLmax(int l){Lmax=l;};
    void SetLmax2(int l){Lmax2=l;};
    void SetLmax3(int l){Lmax3=l;};
 
@@ -278,6 +283,7 @@ class ModelSpace
    int Emax;
    int E2max;
    int E3max;
+   int Lmax;
    int Lmax2;
    int Lmax3;
    int OneBodyJmax;

@@ -238,7 +238,7 @@ double HO_Radial_psi(int n, int l, double hw, double r)
  }
 
 // Creates an operator that performs <Z/r>, using Kramers Relation for an atomic system
-// In oscillator basis: RadialIntegral() with L=-1
+// In oscillator basis: RadialIntegral() with L=-1; not currently implemented correctly
 // In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
 Operator InverseR_Op(ModelSpace& modelspace)
 {
@@ -261,7 +261,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
 	//cout << "InvR.OneBody(" << i << "," << j << ")=" << temp << endl;
      }
    }
-   // 1/137 comes from fine struct const {alpha} = 1/137 = e^2/(4pi{epsilon}{hbar}c)
+   // 1/137 comes from fine struct const {alpha} = e^2/(4pi{epsilon}{hbar}c) ~= 1/137 
    // Therefore Ze^2/(4pi{epsilon}) = Z{hbar}{c}{alpha}; Bohr Rad from R^L_ab = b^L * ~R^L_ab; b = BohrRad
    cout << "Made V, moving on." << endl;
    return InvR / BOHR_RADIUS;
@@ -284,9 +284,9 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          if (b<=a) continue;
          Orbit & ob = modelspace.GetOrbit(b);
          if (oa.n == ob.n+1)
-            T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
-         else if (oa.n == ob.n-1)
-            T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2));
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +3./2));
+         //else if (oa.n == ob.n-1)
+         //   T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2));
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
