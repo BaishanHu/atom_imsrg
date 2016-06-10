@@ -274,24 +274,51 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    Operator T(modelspace);
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
+   
    for (int a=0;a<norbits;++a)
    {
       Orbit & oa = modelspace.GetOrbit(a);
-      T.OneBody(a,a) = 0.5 * hw * (2*oa.n + oa.l +3./2); 
+      T.OneBody(a,a) = 0.5 * hw * (2*oa.n + oa.l + 3./2); 
       //cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
       for ( int b : T.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
       {
          if (b<=a) continue;
          Orbit & ob = modelspace.GetOrbit(b);
          if (oa.n == ob.n+1)
-            T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +3./2));
-         //else if (oa.n == ob.n-1)
-         //   T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2));
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
+         else if (oa.n == ob.n-1)
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2)); // 3/2 ? 1/2
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
    cout << "Leaving KE." << endl;
    return T;
+}
+
+Operator Energy_Op(ModelSpace& modelspace)
+{
+   // Naive energy operator
+   Operator E(modelspace);
+   int norbits = modelspace.GetNumberOrbits();
+   double hw = modelspace.GetHbarOmega();
+
+   for (int a=0;a<norbits;++a)
+   {
+      Orbit & oa = modelspace.GetOrbit(a);
+      E.OneBody(a,a) = hw * (2*oa.n + oa.l + 3./2); 
+      //cout << "E.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
+      //for ( int b : E.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
+      //{
+      //   if (b<=a) continue;
+      //   Orbit & ob = modelspace.GetOrbit(b);
+      //   if (oa.n == ob.n+1)
+      //      E.OneBody(a,b) = hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
+      //   else if (oa.n == ob.n-1)
+      //      E.OneBody(a,b) = hw * sqrt( (ob.n)*(ob.n + ob.l +1./2)); // 3/2 ? 1/2
+      //   E.OneBody(b,a) = E.OneBody(a,b);
+      //}
+   }
+   return E;
 }
 
 /// Relative kinetic energy, includingthe hw/A factor

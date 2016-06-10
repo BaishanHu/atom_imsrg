@@ -85,6 +85,8 @@ void HartreeFock::Solve()
       cout << endl;
    }
    PrintEHF();
+   cout << "Rho=" << endl;
+   cout << rho << endl;
 }
 
 
@@ -115,11 +117,14 @@ void HartreeFock::CalcEHF()
       for (int j : Hbare.OneBodyChannels.at({oi.l,oi.j2,oi.tz2}))
       {
          e1hf += rho(i,j) * jfactor * KE(i,j);
+	 cout << "e1fh=" << e1hf << " rho(" << i << "," << j << ")=" << rho(i,j) << " jfactor=" << jfactor << " KE(" << i << "," << j << ")=" << KE(i,j) << endl;
          e2hf += rho(i,j) * jfactor * 0.5 * Vij(i,j);
          e3hf += rho(i,j) * jfactor * (1./6*V3ij(i,j));
       }
    }
    EHF = e1hf + e2hf + e3hf;
+   cout << "diagmat(rho)=" << endl;
+   cout << diagmat(rho) << endl;
 }
 
 //**************************************************************************************
@@ -170,7 +175,10 @@ void HartreeFock::Diagonalize()
       // Update the full overlap matrix C and energy vector
       energies(orbvec) = E_ch;
       C.submat(orbvec,orbvec) = C_ch;
-
+      cout << "Completed diagonalize()." << endl;
+      F_ch.print();
+      C_ch.print();
+      E_ch.print();
    }
 }
 
@@ -321,6 +329,12 @@ void HartreeFock::UpdateDensityMatrix()
 {
   arma::mat tmp = C.cols(holeorbs);
   rho = (tmp.each_row() % hole_occ) * tmp.t();
+  cout << "holeorbs=" << endl;
+  cout << holeorbs << endl;
+  cout << "hole_occ=" << endl;
+  cout << hole_occ << endl;
+  cout << "tmp=" << endl;
+  cout << tmp << endl;
 }
 
 
@@ -393,6 +407,9 @@ void HartreeFock::UpdateF()
    V3ij = arma::symmatu(V3ij);
 
    F = KE + Vij + 0.5*V3ij;
+
+   cout << "F=" << endl;
+   cout << F << endl;
 
    profiler.timer["HF_UpdateF"] += omp_get_wtime() - start_time;
 }

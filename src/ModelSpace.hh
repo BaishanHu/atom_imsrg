@@ -167,10 +167,10 @@ class ModelSpace
    ModelSpace();
    ModelSpace(const ModelSpace&); // copy constructor
    ModelSpace( ModelSpace&&); // move constructor
-   ModelSpace(int emax, vector<string> hole_list, vector<string> valence_list, int Lmax=-1);
-   ModelSpace(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax=-1);
-   ModelSpace(int emax, string reference, string valence, int Lmax=-1);
-   ModelSpace(int emax, string reference, int Lmax=-1);
+   ModelSpace(int emax, vector<string> hole_list, vector<string> valence_list, int Lmax=-1, string SystemType="nuclear");
+   ModelSpace(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax=-1, string SystemType="nuclear");
+   ModelSpace(int emax, string reference, string valence, int Lmax=-1, string SystemType="nuclear");
+   ModelSpace(int emax, string reference, int Lmax=-1, string SystemType="nuclear");
 
    // Overloaded operators
    ModelSpace operator=(const ModelSpace&); 
@@ -178,11 +178,11 @@ class ModelSpace
 
    // Methods
 
-   void Init(int emax, string reference, string valence, int Lmax=-1);
-   void Init(int emax, map<index_t,double> hole_list, string valence, int Lmax=-1);
-   void Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list, int Lmax=-1);
-   void Init(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax=-1);
-   void Init_occ_from_file(int emax, string valence, string occ_file, int Lmax=-1);
+   void Init(int emax, string reference, string valence, int Lmax=-1, string SystemType="nuclear");
+   void Init(int emax, map<index_t,double> hole_list, string valence, int Lmax=-1, string SystemType="nuclear");
+   void Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list, int Lmax=-1, string SystemType="nuclear");
+   void Init(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax=-1, string SystemType="nuclear");
+   void Init_occ_from_file(int emax, string valence, string occ_file, int Lmax=-1, string SystemType="nuclear");
 
 //   vector<index_t> GetOrbitsAZ(int A, int Z);
    map<index_t,double> GetOrbitsAZ(int A, int Z);
