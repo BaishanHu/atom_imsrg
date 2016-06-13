@@ -125,6 +125,8 @@ void HartreeFock::CalcEHF()
    EHF = e1hf + e2hf + e3hf;
    cout << "diagmat(rho)=" << endl;
    cout << diagmat(rho) << endl;
+   //cout << "rho=" << endl;
+   //cout << rho << endl;
 }
 
 //**************************************************************************************
@@ -329,6 +331,7 @@ void HartreeFock::UpdateDensityMatrix()
 {
   arma::mat tmp = C.cols(holeorbs);
   rho = (tmp.each_row() % hole_occ) * tmp.t();
+  rho = rho;// / trace(rho);
   cout << "holeorbs=" << endl;
   cout << holeorbs << endl;
   cout << "hole_occ=" << endl;

@@ -500,7 +500,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
 	    cout << "Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
 	    if (SystemType == "atomic" and tz < 0){ // Only allow isospin -1/2.  this simulates only protons being added
 		AddOrbit(n,l,j2,tz,occ,cvq);
-	    cout << "Added orbit." << endl;
+		cout << "Added orbit." << endl;
 		real_norbits++;
 	    }
          }

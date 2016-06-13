@@ -279,11 +279,17 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    {
       Orbit & oa = modelspace.GetOrbit(a);
       T.OneBody(a,a) = 0.5 * hw * (2*oa.n + oa.l + 3./2); 
-      //cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
+      cout << "oa.n=" << oa.n << " oa.l=" << oa.l << " oa.j2=" << oa.j2 << endl;
+      cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
+      //cout << "OneBodyChannels=" << modelspace.OneBodyChannels << endl;
       for ( int b : T.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
       {
+	 //cout << "a=" << a << " b=" << b << endl;
          if (b<=a) continue;
+	 //cout << b << "!<=" << a << endl;
          Orbit & ob = modelspace.GetOrbit(b);
+	 //cout << "oa.n=" << oa.n << " oa.l=" << oa.l << " oa.j2=" << oa.j2 << endl;
+	 //cout << "ob.n=" << ob.n << " ob.l=" << ob.l << " ob.j2=" << ob.j2 << endl;
          if (oa.n == ob.n+1)
             T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
          else if (oa.n == ob.n-1)
