@@ -282,7 +282,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
       cout << "oa.n=" << oa.n << " oa.l=" << oa.l << " oa.j2=" << oa.j2 << endl;
       cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
       //cout << "OneBodyChannels=" << modelspace.OneBodyChannels << endl;
-      for ( int b : T.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
+      for ( int b : T.OneBodyChannels.at({oa.l, oa.j2, oa.tz2}) )
       {
 	 //cout << "a=" << a << " b=" << b << endl;
          if (b<=a) continue;
@@ -293,7 +293,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          if (oa.n == ob.n+1)
             T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
          else if (oa.n == ob.n-1)
-            T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2)); // 3/2 ? 1/2
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2));
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
