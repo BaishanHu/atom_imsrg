@@ -454,7 +454,7 @@ void ModelSpace::Init_occ_from_file(int emax, string valence, string occ_file, i
 void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list, int Lmax, string SystemType)
 {
    ClearVectors();
-   if (Lmax <= 0) Lmax = emax;
+   if (Lmax < 0) Lmax = emax;
    emax = Emax;
    cout << "core list: ";
    for (auto& c : core_list) cout << c << " ";
@@ -479,7 +479,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    for (int N=0; N<=Emax; ++N)
    {
      //min(N,Lmax)
-     //cout << "Lmax=" << Lmax << "N=" << N << endl;
+     //cout << "Lmax=" << Lmax << " N=" << N << endl;
      for (int l=N; l>=0; l-=2)
      {
        if (l>Lmax) continue;

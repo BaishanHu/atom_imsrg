@@ -85,8 +85,8 @@ void HartreeFock::Solve()
       cout << endl;
    }
    PrintEHF();
-   cout << "Rho=" << endl;
-   cout << rho << endl;
+   //cout << "Rho=" << endl;
+   //cout << rho << endl;
 }
 
 
@@ -123,8 +123,8 @@ void HartreeFock::CalcEHF()
       }
    }
    EHF = e1hf + e2hf + e3hf;
-   cout << "diagmat(rho)=" << endl;
-   cout << diagmat(rho) << endl;
+   //cout << "diagmat(rho)=" << endl;
+   //cout << diagmat(rho) << endl;
    //cout << "rho=" << endl;
    //cout << rho << endl;
 }
@@ -411,8 +411,8 @@ void HartreeFock::UpdateF()
 
    F = KE + Vij + 0.5*V3ij;
 
-   cout << "F=" << endl;
-   cout << F << endl;
+   //cout << "F=" << endl;
+   //cout << F << endl;
 
    profiler.timer["HF_UpdateF"] += omp_get_wtime() - start_time;
 }

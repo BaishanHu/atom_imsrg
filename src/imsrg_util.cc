@@ -1291,6 +1291,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    for (int p=pmin;p<=pmax;++p)
    {
       I += TalmiB(na,la,nb,lb,p) * TalmiI(p,k);
+      cout << "I = " << I << endl;
    }
    return I;
  }
@@ -1300,6 +1301,9 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 /// This is valid for (2p+3+k) > 0. The Gamma function diverges for non-positive integers.
  double TalmiI(int p, double k)
  {
+   cout << "A = gsl_sf_gamma(" << p << "+1.5+0.5*" << k << ")=" << gsl_sf_gamma(p+1.5+0.5*k) << endl;
+   cout << "B = gsl_sf_gamma(" << p << "+1.5)=" << gsl_sf_gamma(p+1.5) << endl;
+   cout << "A / B = " << gsl_sf_gamma(p+1.5+0.5*k) / gsl_sf_gamma(p+1.5) << endl;
    return gsl_sf_gamma(p+1.5+0.5*k) / gsl_sf_gamma(p+1.5);
  }
 
@@ -1310,19 +1314,67 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    if ( (la+lb)%2>0 ) return 0;
    
    int q = (la+lb)/2;
-   double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
-              * sqrt( gsl_sf_fact(na)*gsl_sf_fact(nb) * gsl_sf_fact(2*na+2*la+1) * gsl_sf_fact(2*nb+2*lb+1) )
-             / sqrt( gsl_sf_fact(na+la) * gsl_sf_fact(nb+lb) );
-   
+   //double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
+   //           * sqrt( gsl_sf_fact(na)*gsl_sf_fact(nb) * gsl_sf_fact(2*na+2*la+1) * gsl_sf_fact(2*nb+2*lb+1) )
+   //          / sqrt( gsl_sf_fact(na+la) * gsl_sf_fact(nb+lb) );
+   //double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
+//	      * sqrt( gsl_sf_fact(na) * gsl_sf_fact(2*na+2*la+1) / gsl_sf_fact(na+la) )
+//	      * sqrt( gsl_sf_fact(nb) * gsl_sf_fact(2*nb+2*lb+1) / gsl_sf_fact(nb+lb) );
+   //long double t = AngMom::phase(p-q);
+   //t *= gsl_sf_fact(2*p+1);
+   //t /= gsl_sf_fact(p);
+   //t /= pow(2,(na+nb));
+   //t /= pow(2,na);
+   //t /= pow(2,nb);
+   //t *= sqrt( gsl_sf_fact(na) );
+   //t *= sqrt( gsl_sf_fact(2*na+2*la+1) );
+   //t /= sqrt( gsl_sf_fact(na+la) );
+   //t *= sqrt( gsl_sf_fact(nb) );
+   //t *= sqrt( gsl_sf_fact(2*nb+2*lb+1) );
+   //t /= sqrt( gsl_sf_fact(nb+lb) );
+   //t *= gsl_sf_fact(sqrt( na) );
+   //t *= gsl_sf_fact( sqrt( 2*na+2*la+1) );
+   //t /= gsl_sf_fact( sqrt( na+la) );
+   //t *= gsl_sf_fact( sqrt( nb) );
+   //t *= gsl_sf_fact( sqrt( 2*nb+2*lb+1) );
+   //t /= gsl_sf_fact( sqrt( nb+lb) );
+   //double B1 = t;
+   double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * exp(gsl_sf_lnfact(2*p+1) + gsl_sf_lnfact(p) + 0.5 * (gsl_sf_lnfact(na) +
+	gsl_sf_lnfact(nb)+ gsl_sf_lnfact(2*na+2*la+1) + gsl_sf_lnfact(2*nb+2*lb+1) - gsl_sf_lnfact(na+la) - gsl_sf_lnfact(nb+lb)));
+   //double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
+	//      * sqrt( gsl_sf_fact(na) ) * sqrt( gsl_sf_fact(2*na+2*la+1) ) / sqrt( gsl_sf_fact(na+la) )
+	//      * sqrt( gsl_sf_fact(nb) ) * sqrt( gsl_sf_fact(2*nb+2*lb+1) ) / sqrt( gsl_sf_fact(nb+lb) );
+   //double phase = AngMom::phase(p-q);
+   //double a = gsl_sf_fact(2*p+1);
+   //double b = gsl_sf_fact(p);
+   //double c = pow(2,(na+nb));
+   //double d = sqrt( gsl_sf_fact(na) );
+   //double e = sqrt( gsl_sf_fact(2*na+2*la+1) );
+   //double f = sqrt( gsl_sf_fact(na+la) );
+   //double g = sqrt( gsl_sf_fact(nb) );
+   //double h = sqrt( gsl_sf_fact(2*nb+2*lb+1) );
+   //double i = sqrt( gsl_sf_fact(nb+lb) );
+   //double B1 = phase * a / ( b * c) * d * e / f * g * h * i;
    double B2 = 0;
    int kmin = max(0, p-q-nb);
    int kmax = min(na, p-q);
    for (int k=kmin;k<=kmax;++k)
    {
-      B2  += gsl_sf_fact(la+k) * gsl_sf_fact(p-int((la-lb)/2)-k)
-             / ( gsl_sf_fact(k) * gsl_sf_fact(2*la+2*k+1) * gsl_sf_fact(na-k) * gsl_sf_fact(2*p-la+lb-2*k+1) )
-              / ( gsl_sf_fact(nb - p + q + k) * gsl_sf_fact(p-q-k) );
+      long double temp = gsl_sf_fact(la+k);
+      temp *= gsl_sf_fact(p-int((la-lb)/2)-k);
+      temp /= gsl_sf_fact(k);
+      temp /= gsl_sf_fact(2*la+2*k+1);
+      temp /= gsl_sf_fact(na-k);
+      temp /= gsl_sf_fact(2*p-la+lb-2*k+1);
+      temp /= gsl_sf_fact(nb - p + q + k);
+      temp /= gsl_sf_fact(p-q-k);
+      //B2  += gsl_sf_fact(la+k) * gsl_sf_fact(p-int((la-lb)/2)-k)
+      //       / ( gsl_sf_fact(k) * gsl_sf_fact(2*la+2*k+1) ) / ( gsl_sf_fact(na-k) * gsl_sf_fact(2*p-la+lb-2*k+1) )
+      //        / ( gsl_sf_fact(nb - p + q + k) * gsl_sf_fact(p-q-k) );
+      B2 += temp;
    }
+   cout << "B1 = " << B1 << endl;
+   cout << "B2 = " << B2 << endl;
    return B1 * B2;
  }
 
