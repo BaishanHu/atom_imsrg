@@ -83,6 +83,7 @@ namespace imsrg_util
  vector<double> ser(double j); // returns a vector which is {1,2,...,j}
  bool isOnes(vector<double> a); // checks to see if a vector contains only ones.
  double simplefact(vector<double> n, vector<double> d, bool isSquare=false); // Reduces factorial division;
+ //boost::multiprecision::cpp_bin_float_100 simplefact(vector<double> n, vector<double> d, bool isSquare=false); // Reduces factorial division;
 
 
 // Templated functions need to be defined in the header file (or else explicitly declared in the .cc file).

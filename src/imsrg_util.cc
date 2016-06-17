@@ -1,6 +1,8 @@
 
 #include "imsrg_util.hh"
 #include "AngMom.hh"
+#include <boost/multiprecision/cpp_bin_float.hpp>
+#include <boost/implicit_cast.hpp>
 #include <gsl/gsl_integration.h>
 #include <list>
 
@@ -1336,6 +1338,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
     return true;
  }
 
+ //boost::multiprecision::cpp_bin_float_100 simplefact(vector<double> n, vector<double> d, bool isSquare) // removes like terms in the factorials, returns n!/d!
  double simplefact(vector<double> n, vector<double> d, bool isSquare) // removes like terms in the factorials, returns n!/d!
  {
     //cout << "Entering simplefact" << endl;
@@ -1349,20 +1352,20 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
     //for (auto j = b.begin(); j != b.end(); ++j)
 	//std::cout << *j << ' ';
     //cout << "}" << endl;
-    bool top = true; // Probably not needed
+    //bool top = true; // Probably not needed
     //cout << "Swapping, if needed" << endl;
     if (n.size() < d.size())
     {
 	a.swap(b);
-	top=false; // Probably not needed
+	//top=false; // Probably not needed
     }
     bool done = false;
-    int bailout = a.size() * b.size();
+    int bailout = a.size() * b.size(); // Arbitrary choice, number of terms in N * number of terms in D
     //cout << "About to enter while" << endl;
     while (!done and bailout >= 0)
     {
-	std::vector<double>::iterator ita;
-	std::vector<double>::iterator itb;
+	//std::vector<double>::iterator ita;
+	//std::vector<double>::iterator itb;
         for (double& i : a)
         {
 	    for (double& j : b)
@@ -1370,9 +1373,9 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 		//cout << "In triple loop; i=" << i << " j=" << j << endl;
 		if (i == j and i > 1 and j > 1)
 		{
-		    ita = std::next(a.begin(), i);
+		    //ita = std::next(a.begin(), i);
 		    //int da = ita - a.begin();
-		    itb = std::next(b.begin(), j);
+		    //itb = std::next(b.begin(), j);
 		    //int db = itb - b.begin();
 		    //cout << "Erasing " << i << " from a." << endl;
 		    //ita = a.begin();
@@ -1472,6 +1475,8 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 //    for (auto j = b.begin(); j != b.end(); ++j)
 //	std::cout << *j << ' ';
     //cout << "}" << endl;
+    //boost::multiprecision::cpp_bin_float_100 t1 = 1;
+    //boost::multiprecision::cpp_bin_float_100 t2 = 1;
     double t1 = 1;
     double t2 = 1;
     for (double i : a)
@@ -1507,7 +1512,10 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 	if (!top and iteratora >= m) t1 *= b[iteratora];
     }*/
     //for (double i in a)
-    return t1 / t2;
+    //boost::multiprecision::cpp_bin_float_100 T = t1/t2;
+    //cout << "This is t1/t2=" << long double (t1/t2) << endl;
+    //cout << "This is T=    " << T << endl;
+    return double (t1 / t2);
  }
 
 /// Calculate B coefficient for Talmi integral. Formula given in Brody and Moshinsky
@@ -1595,14 +1603,15 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    D.insert(D.end(), gl.begin(), gl.end());
    D.insert(D.end(), hl.begin(), hl.end());
    //cout << "About to calc B1" << endl;
+   //boost::multiprecision::cpp_bin_float_100 B1 = AngMom::phase(p-q);
    double B1 = AngMom::phase(p-q);
    //cout << "B1 = " << B1 << endl;
    B1 /= pow(2,(na+nb));
    //cout << "B1 = " << B1 << endl;
    B1 *= simplefact(al,bl,false);
    //cout << "B1 = " << B1 << endl;
-   //B1 *= sqrt(simplefact(N,D));//true); 
-   B1 *= simplefact(N,D,true);
+   B1 *= sqrt(simplefact(N,D));//true); 
+   //B1 *= simplefact(N,D,true);
    //cout << "B1 = " << B1 << endl;
    //std::vector<double> arrayN = {lnc,lnd,lne,lnf};
    //array[0] = max(lnc, max(lnd, max(lne, lnf)));
@@ -1637,6 +1646,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    //double h = sqrt( gsl_sf_fact(2*nb+2*lb+1) );
    //double i = sqrt( gsl_sf_fact(nb+lb) );
    //double B1 = phase * a / ( b * c) * d * e / f * g * h * i;
+   //boost::multiprecision::cpp_bin_float_100 B2 = 0;
    double B2 = 0;
    int kmin = max(0, p-q-nb);
    int kmax = min(na, p-q);
@@ -1665,7 +1675,11 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    }
    //cout << "B1 = " << B1 << endl;
    //cout << "B2 = " << B2 << endl;
-   return B1 * B2;
+   //return B1 * B2;
+    //boost::multiprecision::cpp_bin_float_100 B = B1 * B2;
+    //cout << "This is B1*B2=" << long double (B1*B2) << endl;
+    //cout << "This is B=    " << B << endl;
+    return double (B1 * B2);
  }
 
   Operator AllowedFermi_Op(ModelSpace& modelspace)

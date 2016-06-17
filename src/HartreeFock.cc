@@ -117,7 +117,7 @@ void HartreeFock::CalcEHF()
       for (int j : Hbare.OneBodyChannels.at({oi.l,oi.j2,oi.tz2}))
       {
          e1hf += rho(i,j) * jfactor * KE(i,j);
-	 cout << "e1fh=" << e1hf << " rho(" << i << "," << j << ")=" << rho(i,j) << " jfactor=" << jfactor << " KE(" << i << "," << j << ")=" << KE(i,j) << endl;
+	 //cout << "e1fh=" << e1hf << " rho(" << i << "," << j << ")=" << rho(i,j) << " jfactor=" << jfactor << " KE(" << i << "," << j << ")=" << KE(i,j) << endl;
          e2hf += rho(i,j) * jfactor * 0.5 * Vij(i,j);
          e3hf += rho(i,j) * jfactor * (1./6*V3ij(i,j));
       }
@@ -153,6 +153,10 @@ void HartreeFock::PrintEHF()
 //*********************************************************************
 void HartreeFock::Diagonalize()
 {
+   //cout << "F.print():" << endl;
+   //F.print();
+   //cout << "C.print():" << endl;
+   //C.print();
    prev_energies = energies;
    for ( auto& it : Hbare.OneBodyChannels )
    {
@@ -160,6 +164,8 @@ void HartreeFock::Diagonalize()
       arma::mat F_ch = F.submat(orbvec,orbvec);
       arma::mat C_ch;
       arma::vec E_ch;
+      //cout << "This is F_ch:" << endl;
+      //F_ch.print();
       bool success = false;
       int diag_tries = 0;
       while ( not success)
@@ -178,9 +184,9 @@ void HartreeFock::Diagonalize()
       energies(orbvec) = E_ch;
       C.submat(orbvec,orbvec) = C_ch;
       cout << "Completed diagonalize()." << endl;
-      F_ch.print();
-      C_ch.print();
-      E_ch.print();
+      //F_ch.print();
+      //C_ch.print();
+      //E_ch.print();
    }
 }
 
