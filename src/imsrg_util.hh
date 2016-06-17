@@ -59,7 +59,6 @@ namespace imsrg_util
  Operator Single_Ref_1B_Density_Matrix(ModelSpace& modelspace); // This doesn't work
  double Get_Charge_Density(Operator& DM, double r);  // This doesn't work
 
-
  double Calculate_p1p2(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
  void Calculate_p1p2_all(Operator& OpIn);
  double Calculate_r1r2(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
@@ -79,6 +78,11 @@ namespace imsrg_util
  void CommutatorTest(Operator& X, Operator& Y);
  void Reduce(Operator&);
  void UnReduce(Operator&);
+
+ double Stirling(double n){return sqrt( 2 * 3.14159265359 * n ) * pow(n,n) / exp(n);}; // Stirling's Approximation
+ vector<double> ser(double j); // returns a vector which is {1,2,...,j}
+ bool isOnes(vector<double> a); // checks to see if a vector contains only ones.
+ double simplefact(vector<double> n, vector<double> d, bool isSquare=false); // Reduces factorial division;
 
 
 // Templated functions need to be defined in the header file (or else explicitly declared in the .cc file).

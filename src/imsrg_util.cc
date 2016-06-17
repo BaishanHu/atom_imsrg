@@ -2,6 +2,7 @@
 #include "imsrg_util.hh"
 #include "AngMom.hh"
 #include <gsl/gsl_integration.h>
+#include <list>
 
 using namespace AngMom;
 
@@ -270,7 +271,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
 
 Operator KineticEnergy_Op(ModelSpace& modelspace)
 {
-   cout << "Entering KineticEnergy_Op" << endl;
+   //cout << "Entering KineticEnergy_Op" << endl;
    Operator T(modelspace);
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
@@ -280,7 +281,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
       Orbit & oa = modelspace.GetOrbit(a);
       T.OneBody(a,a) = 0.5 * hw * (2*oa.n + oa.l + 3./2); 
       cout << "oa.n=" << oa.n << " oa.l=" << oa.l << " oa.j2=" << oa.j2 << endl;
-      cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
+      //cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
       //cout << "OneBodyChannels=" << modelspace.OneBodyChannels << endl;
       for ( int b : T.OneBodyChannels.at({oa.l, oa.j2, oa.tz2}) )
       {
@@ -297,7 +298,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
-   cout << "Leaving KE." << endl;
+   //cout << "Leaving KE." << endl;
    return T;
 }
 
@@ -1291,7 +1292,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    for (int p=pmin;p<=pmax;++p)
    {
       I += TalmiB(na,la,nb,lb,p) * TalmiI(p,k);
-      cout << "I = " << I << endl;
+      //cout << "I = " << I << endl;
    }
    return I;
  }
@@ -1301,10 +1302,208 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 /// This is valid for (2p+3+k) > 0. The Gamma function diverges for non-positive integers.
  double TalmiI(int p, double k)
  {
-   cout << "A = gsl_sf_gamma(" << p << "+1.5+0.5*" << k << ")=" << gsl_sf_gamma(p+1.5+0.5*k) << endl;
-   cout << "B = gsl_sf_gamma(" << p << "+1.5)=" << gsl_sf_gamma(p+1.5) << endl;
-   cout << "A / B = " << gsl_sf_gamma(p+1.5+0.5*k) / gsl_sf_gamma(p+1.5) << endl;
+   //cout << "A = gsl_sf_gamma(" << p << "+1.5+0.5*" << k << ")=" << gsl_sf_gamma(p+1.5+0.5*k) << endl;
+   //cout << "B = gsl_sf_gamma(" << p << "+1.5)=" << gsl_sf_gamma(p+1.5) << endl;
+   //cout << "A / B = " << gsl_sf_gamma(p+1.5+0.5*k) / gsl_sf_gamma(p+1.5) << endl;
    return gsl_sf_gamma(p+1.5+0.5*k) / gsl_sf_gamma(p+1.5);
+ }
+
+ vector<double> ser(double j) // takes j, creates {1,2,...,j}
+ {
+    //cout << "Generating vector for j=" << j << endl;
+    if (j <= 0){
+	vector<double> s = {1};
+	return s;
+    }
+    vector<double> s;
+    for (double i=1; i <= j; i++) 
+    {
+	s.emplace_back(i);
+    }
+    return s;
+ }
+
+ bool isOnes(vector<double> a)
+ {
+    for (double i : a)
+    {
+	if (i != 1) return false;
+    }
+    return true;
+ }
+
+ double simplefact(vector<double> n, vector<double> d, bool isSquare) // removes like terms in the factorials, returns n!/d!
+ {
+    //cout << "Entering simplefact" << endl;
+    vector<double> a = n;
+    vector<double> b = d;
+    //cout << "a={ ";
+    //for (auto i = a.begin(); i != a.end(); ++i)
+	//std::cout << *i << ' ';
+    //cout << "}" << endl;
+    //cout << "b={ ";
+    //for (auto j = b.begin(); j != b.end(); ++j)
+	//std::cout << *j << ' ';
+    //cout << "}" << endl;
+    bool top = true; // Probably not needed
+    //cout << "Swapping, if needed" << endl;
+    if (n.size() < d.size())
+    {
+	a.swap(b);
+	top=false; // Probably not needed
+    }
+    bool done = false;
+    int bailout = a.size() * b.size();
+    //cout << "About to enter while" << endl;
+    while (!done and bailout >= 0)
+    {
+	std::vector<double>::iterator ita;
+	std::vector<double>::iterator itb;
+        for (double& i : a)
+        {
+	    for (double& j : b)
+	    {
+		//cout << "In triple loop; i=" << i << " j=" << j << endl;
+		if (i == j and i > 1 and j > 1)
+		{
+		    ita = std::next(a.begin(), i);
+		    //int da = ita - a.begin();
+		    itb = std::next(b.begin(), j);
+		    //int db = itb - b.begin();
+		    //cout << "Erasing " << i << " from a." << endl;
+		    //ita = a.begin();
+		    i = 1; // set value to 1; ideally, should erase to save space/comp time, but it's throwing an error.
+		    //a.erase(std::next(a.begin(), i));
+		    //ita = a.erase(ita);
+		    //a.erase(std::find(a.begin(), a.end(), i), a.end());
+		    //cout << "Erasing " << j << " from b." << endl;
+		    //itb = b.begin();
+		    j = 1; // set value to 1; ideally, should erase to save space/comp time, but it's throwing an error.
+		    //b.erase(std::next(a.begin(), i));
+		    //itb = b.erase(itb);
+		    //b.erase(std::find(b.begin(), b.end(), j), b.end());
+		}
+		//cout << "Got past that crap." << endl;
+	    }
+	}
+	bool a1 = isOnes(a);
+        bool b1 = isOnes(b);
+	//cout << "a.size() = " << a.size() << " b.size()=" << b.size() << " a1=" << a1 << " b1=" << b1 << endl;
+	bailout--; // just in case we go too many times.
+	if (a1 or b1) done = true;
+    }
+    a.erase(std::remove(a.begin()+1, a.end(), 1), a.end());
+    b.erase(std::remove(b.begin()+1, b.end(), 1), b.end());
+    //cout << "Exited triple loop; bailout=" << bailout << endl;
+    //vector<double> tbr = {1};
+ //std::vector<int>::size_type i = 0; i != v.size(); i++
+    //for (std::vector<double>::size_type i = 0; i != a.size(); i++)
+    //std::list<double>::const_iterator iteratora;
+    //for (iteratora = a.begin(); iteratora != a.end(); iteratora++)
+    /*for (double iteratora : a)
+    {   
+	cout << "Looking at iteratora=" << iteratora << " in series." << endl;
+	if ( std::find(b.begin(), b.end(), iteratora) != b.end()) {
+	   //double it = std::find(b.begin(), b.end(), iteratora);
+	   std::list<double>::iterator ita = std::next(a.begin(), iteratora);
+	   std::list<double>::iterator itb = std::next(b.begin(), iteratora);
+	   //tbr.emplace_back(it);
+	   a.erase(ita++);
+	   b.erase(itb++);
+	   cout << "i located in series, adding to 'to-be-removed' list." << endl;
+	} else cout << "didn't find i in series." << endl;
+    }*/
+    /*std::vector<double>::iterator i = a.begin();
+    while (i != a.end())
+    {
+        bool isActivea = *i.update();
+        if (!isActivea)
+        {
+	    std::vector<double>::iterator j = b.begin();
+	    while (j != b.end()) 
+	    {
+		bool isActiveb = *j.update();
+		if (!isActiveb)
+		{
+		    if ( a[*j] == b[*i])
+		    {
+		        //a.erase(i++);
+		        i = a.erase(i);
+		        //b.erase(j++);
+		        j = b.erase(j);
+		        continue;
+		    } else j++;
+		}
+	    }
+            //items.erase(i++);  // alternatively, i = items.erase(i);
+        }
+        else
+        {
+            //other_code_involving(*i);
+            ++i;
+        }
+    }
+    for (int i=0; i<=a.size(); i++) // iterate over a
+    {
+	for (int j=0; j<=b.size(); j++) // iterate over b
+	{
+	    if (a[i] == b[j] and a[i] != 1 and b[j] != 1) // if an element exists in both, set to 1
+	    {
+		a[i] = 1;
+		b[j] = 1;
+	    }
+	}
+    }
+    /*for (auto& j : tbr)
+    {
+	a.erase(std::remove(tbr.begin(), tbr.end(), j), tbr.end());
+	b.erase(std::remove(tbr.begin(), tbr.end(), j), tbr.end());
+    }*/
+    //cout << "About to perform multiplications!" << endl;
+    //cout << "a={ ";
+    //for (auto i = a.begin(); i != a.end(); ++i)
+//	std::cout << *i << ' ';
+    //cout << "}" << endl;
+    //cout << "b={ ";
+//    for (auto j = b.begin(); j != b.end(); ++j)
+//	std::cout << *j << ' ';
+    //cout << "}" << endl;
+    double t1 = 1;
+    double t2 = 1;
+    for (double i : a)
+    {
+	//cout << "t1=" << t1 << " multiplying by i=" << i << endl;
+	if(isSquare){
+	    t1 *= sqrt(i);
+	} else {
+	    t1 *= i;
+    	}
+    }
+    //cout << "t1=" << t1 << endl;
+    //cout << "Done with t1, moving to t2." << endl;
+    for (double j : b)
+    {
+	//cout << "t2=" << t2 << " multiplying by j=" << j << endl;
+	if(isSquare){
+	    t2 *= sqrt(j);
+	} else {
+	    t2 *= j;
+    	}
+    }
+    //cout << "t2=" << t2 << endl;
+    //cout << "Done with t2, returning." << endl;
+    //int m = min(a.size(), b.size());
+    //for (double i=0; i <= max( a.size(), b.size() ); i++) // divides first to reduce the size of the system
+    /*for (iteratora = a.begin(); iteratora != a.end(); iteratora++)
+    {
+	if (a[iteratora] <= 0 and b[iteratora] <= 0) continue;
+	if (top and iteratora < m) t1 *= a[iteratora] / b[iteratora];
+	if (top and iteratora >= m) t1 *= a[iteratora];
+	if (!top and iteratora < m) t1 *= b[iteratora] / a[iteratora];
+	if (!top and iteratora >= m) t1 *= b[iteratora];
+    }*/
+    //for (double i in a)
+    return t1 / t2;
  }
 
 /// Calculate B coefficient for Talmi integral. Formula given in Brody and Moshinsky
@@ -1339,8 +1538,87 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    //t *= gsl_sf_fact( sqrt( 2*nb+2*lb+1) );
    //t /= gsl_sf_fact( sqrt( nb+lb) );
    //double B1 = t;
-   double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * exp(gsl_sf_lnfact(2*p+1) + gsl_sf_lnfact(p) + 0.5 * (gsl_sf_lnfact(na) +
-	gsl_sf_lnfact(nb)+ gsl_sf_lnfact(2*na+2*la+1) + gsl_sf_lnfact(2*nb+2*lb+1) - gsl_sf_lnfact(na+la) - gsl_sf_lnfact(nb+lb)));
+   /*double lna = gsl_sf_lnfact(2*p+1);
+   double lnb = gsl_sf_lnfact(p);
+   double lnc = gsl_sf_lnfact(na);
+   double lnd = gsl_sf_lnfact(nb);
+   double lne = gsl_sf_lnfact(2*na+2*la+1);
+   double lnf = gsl_sf_lnfact(2*nb+2*lb+1);
+   double lng = gsl_sf_lnfact(na+la);
+   double lnh = gsl_sf_lnfact(nb+lb);
+   double lna = Stirling(2*p+1);
+   double lnb = Stirling(p);
+   double lnc = Stirling(na);
+   double lnd = Stirling(nb);
+   double lne = Stirling(2*na+2*la+1);
+   double lnf = Stirling(2*nb+2*lb+1);
+   double lng = Stirling(na+la);
+   double lnh = Stirling(nb+lb);*/
+   //cout << "p=" << p << " na=" << na << " la=" << la << " nb=" << nb << " lb=" << lb << endl;
+   double lna = (2*p+1);
+   //cout << "lna=" << lna << endl;
+   double lnb = (p);
+   //cout << "lnb=" << lnb << endl;
+   double lnc = (na);
+   //cout << "lnc=" << lnc << endl;
+   double lnd = (nb);
+   //cout << "lnd=" << lnd << endl;
+   double lne = (2*na+2*la+1);
+   //cout << "lne=" << lne << endl;
+   double lnf = (2*nb+2*lb+1);
+   //cout << "lnf=" << lnf << endl;
+   double lng = (na+la);
+   //cout << "lng=" << lng << endl;
+   double lnh = (nb+lb);
+   //cout << "lnh=" << lnh << endl;
+
+   vector<double> al = ser(lna);
+   vector<double> bl = ser(lnb);
+   vector<double> cl = ser(lnc);
+   vector<double> dl = ser(lnd);
+   vector<double> el = ser(lne);
+   vector<double> fl = ser(lnf);
+   vector<double> gl = ser(lng);
+   vector<double> hl = ser(lnh);
+   
+   vector<double> N;
+   N.insert(N.end(), cl.begin(), cl.end());
+   N.insert(N.end(), dl.begin(), dl.end());
+   N.insert(N.end(), el.begin(), el.end());
+   N.insert(N.end(), fl.begin(), fl.end());
+
+   vector<double> D;
+   D.insert(D.end(), gl.begin(), gl.end());
+   D.insert(D.end(), hl.begin(), hl.end());
+   //cout << "About to calc B1" << endl;
+   double B1 = AngMom::phase(p-q);
+   //cout << "B1 = " << B1 << endl;
+   B1 /= pow(2,(na+nb));
+   //cout << "B1 = " << B1 << endl;
+   B1 *= simplefact(al,bl,false);
+   //cout << "B1 = " << B1 << endl;
+   //B1 *= sqrt(simplefact(N,D));//true); 
+   B1 *= simplefact(N,D,true);
+   //cout << "B1 = " << B1 << endl;
+   //std::vector<double> arrayN = {lnc,lnd,lne,lnf};
+   //array[0] = max(lnc, max(lnd, max(lne, lnf)));
+   //array[3] = min(lnc, min(lnd, min(lne, lnf)));
+   //double maxN = max(lnc,lnd,lne,lnf);
+   //double maxD = max(lng,lnh);
+   //double minD = min(lng,lnh);
+   //std::sort(arrayN.begin(),arrayN.end()); // Throws error claiming not to be able to sort array of doubles
+   //cout << "arrayN={" << arrayN[0] << "," << arrayN[1] << "," << arrayN[2] << "," << arrayN[3] << "}" << endl;
+   //cout << "lna=" << lna << " lnb=" << lnb << endl;
+   //cout << "ReducedFactorial(" << lna << "," << lnb << ")=" << ReducedFactorial(lna,lnb) << endl;
+   //cout << "ReducedFactorial(" << arrayN[3] << "," << maxD << ")=" << ReducedFactorial(arrayN[3],maxD) << endl;
+   //cout << "ReducedFactorial(" << arrayN[0] << "," << minD << ")=" << ReducedFactorial(arrayN[0],minD) << endl;
+
+   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * exp((gsl_sf_lnfact(2*p+1) - gsl_sf_lnfact(p) + 0.5 * (gsl_sf_lnfact(na) +
+//	gsl_sf_lnfact(nb)+ gsl_sf_lnfact(2*na+2*la+1) + gsl_sf_lnfact(2*nb+2*lb+1) - gsl_sf_lnfact(na+la) - gsl_sf_lnfact(nb+lb))));
+   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * exp(lna - lnb + 0.5 * (lnc + lnd + lne + lnf - lng - lnh));
+   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * lna / lnb * sqrt( lnc * lnd * lne * lnf / (lng * lnh));
+   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * ReducedFactorial(lna,lnb) * sqrt(ReducedFactorial(arrayN[3],maxD) *
+//	ReducedFactorial(arrayN[0],minD) * gsl_sf_fact(arrayN[1]) * gsl_sf_fact(arrayN[2]));
    //double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
 	//      * sqrt( gsl_sf_fact(na) ) * sqrt( gsl_sf_fact(2*na+2*la+1) ) / sqrt( gsl_sf_fact(na+la) )
 	//      * sqrt( gsl_sf_fact(nb) ) * sqrt( gsl_sf_fact(2*nb+2*lb+1) ) / sqrt( gsl_sf_fact(nb+lb) );
@@ -1368,13 +1646,21 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
       temp /= gsl_sf_fact(2*p-la+lb-2*k+1);
       temp /= gsl_sf_fact(nb - p + q + k);
       temp /= gsl_sf_fact(p-q-k);
+      //long double temp = Stirling(la+k);
+      //temp *= Stirling(p-int((la-lb)/2)-k);
+      //temp /= Stirling(k);
+      //temp /= Stirling(2*la+2*k+1);
+      //temp /= Stirling(na-k);
+      //temp /= Stirling(2*p-la+lb-2*k+1);
+      //temp /= Stirling(nb - p + q + k);
+      //temp /= Stirling(p-q-k);
       //B2  += gsl_sf_fact(la+k) * gsl_sf_fact(p-int((la-lb)/2)-k)
       //       / ( gsl_sf_fact(k) * gsl_sf_fact(2*la+2*k+1) ) / ( gsl_sf_fact(na-k) * gsl_sf_fact(2*p-la+lb-2*k+1) )
       //        / ( gsl_sf_fact(nb - p + q + k) * gsl_sf_fact(p-q-k) );
       B2 += temp;
    }
-   cout << "B1 = " << B1 << endl;
-   cout << "B2 = " << B2 << endl;
+   //cout << "B1 = " << B1 << endl;
+   //cout << "B2 = " << B2 << endl;
    return B1 * B2;
  }
 
@@ -1535,6 +1821,18 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
     map<index_t,double> hole_list;
     cout << "GetSecondOrderOccupations : Not yet implemented" << endl;
     return hole_list;
+  }
+
+  double ReducedFactorial(int n, int d)
+  {
+     double temp = 1;
+     if((n-d) == 0) return 1;
+     for (int x = min(n,d); x <= max(n,d); x++)
+     {
+	temp *= x;
+     }
+     if((n-d) > 0) return temp;
+     else return 1/temp;
   }
 
 
