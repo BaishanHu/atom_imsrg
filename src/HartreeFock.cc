@@ -164,8 +164,12 @@ void HartreeFock::Diagonalize()
       arma::mat F_ch = F.submat(orbvec,orbvec);
       arma::mat C_ch;
       arma::vec E_ch;
-      //cout << "This is F_ch:" << endl;
+      //cout << "This is F_ch before:" << endl;
       //F_ch.print();
+      //cout << "This is C_ch before:" << endl;
+      //C_ch.print();
+      //cout << "This is E_ch before:" << endl;
+      //E_ch.print();
       bool success = false;
       int diag_tries = 0;
       while ( not success)
@@ -180,10 +184,16 @@ void HartreeFock::Diagonalize()
            break;
          }
       }
+      //cout << "This is F_ch after:" << endl;
+      //F_ch.print();
+      //cout << "This is C_ch after:" << endl;
+      //C_ch.print();
+      //cout << "This is E_ch after:" << endl;
+      //E_ch.print();
       // Update the full overlap matrix C and energy vector
       energies(orbvec) = E_ch;
       C.submat(orbvec,orbvec) = C_ch;
-      cout << "Completed diagonalize()." << endl;
+      //cout << "Completed diagonalize()." << endl;
       //F_ch.print();
       //C_ch.print();
       //E_ch.print();
@@ -337,13 +347,13 @@ void HartreeFock::UpdateDensityMatrix()
 {
   arma::mat tmp = C.cols(holeorbs);
   rho = (tmp.each_row() % hole_occ) * tmp.t();
-  rho = rho;// / trace(rho);
-  cout << "holeorbs=" << endl;
-  cout << holeorbs << endl;
-  cout << "hole_occ=" << endl;
-  cout << hole_occ << endl;
-  cout << "tmp=" << endl;
-  cout << tmp << endl;
+  rho = rho;
+  //cout << "holeorbs=" << endl;
+  //cout << holeorbs << endl;
+  //cout << "hole_occ=" << endl;
+  //cout << hole_occ << endl;
+  //cout << "tmp=" << endl;
+  //cout << tmp << endl;
 }
 
 

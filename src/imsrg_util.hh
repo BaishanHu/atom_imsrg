@@ -55,6 +55,11 @@ namespace imsrg_util
  Operator Sigma_Op_pn(ModelSpace& modelspace, string pn);
  Operator RadialOverlap(ModelSpace& modelspace);
  Operator LdotS_Op(ModelSpace& modelspace);
+ Operator ElectronTwoBody(ModelSpace& modelspace);
+ double CalculateCMInvR( double n1, double l1, double s1, double j1,
+			double n2, double l2, double s2, double j2,
+			double n3, double l3, double s3, double j3,
+			double n4, double l4, double s4, double j4, ModelSpace& modelspace);
 
  Operator Single_Ref_1B_Density_Matrix(ModelSpace& modelspace); // This doesn't work
  double Get_Charge_Density(Operator& DM, double r);  // This doesn't work
@@ -79,7 +84,7 @@ namespace imsrg_util
  void Reduce(Operator&);
  void UnReduce(Operator&);
 
- double Stirling(double n){return sqrt( 2 * 3.14159265359 * n ) * pow(n,n) / exp(n);}; // Stirling's Approximation
+ //double Stirling(double n){return sqrt( 2 * 3.14159265359 * n ) * pow(n,n) / exp(n);}; // Stirling's Approximation
  vector<double> ser(double j); // returns a vector which is {1,2,...,j}
  bool isOnes(vector<double> a); // checks to see if a vector contains only ones.
  double simplefact(vector<double> n, vector<double> d, bool isSquare=false); // Reduces factorial division;

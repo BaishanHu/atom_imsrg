@@ -249,35 +249,231 @@ double HO_Radial_psi(int n, int l, double hw, double r)
 // In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
 Operator InverseR_Op(ModelSpace& modelspace)
 {
-   cout << "Entering InverseR_Op" << endl;
    Operator InvR(modelspace);
    int norbits = modelspace.GetNumberOrbits();
-   //cout << "About to make V for norbits=" << norbits << endl;
    for (int i=0; i<norbits; i++)
    {
      Orbit& oi = modelspace.GetOrbit(i);
-     for (int j=0; j<norbits; j++)
+     for (int j=0; j<=i; j++)
      {
-	//cout << "i=" << i << " j=" << j << endl;
-	//if (i==j) InvR.OneBody(i,j) = oi.occ/((oi.n+1) * (oi.n+1));
 	Orbit& oj = modelspace.GetOrbit(j);
-	//cout << "oi.n=" << oi.n << " oi.l=" << oi.l << " oi.j2=" << oi.j2 << " oi.tz2=" << oi.tz2 << endl;
-	//cout << "oj.n=" << oj.n << " oj.l=" << oj.l << " oj.j2=" << oj.j2 << " oj.tz2=" << oj.tz2 << endl;
-	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1) * modelspace.GetTargetZ() * HBARC/(137.); // consider n +/- 1; selection rules
+	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1); // consider n +/- 1; selection rules
 	InvR.OneBody(i,j) = temp;
-	//cout << "InvR.OneBody(" << i << "," << j << ")=" << temp << endl;
+	InvR.OneBody(j,i) = temp;
      }
    }
    // 1/137 comes from fine struct const {alpha} = e^2/(4pi{epsilon}{hbar}c) ~= 1/137 
-   // Therefore Ze^2/(4pi{epsilon}) = Z{hbar}{c}{alpha}; Bohr Rad from R^L_ab = b^L * ~R^L_ab; b = BohrRad
-   cout << "Made V, moving on." << endl;
-   return InvR / BOHR_RADIUS;
+   // Therefore e^2/(4pi{epsilon}) = {hbar}{c}{alpha}; Bohr Rad from R^L_ab = b^L * ~R^L_ab; b = BohrRad
+   return InvR  * HBARC / (137.) / BOHR_RADIUS;
+}
+
+Operator ElectronTwoBody(ModelSpace& modelspace)
+{
+   int nchan = modelspace.GetNumberTwoBodyChannels();
+   //#pragma omp parallel for schedule(dynamic,1)  // Will make parallel later, and/or make CalculateCMInvR Parallel.
+   Operator V12(modelspace);
+   for (int ch = 0; ch < nchan; ++ch)
+   {
+      TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+      int nkets = tbc.GetNumberKets();
+      for (int ibra = 0; ibra < nkets; ++ibra)
+      {
+         Ket & bra = tbc.GetKet(ibra);
+         Orbit & o1 = modelspace.GetOrbit(bra.p);
+         Orbit & o2 = modelspace.GetOrbit(bra.q);
+	 for (int jket = 0; jket <= ibra; jket++)
+	 {
+	    Ket & ket = tbc.GetKet(jket);
+	    Orbit & o3 = modelspace.GetOrbit(ket.p);
+	    Orbit & o4 = modelspace.GetOrbit(ket.q);
+	    double s1 = 1./2;
+	    double s2 = 1./2;
+	    double s3 = 1./2;
+	    double s4 = 1./2;
+	    //cout << "o1.index=" << o1.index << endl;
+	    //cout << "o2.index=" << o2.index << endl;
+	    //cout << "o3.index=" << o3.index << endl;
+	    //cout << "o4.index=" << o4.index << endl;
+	    //if (o1.index%2!=0) s1=-1./2;
+	    //if (o2.index%2!=0) s2=-1./2;
+	    //if (o3.index%2!=0) s3=-1./2;
+	    //if (o4.index%2!=0) s4=-1./2;
+	    //cout << "Reassigned spins" << endl;
+            double cmInvR = CalculateCMInvR(o1.n, o1.l, s1, o1.j2,
+					    o2.n, o2.l, s2, o2.j2,
+					    o3.n, o3.l, s3, o3.j2,
+					    o4.n, o4.l, s4, o4.j2, modelspace );
+	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
+	    V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
+	 } // jket
+      } // ibra
+   } // ch
+
+   return V12;
+}
+
+
+// Calculate Centre of Mass 1/r for a pair of particles at initial states 12, and final state 34
+double CalculateCMInvR( double n1, double l1, double s1, double j1,
+			double n2, double l2, double s2, double j2,
+			double n3, double l3, double s3, double j3,
+			double n4, double l4, double s4, double j4, ModelSpace& modelspace)
+{
+    // Declare limits here, easier to read/modify
+    int Lambda_lower = abs(l1 - l2); 
+    int Lambdap_lower = abs(l3 - l4);
+    int Lambda_upper = abs(l1 + l2);
+    int Lambdap_upper = abs(l3 + l4);
+
+    int S_lower = 0;
+    int Sp_lower = 0;
+    int S_upper = 1;
+    int Sp_upper = 1;
+
+    // Conservation of Energy terms
+    int p12 = 2*n1 + 2*n2 + l1 + l2; 
+    int p34 = 2*n3 + 2*n4 + l3 + l4;
+
+    int nMin = 0;
+    //cout << "nMin=" << nMin << endl;
+    int nMax = 0.5 * (2*n1 + 2*n2 + l1 + l2);
+    //cout << "nMax=" << nMax << endl;
+    int NMin = 0;
+    //cout << "NMin=" << NMin << endl;
+    int NMax = nMax;
+    //cout << "NMax=" << NMax << endl;
+    int lMin = 0;
+    //cout << "lMin=" << lMin << endl;
+    int lMax = 2*n1 + 2*n2 + l1 + l2;
+    //cout << "lMax=" << lMax << endl;
+    int LMin = 0;
+    //cout << "LMin=" << LMin << endl;
+    int LMax = lMax;
+    //cout << "LMax=" << LMax << endl;
+
+    int npMin = 0;
+    //cout << "npMin=" << npMin << endl;
+    int npMax = 0.5 * (2*n3 + 2*n4 + l3 + l4);
+    //cout << "npMax=" << npMax << endl;
+    int NpMin = 0;
+    //cout << "NpMin=" << NpMin << endl;
+    int NpMax = npMax;
+    //cout << "NpMax=" << NpMax << endl;
+    int lpMin = 0;
+    //cout << "lpMin=" << lpMin << endl;
+    int lpMax = 2*n3 + 2*n4 + l3 + l4;
+    //cout << "lpMax=" << lpMax << endl;
+    int LpMin = 0;
+    //cout << "LpMin=" << LpMin << endl;
+    int LpMax = lpMax;
+    //cout << "LpMax=" << LpMax << endl;
+
+    double T = 0;
+    double temp = 0;
+    double m = 0;
+
+    // There has got to be a better way...
+    for (int Lambda = Lambda_lower; Lambda <= Lambda_upper; Lambda++)
+    {
+	//cout << "Looping Lambda=" << Lambda << endl;
+	for (int S = S_lower; S <= S_upper; S++)
+	{
+	    //cout << "Looping S=" << S << endl;
+	    for (int Lambdap = Lambdap_lower; Lambdap <= Lambdap_upper; Lambdap++)
+	    {
+		//cout << "Looping Lambdap=" << Lambdap << endl;
+		for (int Sp = Sp_lower; Sp <= Sp_upper; Sp++)
+		{
+		    //cout << "Looping Sp=" << Sp << endl;
+		    for (int J12 = abs(Lambda - S); J12 <= abs(Lambda + S); J12++)
+		    {
+			//cout << "Looping J12=" << J12 << endl;
+			for (int J34 = abs(Lambdap - Sp); J34 <= abs(Lambdap + Sp); J34++)
+			{
+			    //cout << "Looping J34=" << J34 << endl;
+			    //cout << "About to calculate some NormNineJ" << endl;
+			    double i = NormNineJ(l1,s1,j1/2,l2,s2,j2/2,Lambda,S,J12/2);
+			    double j = NormNineJ(l3,s3,j3/2,l4,s4,j4/2,Lambdap,Sp,J34/2);
+			    temp = i * j;
+			    //cout << "i=" << i << endl;
+			    //cout << "j=" << j << endl;
+			    if (temp == 0) continue;
+			    //cout << "temp = " << temp << endl;
+			    m = 0;
+			    for (int n = nMin; n <= p12/2; n++)
+			    {
+				//cout << "Looping n=" << n << endl;
+				for (int N = NMin; N <= p12/2-n; N++)
+				{
+				    //cout << "Looping N=" << N << endl;
+				    for (int l = 0; l <= p12-2*n-2*N; l++)
+				    {
+					//cout << "Looping l=" << l << endl;
+					for (int L = p12-2*n-2*N-l; L <= p12-2*n-2*N-l; L++) // L,Lp value can be found exactly
+					{
+					    //cout << "Looping L=" << L << endl;
+					    if (p12 != 2*n+2*N+l+L or Lambda < abs(l-L) or Lambda > (l+L)) continue; // Cons of Energy
+					    for (int np = npMin; np <= p34/2; np++)
+					    {
+						//cout << "Looping np=" << np << endl;
+						for (int Np = 0; Np <= p34/2-np; Np++)
+						{
+						    //cout << "Looping Np=" << Np << endl;
+						    for (int lp = 0; lp <= p34-2*np-2*Np; lp++)
+						    {
+							//cout << "Looping lp=" << lp << endl;
+							for (int Lp = p34-2*np-2*Np-lp; Lp <= p34-2*np-2*Np-lp; Lp++)
+							{
+							    if (p34 != 2*np+2*Np+lp+Lp or Lambdap < abs(lp-Lp) or Lambdap > (lp+Lp)) continue;
+							    if (L != Lp or N != Np) continue;
+
+							    //cout << "About to make some integrals!" << endl;
+							    //cout << "n1=" << n1 << endl;
+							    //cout << "n2=" << n2 << endl;
+							    //cout << "n3=" << n3 << endl;
+							    //cout << "n4=" << n4 << endl;
+							    //cout << "l1=" << l1 << endl;
+							    //cout << "l2=" << l2 << endl;
+							    //cout << "l3=" << l3 << endl;
+							    //cout << "l4=" << l4 << endl;
+							    //cout << "n=" << n << endl;
+							    //cout << "np=" << np << endl;
+							    //cout << "N=" << N << endl;
+							    //cout << "Np=" << Np << endl;
+							    //cout << "l=" << l << endl;
+							    //cout << "lp=" << lp << endl;
+							    //cout << "L=" << L << endl;
+							    //cout << "Lp=" << Lp << endl;
+
+							    // Factor of 2 comes from r=(r1-r2)/sqrt(2), R=(r1+r2)/sqrt(2)
+							    m +=1/sqrt(2) * modelspace.GetMoshinsky(n1,l1,n2,l2, n, l, N, L, Lambda)
+ 								  * modelspace.GetMoshinsky(np,lp,Np,Lp, n3,l3,n4,l4,Lambdap)
+								  //* RadialIntegral(N, L, Np, Lp, 0)
+								  * RadialIntegral(n, l, np, lp, -1);
+							    //cout << "Calculated m=" << m << endl;
+							} // Lp
+						    } // lp
+						} // Np
+					    } // np
+					} // L
+				    } // l
+				} // N
+			    } // n
+			T += temp*m;
+			//cout << "Calculated T=" << T << endl;
+			} // J34
+		    } // J12
+		} // Sp
+	    } // Lambdap
+	} // S
+    } // Lambda
+    //cout << "Leaving Electron Two Body." << endl;
+    return T * HBARC / (137.) / (BOHR_RADIUS);
 }
 
 
 Operator KineticEnergy_Op(ModelSpace& modelspace)
 {
-   //cout << "Entering KineticEnergy_Op" << endl;
    Operator T(modelspace);
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
@@ -286,17 +482,10 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    {
       Orbit & oa = modelspace.GetOrbit(a);
       T.OneBody(a,a) = 0.5 * hw * (2*oa.n + oa.l + 3./2); 
-      cout << "oa.n=" << oa.n << " oa.l=" << oa.l << " oa.j2=" << oa.j2 << endl;
-      //cout << "T.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
-      //cout << "OneBodyChannels=" << modelspace.OneBodyChannels << endl;
       for ( int b : T.OneBodyChannels.at({oa.l, oa.j2, oa.tz2}) )
       {
-	 //cout << "a=" << a << " b=" << b << endl;
          if (b<=a) continue;
-	 //cout << b << "!<=" << a << endl;
          Orbit & ob = modelspace.GetOrbit(b);
-	 //cout << "oa.n=" << oa.n << " oa.l=" << oa.l << " oa.j2=" << oa.j2 << endl;
-	 //cout << "ob.n=" << ob.n << " ob.l=" << ob.l << " ob.j2=" << ob.j2 << endl;
          if (oa.n == ob.n+1)
             T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
          else if (oa.n == ob.n-1)
@@ -304,10 +493,10 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
-   //cout << "Leaving KE." << endl;
    return T;
 }
 
+// This was a test, can't imagine it is actually useful
 Operator Energy_Op(ModelSpace& modelspace)
 {
    // Naive energy operator
@@ -368,7 +557,7 @@ Operator Energy_Op(ModelSpace& modelspace)
    TcmOp.SetHermitian();
    double Mu = A; // to avoid /0
    if (modelspace.GetSystemType() == "nuclear") Mu = A; // Can clean this up later
-   else if (modelspace.GetSystemType() == "atomic") Mu = A*(1836); // scale of nucleon to electron masses
+   else if (modelspace.GetSystemType() == "atomic") Mu = A*(1836); // scale of nucleon to electron masses, this Doesn't make sense
    // One body piece = p**2/(2mA)
    int norb = modelspace.GetNumberOrbits();
    for (int i=0; i<norb; ++i)
@@ -408,7 +597,7 @@ Operator Energy_Op(ModelSpace& modelspace)
             Orbit & ok = modelspace.GetOrbit(ket.p);
             Orbit & ol = modelspace.GetOrbit(ket.q);
             if ( 2*(ok.n+ol.n)+ok.l+ol.l > E2max) continue;
-            double p1p2 = Calculate_p1p2(modelspace,bra,ket,tbc.J) * hw/(A*1836);
+            double p1p2 = Calculate_p1p2(modelspace,bra,ket,tbc.J) * hw/(A);
             if (abs(p1p2)>1e-7)
             {
               TcmOp.TwoBody.SetTBME(ch,ibra,iket,p1p2);
@@ -1298,7 +1487,6 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    for (int p=pmin;p<=pmax;++p)
    {
       I += TalmiB(na,la,nb,lb,p) * TalmiI(p,k);
-      //cout << "I = " << I << endl;
    }
    return I;
  }
@@ -1308,9 +1496,6 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 /// This is valid for (2p+3+k) > 0. The Gamma function diverges for non-positive integers.
  double TalmiI(int p, double k)
  {
-   //cout << "A = gsl_sf_gamma(" << p << "+1.5+0.5*" << k << ")=" << gsl_sf_gamma(p+1.5+0.5*k) << endl;
-   //cout << "B = gsl_sf_gamma(" << p << "+1.5)=" << gsl_sf_gamma(p+1.5) << endl;
-   //cout << "A / B = " << gsl_sf_gamma(p+1.5+0.5*k) / gsl_sf_gamma(p+1.5) << endl;
    return gsl_sf_gamma(p+1.5+0.5*k) / gsl_sf_gamma(p+1.5);
  }
 
@@ -1338,183 +1523,59 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
     return true;
  }
 
- //boost::multiprecision::cpp_bin_float_100 simplefact(vector<double> n, vector<double> d, bool isSquare) // removes like terms in the factorials, returns n!/d!
+
+ // Takes in a vector numerator and vector denominator of the form {1,2,..,a,1,2,...b,1,2,..,c,...} for a!b!c! and removes like terms that occur in both numerator and denominator.
+ //boost::multiprecision::cpp_bin_float_100 simplefact(vector<double> n, vector<double> d, bool isSquare)
  double simplefact(vector<double> n, vector<double> d, bool isSquare) // removes like terms in the factorials, returns n!/d!
  {
-    //cout << "Entering simplefact" << endl;
     vector<double> a = n;
     vector<double> b = d;
-    //cout << "a={ ";
-    //for (auto i = a.begin(); i != a.end(); ++i)
-	//std::cout << *i << ' ';
-    //cout << "}" << endl;
-    //cout << "b={ ";
-    //for (auto j = b.begin(); j != b.end(); ++j)
-	//std::cout << *j << ' ';
-    //cout << "}" << endl;
-    //bool top = true; // Probably not needed
-    //cout << "Swapping, if needed" << endl;
-    if (n.size() < d.size())
-    {
-	a.swap(b);
-	//top=false; // Probably not needed
-    }
+
+    //if (n.size() < d.size()) // I forgot why I put this in here, but I think I had a good reason.
+    //{
+	//a.swap(b);
+    //}
     bool done = false;
     int bailout = a.size() * b.size(); // Arbitrary choice, number of terms in N * number of terms in D
-    //cout << "About to enter while" << endl;
     while (!done and bailout >= 0)
     {
-	//std::vector<double>::iterator ita;
-	//std::vector<double>::iterator itb;
         for (double& i : a)
         {
 	    for (double& j : b)
 	    {
-		//cout << "In triple loop; i=" << i << " j=" << j << endl;
 		if (i == j and i > 1 and j > 1)
 		{
-		    //ita = std::next(a.begin(), i);
-		    //int da = ita - a.begin();
-		    //itb = std::next(b.begin(), j);
-		    //int db = itb - b.begin();
-		    //cout << "Erasing " << i << " from a." << endl;
-		    //ita = a.begin();
 		    i = 1; // set value to 1; ideally, should erase to save space/comp time, but it's throwing an error.
-		    //a.erase(std::next(a.begin(), i));
-		    //ita = a.erase(ita);
-		    //a.erase(std::find(a.begin(), a.end(), i), a.end());
-		    //cout << "Erasing " << j << " from b." << endl;
-		    //itb = b.begin();
 		    j = 1; // set value to 1; ideally, should erase to save space/comp time, but it's throwing an error.
-		    //b.erase(std::next(a.begin(), i));
-		    //itb = b.erase(itb);
-		    //b.erase(std::find(b.begin(), b.end(), j), b.end());
 		}
-		//cout << "Got past that crap." << endl;
 	    }
 	}
 	bool a1 = isOnes(a);
         bool b1 = isOnes(b);
-	//cout << "a.size() = " << a.size() << " b.size()=" << b.size() << " a1=" << a1 << " b1=" << b1 << endl;
 	bailout--; // just in case we go too many times.
 	if (a1 or b1) done = true;
     }
-    a.erase(std::remove(a.begin()+1, a.end(), 1), a.end());
-    b.erase(std::remove(b.begin()+1, b.end(), 1), b.end());
-    //cout << "Exited triple loop; bailout=" << bailout << endl;
-    //vector<double> tbr = {1};
- //std::vector<int>::size_type i = 0; i != v.size(); i++
-    //for (std::vector<double>::size_type i = 0; i != a.size(); i++)
-    //std::list<double>::const_iterator iteratora;
-    //for (iteratora = a.begin(); iteratora != a.end(); iteratora++)
-    /*for (double iteratora : a)
-    {   
-	cout << "Looking at iteratora=" << iteratora << " in series." << endl;
-	if ( std::find(b.begin(), b.end(), iteratora) != b.end()) {
-	   //double it = std::find(b.begin(), b.end(), iteratora);
-	   std::list<double>::iterator ita = std::next(a.begin(), iteratora);
-	   std::list<double>::iterator itb = std::next(b.begin(), iteratora);
-	   //tbr.emplace_back(it);
-	   a.erase(ita++);
-	   b.erase(itb++);
-	   cout << "i located in series, adding to 'to-be-removed' list." << endl;
-	} else cout << "didn't find i in series." << endl;
-    }*/
-    /*std::vector<double>::iterator i = a.begin();
-    while (i != a.end())
-    {
-        bool isActivea = *i.update();
-        if (!isActivea)
-        {
-	    std::vector<double>::iterator j = b.begin();
-	    while (j != b.end()) 
-	    {
-		bool isActiveb = *j.update();
-		if (!isActiveb)
-		{
-		    if ( a[*j] == b[*i])
-		    {
-		        //a.erase(i++);
-		        i = a.erase(i);
-		        //b.erase(j++);
-		        j = b.erase(j);
-		        continue;
-		    } else j++;
-		}
-	    }
-            //items.erase(i++);  // alternatively, i = items.erase(i);
-        }
-        else
-        {
-            //other_code_involving(*i);
-            ++i;
-        }
-    }
-    for (int i=0; i<=a.size(); i++) // iterate over a
-    {
-	for (int j=0; j<=b.size(); j++) // iterate over b
-	{
-	    if (a[i] == b[j] and a[i] != 1 and b[j] != 1) // if an element exists in both, set to 1
-	    {
-		a[i] = 1;
-		b[j] = 1;
-	    }
-	}
-    }
-    /*for (auto& j : tbr)
-    {
-	a.erase(std::remove(tbr.begin(), tbr.end(), j), tbr.end());
-	b.erase(std::remove(tbr.begin(), tbr.end(), j), tbr.end());
-    }*/
-    //cout << "About to perform multiplications!" << endl;
-    //cout << "a={ ";
-    //for (auto i = a.begin(); i != a.end(); ++i)
-//	std::cout << *i << ' ';
-    //cout << "}" << endl;
-    //cout << "b={ ";
-//    for (auto j = b.begin(); j != b.end(); ++j)
-//	std::cout << *j << ' ';
-    //cout << "}" << endl;
-    //boost::multiprecision::cpp_bin_float_100 t1 = 1;
-    //boost::multiprecision::cpp_bin_float_100 t2 = 1;
+    a.erase(std::remove(a.begin()+1, a.end(), 1), a.end()); // Erase all but the first "1"
+    b.erase(std::remove(b.begin()+1, b.end(), 1), b.end()); // If the first "1" is erase as well, can end up with empty array.
+
     double t1 = 1;
     double t2 = 1;
     for (double i : a)
     {
-	//cout << "t1=" << t1 << " multiplying by i=" << i << endl;
 	if(isSquare){
 	    t1 *= sqrt(i);
 	} else {
 	    t1 *= i;
     	}
     }
-    //cout << "t1=" << t1 << endl;
-    //cout << "Done with t1, moving to t2." << endl;
     for (double j : b)
     {
-	//cout << "t2=" << t2 << " multiplying by j=" << j << endl;
 	if(isSquare){
 	    t2 *= sqrt(j);
 	} else {
 	    t2 *= j;
     	}
     }
-    //cout << "t2=" << t2 << endl;
-    //cout << "Done with t2, returning." << endl;
-    //int m = min(a.size(), b.size());
-    //for (double i=0; i <= max( a.size(), b.size() ); i++) // divides first to reduce the size of the system
-    /*for (iteratora = a.begin(); iteratora != a.end(); iteratora++)
-    {
-	if (a[iteratora] <= 0 and b[iteratora] <= 0) continue;
-	if (top and iteratora < m) t1 *= a[iteratora] / b[iteratora];
-	if (top and iteratora >= m) t1 *= a[iteratora];
-	if (!top and iteratora < m) t1 *= b[iteratora] / a[iteratora];
-	if (!top and iteratora >= m) t1 *= b[iteratora];
-    }*/
-    //for (double i in a)
-    //boost::multiprecision::cpp_bin_float_100 T = t1/t2;
-    //cout << "This is t1/t2=" << long double (t1/t2) << endl;
-    //cout << "This is T=    " << T << endl;
     return double (t1 / t2);
  }
 
@@ -1525,64 +1586,15 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    if ( (la+lb)%2>0 ) return 0;
    
    int q = (la+lb)/2;
-   //double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
-   //           * sqrt( gsl_sf_fact(na)*gsl_sf_fact(nb) * gsl_sf_fact(2*na+2*la+1) * gsl_sf_fact(2*nb+2*lb+1) )
-   //          / sqrt( gsl_sf_fact(na+la) * gsl_sf_fact(nb+lb) );
-   //double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
-//	      * sqrt( gsl_sf_fact(na) * gsl_sf_fact(2*na+2*la+1) / gsl_sf_fact(na+la) )
-//	      * sqrt( gsl_sf_fact(nb) * gsl_sf_fact(2*nb+2*lb+1) / gsl_sf_fact(nb+lb) );
-   //long double t = AngMom::phase(p-q);
-   //t *= gsl_sf_fact(2*p+1);
-   //t /= gsl_sf_fact(p);
-   //t /= pow(2,(na+nb));
-   //t /= pow(2,na);
-   //t /= pow(2,nb);
-   //t *= sqrt( gsl_sf_fact(na) );
-   //t *= sqrt( gsl_sf_fact(2*na+2*la+1) );
-   //t /= sqrt( gsl_sf_fact(na+la) );
-   //t *= sqrt( gsl_sf_fact(nb) );
-   //t *= sqrt( gsl_sf_fact(2*nb+2*lb+1) );
-   //t /= sqrt( gsl_sf_fact(nb+lb) );
-   //t *= gsl_sf_fact(sqrt( na) );
-   //t *= gsl_sf_fact( sqrt( 2*na+2*la+1) );
-   //t /= gsl_sf_fact( sqrt( na+la) );
-   //t *= gsl_sf_fact( sqrt( nb) );
-   //t *= gsl_sf_fact( sqrt( 2*nb+2*lb+1) );
-   //t /= gsl_sf_fact( sqrt( nb+lb) );
-   //double B1 = t;
-   /*double lna = gsl_sf_lnfact(2*p+1);
-   double lnb = gsl_sf_lnfact(p);
-   double lnc = gsl_sf_lnfact(na);
-   double lnd = gsl_sf_lnfact(nb);
-   double lne = gsl_sf_lnfact(2*na+2*la+1);
-   double lnf = gsl_sf_lnfact(2*nb+2*lb+1);
-   double lng = gsl_sf_lnfact(na+la);
-   double lnh = gsl_sf_lnfact(nb+lb);
-   double lna = Stirling(2*p+1);
-   double lnb = Stirling(p);
-   double lnc = Stirling(na);
-   double lnd = Stirling(nb);
-   double lne = Stirling(2*na+2*la+1);
-   double lnf = Stirling(2*nb+2*lb+1);
-   double lng = Stirling(na+la);
-   double lnh = Stirling(nb+lb);*/
-   //cout << "p=" << p << " na=" << na << " la=" << la << " nb=" << nb << " lb=" << lb << endl;
+
    double lna = (2*p+1);
-   //cout << "lna=" << lna << endl;
    double lnb = (p);
-   //cout << "lnb=" << lnb << endl;
    double lnc = (na);
-   //cout << "lnc=" << lnc << endl;
    double lnd = (nb);
-   //cout << "lnd=" << lnd << endl;
    double lne = (2*na+2*la+1);
-   //cout << "lne=" << lne << endl;
    double lnf = (2*nb+2*lb+1);
-   //cout << "lnf=" << lnf << endl;
    double lng = (na+la);
-   //cout << "lng=" << lng << endl;
    double lnh = (nb+lb);
-   //cout << "lnh=" << lnh << endl;
 
    vector<double> al = ser(lna);
    vector<double> bl = ser(lnb);
@@ -1611,41 +1623,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    B1 *= simplefact(al,bl,false);
    //cout << "B1 = " << B1 << endl;
    B1 *= sqrt(simplefact(N,D));//true); 
-   //B1 *= simplefact(N,D,true);
-   //cout << "B1 = " << B1 << endl;
-   //std::vector<double> arrayN = {lnc,lnd,lne,lnf};
-   //array[0] = max(lnc, max(lnd, max(lne, lnf)));
-   //array[3] = min(lnc, min(lnd, min(lne, lnf)));
-   //double maxN = max(lnc,lnd,lne,lnf);
-   //double maxD = max(lng,lnh);
-   //double minD = min(lng,lnh);
-   //std::sort(arrayN.begin(),arrayN.end()); // Throws error claiming not to be able to sort array of doubles
-   //cout << "arrayN={" << arrayN[0] << "," << arrayN[1] << "," << arrayN[2] << "," << arrayN[3] << "}" << endl;
-   //cout << "lna=" << lna << " lnb=" << lnb << endl;
-   //cout << "ReducedFactorial(" << lna << "," << lnb << ")=" << ReducedFactorial(lna,lnb) << endl;
-   //cout << "ReducedFactorial(" << arrayN[3] << "," << maxD << ")=" << ReducedFactorial(arrayN[3],maxD) << endl;
-   //cout << "ReducedFactorial(" << arrayN[0] << "," << minD << ")=" << ReducedFactorial(arrayN[0],minD) << endl;
 
-   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * exp((gsl_sf_lnfact(2*p+1) - gsl_sf_lnfact(p) + 0.5 * (gsl_sf_lnfact(na) +
-//	gsl_sf_lnfact(nb)+ gsl_sf_lnfact(2*na+2*la+1) + gsl_sf_lnfact(2*nb+2*lb+1) - gsl_sf_lnfact(na+la) - gsl_sf_lnfact(nb+lb))));
-   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * exp(lna - lnb + 0.5 * (lnc + lnd + lne + lnf - lng - lnh));
-   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * lna / lnb * sqrt( lnc * lnd * lne * lnf / (lng * lnh));
-   //double B1 = AngMom::phase(p-q) / pow(2,(na+nb)) * ReducedFactorial(lna,lnb) * sqrt(ReducedFactorial(arrayN[3],maxD) *
-//	ReducedFactorial(arrayN[0],minD) * gsl_sf_fact(arrayN[1]) * gsl_sf_fact(arrayN[2]));
-   //double B1 = AngMom::phase(p-q) * gsl_sf_fact(2*p+1)/gsl_sf_fact(p)/pow(2,(na+nb))
-	//      * sqrt( gsl_sf_fact(na) ) * sqrt( gsl_sf_fact(2*na+2*la+1) ) / sqrt( gsl_sf_fact(na+la) )
-	//      * sqrt( gsl_sf_fact(nb) ) * sqrt( gsl_sf_fact(2*nb+2*lb+1) ) / sqrt( gsl_sf_fact(nb+lb) );
-   //double phase = AngMom::phase(p-q);
-   //double a = gsl_sf_fact(2*p+1);
-   //double b = gsl_sf_fact(p);
-   //double c = pow(2,(na+nb));
-   //double d = sqrt( gsl_sf_fact(na) );
-   //double e = sqrt( gsl_sf_fact(2*na+2*la+1) );
-   //double f = sqrt( gsl_sf_fact(na+la) );
-   //double g = sqrt( gsl_sf_fact(nb) );
-   //double h = sqrt( gsl_sf_fact(2*nb+2*lb+1) );
-   //double i = sqrt( gsl_sf_fact(nb+lb) );
-   //double B1 = phase * a / ( b * c) * d * e / f * g * h * i;
    //boost::multiprecision::cpp_bin_float_100 B2 = 0;
    double B2 = 0;
    int kmin = max(0, p-q-nb);
@@ -1660,25 +1638,9 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
       temp /= gsl_sf_fact(2*p-la+lb-2*k+1);
       temp /= gsl_sf_fact(nb - p + q + k);
       temp /= gsl_sf_fact(p-q-k);
-      //long double temp = Stirling(la+k);
-      //temp *= Stirling(p-int((la-lb)/2)-k);
-      //temp /= Stirling(k);
-      //temp /= Stirling(2*la+2*k+1);
-      //temp /= Stirling(na-k);
-      //temp /= Stirling(2*p-la+lb-2*k+1);
-      //temp /= Stirling(nb - p + q + k);
-      //temp /= Stirling(p-q-k);
-      //B2  += gsl_sf_fact(la+k) * gsl_sf_fact(p-int((la-lb)/2)-k)
-      //       / ( gsl_sf_fact(k) * gsl_sf_fact(2*la+2*k+1) ) / ( gsl_sf_fact(na-k) * gsl_sf_fact(2*p-la+lb-2*k+1) )
-      //        / ( gsl_sf_fact(nb - p + q + k) * gsl_sf_fact(p-q-k) );
+
       B2 += temp;
    }
-   //cout << "B1 = " << B1 << endl;
-   //cout << "B2 = " << B2 << endl;
-   //return B1 * B2;
-    //boost::multiprecision::cpp_bin_float_100 B = B1 * B2;
-    //cout << "This is B1*B2=" << long double (B1*B2) << endl;
-    //cout << "This is B=    " << B << endl;
     return double (B1 * B2);
  }
 
