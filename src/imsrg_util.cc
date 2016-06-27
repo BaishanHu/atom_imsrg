@@ -244,7 +244,7 @@ double HO_Radial_psi(int n, int l, double hw, double r)
    return rho;
  }
 
-// Creates an operator that performs <Z/r>, using Kramers Relation for an atomic system
+// Creates an operator that performs <k/r>
 // In oscillator basis: RadialIntegral() with L=-1; not currently implemented correctly
 // In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
 Operator InverseR_Op(ModelSpace& modelspace)
@@ -257,6 +257,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
      for (int j=0; j<=i; j++)
      {
 	Orbit& oj = modelspace.GetOrbit(j);
+	if ( oi.l != oj.l ) continue; 
 	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1); // consider n +/- 1; selection rules
 	InvR.OneBody(i,j) = temp;
 	InvR.OneBody(j,i) = temp;
@@ -299,10 +300,10 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //if (o3.index%2!=0) s3=-1./2;
 	    //if (o4.index%2!=0) s4=-1./2;
 	    //cout << "Reassigned spins" << endl;
-            double cmInvR = CalculateCMInvR(o1.n, o1.l, s1, o1.j2,
-					    o2.n, o2.l, s2, o2.j2,
-					    o3.n, o3.l, s3, o3.j2,
-					    o4.n, o4.l, s4, o4.j2, modelspace );
+            double cmInvR = CalculateCMInvR(o1.n, o1.l, s1, o1.j2/2.0,
+					    o2.n, o2.l, s2, o2.j2/2.0,
+					    o3.n, o3.l, s3, o3.j2/2.0,
+					    o4.n, o4.l, s4, o4.j2/2.0, modelspace, tbc.J);
 	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
 	    V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
 	 } // jket
@@ -317,8 +318,9 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 double CalculateCMInvR( double n1, double l1, double s1, double j1,
 			double n2, double l2, double s2, double j2,
 			double n3, double l3, double s3, double j3,
-			double n4, double l4, double s4, double j4, ModelSpace& modelspace)
+			double n4, double l4, double s4, double j4, ModelSpace& modelspace, double J)
 {
+    //cout << "Entering CalculateCMInvR; J=" << J << endl;
     // Declare limits here, easier to read/modify
     int Lambda_lower = abs(l1 - l2); 
     int Lambdap_lower = abs(l3 - l4);
@@ -335,37 +337,39 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
     int p34 = 2*n3 + 2*n4 + l3 + l4;
 
     int nMin = 0;
-    //cout << "nMin=" << nMin << endl;
     int nMax = 0.5 * (2*n1 + 2*n2 + l1 + l2);
-    //cout << "nMax=" << nMax << endl;
     int NMin = 0;
-    //cout << "NMin=" << NMin << endl;
     int NMax = nMax;
-    //cout << "NMax=" << NMax << endl;
     int lMin = 0;
-    //cout << "lMin=" << lMin << endl;
     int lMax = 2*n1 + 2*n2 + l1 + l2;
-    //cout << "lMax=" << lMax << endl;
     int LMin = 0;
-    //cout << "LMin=" << LMin << endl;
     int LMax = lMax;
+
+    //cout << "nMin=" << nMin << endl;
+    //cout << "nMax=" << nMax << endl;
+    //cout << "NMin=" << NMin << endl;
+    //cout << "NMax=" << NMax << endl;
+    //cout << "lMin=" << lMin << endl;
+    //cout << "lMax=" << lMax << endl;
+    //cout << "LMin=" << LMin << endl;
     //cout << "LMax=" << LMax << endl;
 
     int npMin = 0;
-    //cout << "npMin=" << npMin << endl;
     int npMax = 0.5 * (2*n3 + 2*n4 + l3 + l4);
-    //cout << "npMax=" << npMax << endl;
     int NpMin = 0;
-    //cout << "NpMin=" << NpMin << endl;
     int NpMax = npMax;
-    //cout << "NpMax=" << NpMax << endl;
     int lpMin = 0;
-    //cout << "lpMin=" << lpMin << endl;
     int lpMax = 2*n3 + 2*n4 + l3 + l4;
-    //cout << "lpMax=" << lpMax << endl;
     int LpMin = 0;
-    //cout << "LpMin=" << LpMin << endl;
     int LpMax = lpMax;
+
+    //cout << "npMin=" << npMin << endl;
+    //cout << "npMax=" << npMax << endl;
+    //cout << "NpMin=" << NpMin << endl;
+    //cout << "NpMax=" << NpMax << endl;
+    //cout << "lpMin=" << lpMin << endl;
+    //cout << "lpMax=" << lpMax << endl;
+    //cout << "LpMin=" << LpMin << endl;
     //cout << "LpMax=" << LpMax << endl;
 
     double T = 0;
@@ -379,95 +383,71 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 	for (int S = S_lower; S <= S_upper; S++)
 	{
 	    //cout << "Looping S=" << S << endl;
+	    if (J < abs(Lambda-S) or J > Lambda+S) continue;
 	    for (int Lambdap = Lambdap_lower; Lambdap <= Lambdap_upper; Lambdap++)
 	    {
 		//cout << "Looping Lambdap=" << Lambdap << endl;
 		for (int Sp = Sp_lower; Sp <= Sp_upper; Sp++)
 		{
-		    //cout << "Looping Sp=" << Sp << endl;
-		    for (int J12 = abs(Lambda - S); J12 <= abs(Lambda + S); J12++)
+		    if ( J < abs(Lambdap - Sp) or J > (Lambdap + Sp) ) continue;
+		    //cout << "Looping J34=" << J34 << endl;
+		    //cout << "About to calculate some NormNineJ" << endl;
+		    double i = NormNineJ(l1,s1,j1,l2,s2,j2,Lambda,S,J);
+		    double j = NormNineJ(l3,s3,j3,l4,s4,j4,Lambdap,Sp,J);
+		    temp = i * j;
+		    //cout << "i=" << i << endl;
+		    //cout << "j=" << j << endl;
+		    if (abs(temp) <= 1e-8) continue;
+		    //cout << "temp = " << temp << endl;
+		    m = 0;
+		    for (int n = nMin; n <= p12/2; n++)
 		    {
-			//cout << "Looping J12=" << J12 << endl;
-			for (int J34 = abs(Lambdap - Sp); J34 <= abs(Lambdap + Sp); J34++)
+			//cout << "Looping n=" << n << endl;
+			for (int N = NMin; N <= p12/2-n; N++)
 			{
-			    //cout << "Looping J34=" << J34 << endl;
-			    //cout << "About to calculate some NormNineJ" << endl;
-			    double i = NormNineJ(l1,s1,j1/2,l2,s2,j2/2,Lambda,S,J12/2);
-			    double j = NormNineJ(l3,s3,j3/2,l4,s4,j4/2,Lambdap,Sp,J34/2);
-			    temp = i * j;
-			    //cout << "i=" << i << endl;
-			    //cout << "j=" << j << endl;
-			    if (temp == 0) continue;
-			    //cout << "temp = " << temp << endl;
-			    m = 0;
-			    for (int n = nMin; n <= p12/2; n++)
+			    //cout << "Looping N=" << N << endl;
+			    for (int l = 0; l <= p12-2*n-2*N; l++)
 			    {
-				//cout << "Looping n=" << n << endl;
-				for (int N = NMin; N <= p12/2-n; N++)
+				//cout << "Looping l=" << l << endl;
+				int L = p12-2*n-2*N-l; // L,Lp value can be found exactly from Cons of energy
+				    
+				if (p12 != 2*n+2*N+l+L) continue; // Cons of Energy
+				if (Lambda < abs(l-L) or Lambda > (l+L)) continue; 
+				for (int np = npMin; np <= p34/2; np++)
 				{
-				    //cout << "Looping N=" << N << endl;
-				    for (int l = 0; l <= p12-2*n-2*N; l++)
+				    //cout << "Looping np=" << np << endl;
+				    for (int Np = 0; Np <= p34/2-np; Np++)
 				    {
-					//cout << "Looping l=" << l << endl;
-					for (int L = p12-2*n-2*N-l; L <= p12-2*n-2*N-l; L++) // L,Lp value can be found exactly
+					//cout << "Looping Np=" << Np << endl;
+					for (int lp = 0; lp <= p34-2*np-2*Np; lp++)
 					{
-					    //cout << "Looping L=" << L << endl;
-					    if (p12 != 2*n+2*N+l+L or Lambda < abs(l-L) or Lambda > (l+L)) continue; // Cons of Energy
-					    for (int np = npMin; np <= p34/2; np++)
-					    {
-						//cout << "Looping np=" << np << endl;
-						for (int Np = 0; Np <= p34/2-np; Np++)
-						{
-						    //cout << "Looping Np=" << Np << endl;
-						    for (int lp = 0; lp <= p34-2*np-2*Np; lp++)
-						    {
-							//cout << "Looping lp=" << lp << endl;
-							for (int Lp = p34-2*np-2*Np-lp; Lp <= p34-2*np-2*Np-lp; Lp++)
-							{
-							    if (p34 != 2*np+2*Np+lp+Lp or Lambdap < abs(lp-Lp) or Lambdap > (lp+Lp)) continue;
-							    if (L != Lp or N != Np) continue;
+					    //cout << "Looping lp=" << lp << endl;
+					    int Lp = p34-2*np-2*Np-lp;
+					    if (p34 != 2*np+2*Np+lp+Lp or Lambdap < abs(lp-Lp) or Lambdap > (lp+Lp)) continue;
+					    if (L != Lp or N != Np) continue;
 
-							    //cout << "About to make some integrals!" << endl;
-							    //cout << "n1=" << n1 << endl;
-							    //cout << "n2=" << n2 << endl;
-							    //cout << "n3=" << n3 << endl;
-							    //cout << "n4=" << n4 << endl;
-							    //cout << "l1=" << l1 << endl;
-							    //cout << "l2=" << l2 << endl;
-							    //cout << "l3=" << l3 << endl;
-							    //cout << "l4=" << l4 << endl;
-							    //cout << "n=" << n << endl;
-							    //cout << "np=" << np << endl;
-							    //cout << "N=" << N << endl;
-							    //cout << "Np=" << Np << endl;
-							    //cout << "l=" << l << endl;
-							    //cout << "lp=" << lp << endl;
-							    //cout << "L=" << L << endl;
-							    //cout << "Lp=" << Lp << endl;
-
-							    // Factor of 2 comes from r=(r1-r2)/sqrt(2), R=(r1+r2)/sqrt(2)
-							    m +=1/sqrt(2) * modelspace.GetMoshinsky(n1,l1,n2,l2, n, l, N, L, Lambda)
- 								  * modelspace.GetMoshinsky(np,lp,Np,Lp, n3,l3,n4,l4,Lambdap)
-								  //* RadialIntegral(N, L, Np, Lp, 0)
-								  * RadialIntegral(n, l, np, lp, -1);
-							    //cout << "Calculated m=" << m << endl;
-							} // Lp
-						    } // lp
-						} // Np
-					    } // np
-					} // L
-				    } // l
-				} // N
-			    } // n
-			T += temp*m;
-			//cout << "Calculated T=" << T << endl;
-			} // J34
-		    } // J12
+					    // Factor of sqrt(2) comes from r=(r1-r2)/sqrt(2), R=(r1+r2)/sqrt(2)
+					    //double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
+					    m +=1/sqrt(2) * modelspace.GetMoshinsky(n1,l1,n2,l2, n, l, N, L, Lambda)
+ 						//  * modelspace.GetMoshinsky(np,lp,Np,Lp, n3,l3,n4,l4,Lambdap)
+					    //m +=1/sqrt(2) * modelspace.GetMoshinsky(n,l,N,L, n1, l1, n2, l2, Lambda)
+ 						* modelspace.GetMoshinsky(n3,l3,n4,l4, np,lp,Np,Lp,Lambdap)
+						//* RadialIntegral(N, L, Np, Lp, 0)
+						* RadialIntegral(n, l, np, lp, -1);
+						//cout << "Calculated m=" << m << endl;
+					} // lp
+				    } // Np
+				} // np
+			    } // l
+			} // N
+		    } // n
+		T += temp*m;
+		//cout << "Calculated T=" << T << endl;
 		} // Sp
 	    } // Lambdap
 	} // S
     } // Lambda
-    //cout << "Leaving Electron Two Body." << endl;
+    //cout << "Leaving CMInvR" << endl;
     return T * HBARC / (137.) / (BOHR_RADIUS);
 }
 

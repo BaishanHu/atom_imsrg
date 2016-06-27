@@ -57,9 +57,9 @@ namespace imsrg_util
  Operator LdotS_Op(ModelSpace& modelspace);
  Operator ElectronTwoBody(ModelSpace& modelspace);
  double CalculateCMInvR( double n1, double l1, double s1, double j1,
-			double n2, double l2, double s2, double j2,
-			double n3, double l3, double s3, double j3,
-			double n4, double l4, double s4, double j4, ModelSpace& modelspace);
+			 double n2, double l2, double s2, double j2,
+			 double n3, double l3, double s3, double j3,
+			 double n4, double l4, double s4, double j4, ModelSpace& modelspace, double J);
 
  Operator Single_Ref_1B_Density_Matrix(ModelSpace& modelspace); // This doesn't work
  double Get_Charge_Density(Operator& DM, double r);  // This doesn't work

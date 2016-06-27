@@ -477,7 +477,8 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    norbits = (Emax+1)*(Emax+2); // Need to take into account effect of Lmax
    Orbits.resize(norbits);
    int real_norbits = 0;
-   for (int N=0; N<=Emax; ++N)
+   int offset = 0;
+   for (int N=0; N<=Emax+offset; ++N)
    {
      //min(N,Lmax)
      //cout << "Lmax=" << Lmax << " N=" << N << endl;
@@ -499,11 +500,18 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
             if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
             if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
 	    cout << "Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
-	    if (SystemType == "atomic" and tz < 0){ // Only allow isospin -1/2.  this simulates only protons being added
+	    if (SystemType == "atomic" and tz < 0) { // Only allow isospin -1/2.  this simulates only protons being added
 		AddOrbit(n,l,j2,tz,occ,cvq);
 		cout << "Added orbit." << endl;
 		real_norbits++;
+	    } else if (SystemType == "nuclear" ) {
+		AddOrbit(n,l,j2,tz,occ,cvq);
+		real_norbits++;
+	    } else {
+		//offset++; // In case we don't add an orbit, iterate a bit further to try to get all the orbits in.
 	    }
+	    cout << "Next iteration of the loop; indexMap=" << endl;
+            for (int i=0; i<indx; i++) cout << " " << indexMap[i];
          }
        }
      }
@@ -851,9 +859,9 @@ void ModelSpace::SetupKets()
      {
         index = Index2(p,q);
         //cout << "index=" << index << " p=" << p << " q=" << q << endl;
-        Orbit& orbp = GetOrbit(p);
+        //Orbit& orbp = GetOrbit(p);
 	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
-	Orbit& orbq = GetOrbit(q);
+	//Orbit& orbq = GetOrbit(q);
 	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
      }
