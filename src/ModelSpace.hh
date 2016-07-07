@@ -186,6 +186,7 @@ class ModelSpace
 
 //   vector<index_t> GetOrbitsAZ(int A, int Z);
    map<index_t,double> GetOrbitsAZ(int A, int Z);
+   map<index_t,double> GetOrbitsE(int Z);
    void GetAZfromString(string str, int& A, int& Z);
    vector<index_t> String2Index( vector<string> vs );
    string Index2String(index_t ind);
@@ -240,6 +241,7 @@ class ModelSpace
    double GetNineJ(double j1, double j2, double j3, double j4, double j5, double j6, double j7, double j8, double j9);
    double GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l2, int L); // Inconsistent notation. Not ideal.
    bool SixJ_is_empty(){ return SixJList.empty(); };
+   double GetFactorial(double m);
 
    int GetOrbitIndex(string);
    int GetTwoBodyChannelIndex(int j, int p, int t);
@@ -251,6 +253,7 @@ class ModelSpace
 
    void PreCalculateMoshinsky();
    void ClearVectors();
+   void GenerateFactorialList(double m);
 
 
    // Data members
@@ -312,6 +315,7 @@ class ModelSpace
    vector<Ket> Kets;
    vector<TwoBodyChannel> TwoBodyChannels;
    vector<TwoBodyChannel_CC> TwoBodyChannels_CC;
+   vector<double> factorialList;
 //   map<long int,double> SixJList;
 
    static unordered_map<unsigned long int,double> SixJList;

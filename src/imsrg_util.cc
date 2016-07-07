@@ -245,12 +245,14 @@ double HO_Radial_psi(int n, int l, double hw, double r)
  }
 
 // Creates an operator that performs <k/r>
-// In oscillator basis: RadialIntegral() with L=-1; not currently implemented correctly
+// In oscillator basis: RadialIntegral() with L=-1; currently implemented correctly
 // In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
 Operator InverseR_Op(ModelSpace& modelspace)
 {
    Operator InvR(modelspace);
+   double t_start = omp_get_wtime();
    int norbits = modelspace.GetNumberOrbits();
+   #pragma omp parallel for
    for (int i=0; i<norbits; i++)
    {
      Orbit& oi = modelspace.GetOrbit(i);
@@ -258,58 +260,83 @@ Operator InverseR_Op(ModelSpace& modelspace)
      {
 	Orbit& oj = modelspace.GetOrbit(j);
 	if ( oi.l != oj.l ) continue; 
-	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1); // consider n +/- 1; selection rules
+	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1, modelspace); // consider n +/- 1; selection rules
 	InvR.OneBody(i,j) = temp;
 	InvR.OneBody(j,i) = temp;
      }
    }
    // 1/137 comes from fine struct const {alpha} = e^2/(4pi{epsilon}{hbar}c) ~= 1/137 
    // Therefore e^2/(4pi{epsilon}) = {hbar}{c}{alpha}; Bohr Rad from R^L_ab = b^L * ~R^L_ab; b = BohrRad
+   InvR.profiler.timer["InverseR_Op"] += omp_get_wtime() - t_start;
    return InvR  * HBARC / (137.) / BOHR_RADIUS;
 }
 
 Operator ElectronTwoBody(ModelSpace& modelspace)
 {
+   double t_start = omp_get_wtime();
+   cout << "Entering ElectronTwoBody." << endl;
    int nchan = modelspace.GetNumberTwoBodyChannels();
-   //#pragma omp parallel for schedule(dynamic,1)  // Will make parallel later, and/or make CalculateCMInvR Parallel.
    Operator V12(modelspace);
+   V12.SetHermitian();
+   //cout << "nchan is " << nchan << endl;
+   //modelspace.PreCalculateMoshinsky(); // Precalculate to speed parallization; already done in Atomic.cc
+   //#pragma omp parallel for // Doesn't seem to be thread-safe
    for (int ch = 0; ch < nchan; ++ch)
    {
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+      //cout << "+++++ Channel is " << ch << " +++++" << endl;
       int nkets = tbc.GetNumberKets();
+      //cout << "nkets is " << nkets << endl;
+      if (nkets == 0) continue;
+      bool trunc[nkets][nkets] = { {false} };
+      //cout << "created trunc, moving into ibra loop." << endl;
       for (int ibra = 0; ibra < nkets; ++ibra)
       {
+	 //cout << "----- ibra is " << ibra << " -----" << endl;
          Ket & bra = tbc.GetKet(ibra);
+	 //cout << "Got bra, getting orbits." << endl;
          Orbit & o1 = modelspace.GetOrbit(bra.p);
+	 //cout << "Got o1, getting o2." << endl;
          Orbit & o2 = modelspace.GetOrbit(bra.q);
-	 for (int jket = 0; jket <= ibra; jket++)
+	 //#pragma omp parallel for
+	 
+	 for (int jket = ibra; jket < nkets; jket++)
 	 {
+	    //cout << "----- jket is " << jket << " -----" << endl;
+	    if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
+	    //cout << "Got past if(trunc[ch][ibra][jket]..." << endl;
+	    //cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
 	    Ket & ket = tbc.GetKet(jket);
+	    //cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
 	    Orbit & o3 = modelspace.GetOrbit(ket.p);
+	    //cout << "Got Past Orbit & o3..." << endl;
 	    Orbit & o4 = modelspace.GetOrbit(ket.q);
-	    double s1 = 1./2;
-	    double s2 = 1./2;
-	    double s3 = 1./2;
-	    double s4 = 1./2;
+	    //cout << "Got Past Orbit & o4..." << endl;
+	    
+	    if ( o1.index > o2.index or o3.index > o4.index ) continue;
 	    //cout << "o1.index=" << o1.index << endl;
 	    //cout << "o2.index=" << o2.index << endl;
 	    //cout << "o3.index=" << o3.index << endl;
 	    //cout << "o4.index=" << o4.index << endl;
-	    //if (o1.index%2!=0) s1=-1./2;
-	    //if (o2.index%2!=0) s2=-1./2;
-	    //if (o3.index%2!=0) s3=-1./2;
-	    //if (o4.index%2!=0) s4=-1./2;
-	    //cout << "Reassigned spins" << endl;
-            double cmInvR = CalculateCMInvR(o1.n, o1.l, s1, o1.j2/2.0,
-					    o2.n, o2.l, s2, o2.j2/2.0,
-					    o3.n, o3.l, s3, o3.j2/2.0,
-					    o4.n, o4.l, s4, o4.j2/2.0, modelspace, tbc.J);
+	    double t2_start = omp_get_wtime();
+            double cmInvR = CalculateCMInvR(o1.n, o1.l, 1./2, o1.j2/2.0,
+					    o2.n, o2.l, 1./2, o2.j2/2.0,
+					    o3.n, o3.l, 1./2, o3.j2/2.0,
+					    o4.n, o4.l, 1./2, o4.j2/2.0, modelspace, tbc.J);
+	    V12.profiler.timer["CalculateCMInvR"] += (omp_get_wtime() - t2_start);//12;
+	    //cout << "Got past CalcCMInvR." << endl;
 	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
 	    V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
+	    trunc[ibra][jket] = true;
+	    //cout << "Set ibra,jket, setting jket,ibra." << endl; // TwoBodyKE only sets ibra,jket, should mimick this?
+	    V12.TwoBody.SetTBME(ch,jket,ibra,cmInvR);
+	    trunc[jket][ibra] = true;
+	    //cout << "Got past setting TBME." << endl;
 	 } // jket
       } // ibra
    } // ch
-
+   V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
+   cout << "Leaving ElectronTwoBody." << endl;
    return V12;
 }
 
@@ -320,7 +347,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 			double n3, double l3, double s3, double j3,
 			double n4, double l4, double s4, double j4, ModelSpace& modelspace, double J)
 {
-    //cout << "Entering CalculateCMInvR; J=" << J << endl;
+    cout << "Entering CalculateCMInvR" << endl;
     // Declare limits here, easier to read/modify
     int Lambda_lower = abs(l1 - l2); 
     int Lambdap_lower = abs(l3 - l4);
@@ -337,13 +364,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
     int p34 = 2*n3 + 2*n4 + l3 + l4;
 
     int nMin = 0;
-    int nMax = 0.5 * (2*n1 + 2*n2 + l1 + l2);
     int NMin = 0;
-    int NMax = nMax;
-    int lMin = 0;
-    int lMax = 2*n1 + 2*n2 + l1 + l2;
-    int LMin = 0;
-    int LMax = lMax;
 
     //cout << "nMin=" << nMin << endl;
     //cout << "nMax=" << nMax << endl;
@@ -355,13 +376,6 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
     //cout << "LMax=" << LMax << endl;
 
     int npMin = 0;
-    int npMax = 0.5 * (2*n3 + 2*n4 + l3 + l4);
-    int NpMin = 0;
-    int NpMax = npMax;
-    int lpMin = 0;
-    int lpMax = 2*n3 + 2*n4 + l3 + l4;
-    int LpMin = 0;
-    int LpMax = lpMax;
 
     //cout << "npMin=" << npMin << endl;
     //cout << "npMax=" << npMax << endl;
@@ -377,6 +391,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
     double m = 0;
 
     // There has got to be a better way...
+    #pragma omp parallel for // Almost certainly thread safe, I think
     for (int Lambda = Lambda_lower; Lambda <= Lambda_upper; Lambda++)
     {
 	//cout << "Looping Lambda=" << Lambda << endl;
@@ -398,6 +413,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 		    //cout << "i=" << i << endl;
 		    //cout << "j=" << j << endl;
 		    if (abs(temp) <= 1e-8) continue;
+		    
 		    //cout << "temp = " << temp << endl;
 		    m = 0;
 		    for (int n = nMin; n <= p12/2; n++)
@@ -433,7 +449,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 					    //m +=1/sqrt(2) * modelspace.GetMoshinsky(n,l,N,L, n1, l1, n2, l2, Lambda)
  						* modelspace.GetMoshinsky(n3,l3,n4,l4, np,lp,Np,Lp,Lambdap)
 						//* RadialIntegral(N, L, Np, Lp, 0)
-						* RadialIntegral(n, l, np, lp, -1);
+						* RadialIntegral(n, l, np, lp, -1, modelspace);
 						//cout << "Calculated m=" << m << endl;
 					} // lp
 				    } // Np
@@ -447,7 +463,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 	    } // Lambdap
 	} // S
     } // Lambda
-    //cout << "Leaving CMInvR" << endl;
+    cout << "Leaving CMInvR" << endl;
     return T * HBARC / (137.) / (BOHR_RADIUS);
 }
 
@@ -457,6 +473,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    Operator T(modelspace);
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
+   double t_start = omp_get_wtime();
    
    for (int a=0;a<norbits;++a)
    {
@@ -473,6 +490,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
+   T.profiler.timer["KineticEnergy_Op"] += omp_get_wtime() - t_start;
    return T;
 }
 
@@ -1378,7 +1396,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
         if (j<i) continue;
         Orbit& oj = modelspace.GetOrbit(j);
         double jj = 0.5*oj.j2;
-        double r2int = RadialIntegral(oi.n,oi.l,oj.n,oj.l,L) * bL ;
+        double r2int = RadialIntegral(oi.n,oi.l,oj.n,oj.l,L,modelspace) * bL ;
         EL.OneBody(i,j) = modelspace.phase(jj+L-0.5) * sqrt( (2*ji+1)*(2*jj+1)*(2*L+1)/4./3.1415926) * AngMom::ThreeJ(ji,jj, L, 0.5, -0.5,0) * r2int;
         EL.OneBody(j,i) = modelspace.phase((oi.j2-oj.j2)/2) * EL.OneBody(i,j);
       }
@@ -1419,7 +1437,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
         Orbit& oj = modelspace.GetOrbit(j);
         double jj = 0.5*oj.j2;
         // multiply radial integral by b^L-1 = (hbar/mw)^L-1/2
-        double r2int = RadialIntegral(oi.n,oi.l,oj.n,oj.l,L-1) * bL;
+        double r2int = RadialIntegral(oi.n,oi.l,oj.n,oj.l,L-1,modelspace) * bL;
         double kappa =  modelspace.phase(oi.l+ji+0.5) * (ji+0.5)  +  modelspace.phase(oj.l+jj+0.5) * (jj+0.5);
         ML.OneBody(i,j) = modelspace.phase(jj+L-0.5) * sqrt( (2*ji+1)*(2*jj+1)*(2*L+1)/4./3.1415926) * AngMom::ThreeJ(ji, jj,L, 0.5,-0.5,0)
                         * (L - kappa) *(gl*(1+kappa/(L+1.))-0.5*gs )  * r2int ;
@@ -1438,9 +1456,9 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 /// This implementation uses eq (6.41) from Suhonen.
 /// Note this is only valid for \f$ \ell_a+\ell_b+\lambda\f$ = even.
 /// If \f$ \ell_a+\ell_b+\lambda\f$ is odd, RadialIntegral_RpowK() is called.
-  double RadialIntegral(int na, int la, int nb, int lb, int L)
+  double RadialIntegral(int na, int la, int nb, int lb, int L, ModelSpace& ms)
   {
-    if ((la+lb+L)%2!=0) return RadialIntegral_RpowK(na,la,nb,lb,L);
+    if ((la+lb+L)%2!=0) return RadialIntegral_RpowK(na,la,nb,lb,L,ms);
     int tau_a = max((lb-la+L)/2,0);
     int tau_b = max((la-lb+L)/2,0);
     int sigma_min = max(max(na-tau_a,nb-tau_b),0);
@@ -1458,18 +1476,17 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
   }
 
 
-
- double RadialIntegral_RpowK(int na, int la, int nb, int lb, int k)
+ double RadialIntegral_RpowK(int na, int la, int nb, int lb, int k, ModelSpace& ms)
  {
    double I = 0;
    int pmin = (la+lb)/2;
    int pmax = pmin + na + nb;
    for (int p=pmin;p<=pmax;++p)
    {
-      I += TalmiB(na,la,nb,lb,p) * TalmiI(p,k);
+      I += TalmiB(na,la,nb,lb,p,ms) * TalmiI(p,k);
    }
    return I;
- }
+ } 
 
 /// General Talmi integral for a potential r**k
 /// 1/gamma(p+3/2) * 2*INT dr r**2 r**2p r**k exp(-r**2/b**2)
@@ -1540,6 +1557,8 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 
     double t1 = 1;
     double t2 = 1;
+    #pragma omp parallel
+    {
     for (double i : a)
     {
 	if(isSquare){
@@ -1556,12 +1575,13 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 	    t2 *= j;
     	}
     }
+    }
     return double (t1 / t2);
  }
 
 /// Calculate B coefficient for Talmi integral. Formula given in Brody and Moshinsky
 /// "Tables of Transformation Brackets for Nuclear Shell-Model Calculations"
- double TalmiB(int na, int la, int nb, int lb, int p)
+ double TalmiB(int na, int la, int nb, int lb, int p, ModelSpace& ms)
  {
    if ( (la+lb)%2>0 ) return 0;
    
@@ -1575,41 +1595,67 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    double lnf = (2*nb+2*lb+1);
    double lng = (na+la);
    double lnh = (nb+lb);
+   double lMax = max(lna, max(lnb, max(lnc, max(lnd, max(lne, max(lnf, max(lng, lnh)))))));
 
-   vector<double> al = ser(lna);
-   vector<double> bl = ser(lnb);
-   vector<double> cl = ser(lnc);
-   vector<double> dl = ser(lnd);
-   vector<double> el = ser(lne);
-   vector<double> fl = ser(lnf);
-   vector<double> gl = ser(lng);
-   vector<double> hl = ser(lnh);
-   
-   vector<double> N;
-   N.insert(N.end(), cl.begin(), cl.end());
-   N.insert(N.end(), dl.begin(), dl.end());
-   N.insert(N.end(), el.begin(), el.end());
-   N.insert(N.end(), fl.begin(), fl.end());
-
-   vector<double> D;
-   D.insert(D.end(), gl.begin(), gl.end());
-   D.insert(D.end(), hl.begin(), hl.end());
-   //cout << "About to calc B1" << endl;
-   //boost::multiprecision::cpp_bin_float_100 B1 = AngMom::phase(p-q);
    double B1 = AngMom::phase(p-q);
-   //cout << "B1 = " << B1 << endl;
    B1 /= pow(2,(na+nb));
-   //cout << "B1 = " << B1 << endl;
-   B1 *= simplefact(al,bl,false);
-   //cout << "B1 = " << B1 << endl;
-   B1 *= sqrt(simplefact(N,D));//true); 
+/*
+   if (lMax > 10){
+
+   	vector<double> al = ser(lna);
+   	vector<double> bl = ser(lnb);
+   	vector<double> cl = ser(lnc);
+   	vector<double> dl = ser(lnd);
+   	vector<double> el = ser(lne);
+   	vector<double> fl = ser(lnf);
+   	vector<double> gl = ser(lng);
+   	vector<double> hl = ser(lnh);
+   
+   	vector<double> N;
+   	N.insert(N.end(), cl.begin(), cl.end());
+   	N.insert(N.end(), dl.begin(), dl.end());
+   	N.insert(N.end(), el.begin(), el.end());
+   	N.insert(N.end(), fl.begin(), fl.end());
+
+   	vector<double> D;
+   	D.insert(D.end(), gl.begin(), gl.end());
+   	D.insert(D.end(), hl.begin(), hl.end());
+   	//cout << "About to calc B1" << endl;
+   	//boost::multiprecision::cpp_bin_float_100 B1 = AngMom::phase(p-q);
+   
+   	//cout << "B1 = " << B1 << endl;
+   	
+   	//cout << "B1 = " << B1 << endl;
+   	B1 *= simplefact(al,bl,false);
+   	//cout << "B1 = " << B1 << endl;
+   	B1 *= sqrt(simplefact(N,D));//true); 
+   } else {
+	B1 *= gsl_sf_fact(lna);
+	B1 /= gsl_sf_fact(lnb);
+	B1 *= sqrt(gsl_sf_fact(lnc));
+	B1 *= sqrt(gsl_sf_fact(lnd));
+	B1 *= sqrt(gsl_sf_fact(lne));
+	B1 *= sqrt(gsl_sf_fact(lnf));
+	B1 /= sqrt(gsl_sf_fact(lng));
+	B1 /= sqrt(gsl_sf_fact(lnh));
+   }
+*/
+
+   B1 *= ms.GetFactorial(lna);
+   B1 /= ms.GetFactorial(lnb);
+   B1 *= sqrt(ms.GetFactorial(lnc));
+   B1 *= sqrt(ms.GetFactorial(lnd));
+   B1 *= sqrt(ms.GetFactorial(lne));
+   B1 *= sqrt(ms.GetFactorial(lnf));
+   B1 /= sqrt(ms.GetFactorial(lng));
+   B1 /= sqrt(ms.GetFactorial(lnh));
 
    //boost::multiprecision::cpp_bin_float_100 B2 = 0;
    double B2 = 0;
    int kmin = max(0, p-q-nb);
    int kmax = min(na, p-q);
    for (int k=kmin;k<=kmax;++k)
-   {
+   {/*
       long double temp = gsl_sf_fact(la+k);
       temp *= gsl_sf_fact(p-int((la-lb)/2)-k);
       temp /= gsl_sf_fact(k);
@@ -1618,7 +1664,15 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
       temp /= gsl_sf_fact(2*p-la+lb-2*k+1);
       temp /= gsl_sf_fact(nb - p + q + k);
       temp /= gsl_sf_fact(p-q-k);
-
+    */
+      long double temp = gsl_sf_fact(la+k);
+      temp *= ms.GetFactorial(p-int((la-lb)/2)-k);
+      temp /= ms.GetFactorial(k);
+      temp /= ms.GetFactorial(2*la+2*k+1);
+      temp /= ms.GetFactorial(na-k);
+      temp /= ms.GetFactorial(2*p-la+lb-2*k+1);
+      temp /= ms.GetFactorial(nb - p + q + k);
+      temp /= ms.GetFactorial(p-q-k);
       B2 += temp;
    }
     return double (B1 * B2);
@@ -1753,7 +1807,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
        for (index_t j=0; j<norb; ++j)
        {
          Orbit& oj = modelspace.GetOrbit(j);
-         OVL.OneBody(i,j) = RadialIntegral(oi.n, oi.l, oj.n, oj.l, 0 ); // This is not quite right. Only works for li+lj=even.
+         OVL.OneBody(i,j) = RadialIntegral(oi.n, oi.l, oj.n, oj.l, 0, modelspace); // This is not quite right. Only works for li+lj=even.
        } 
      }
      return OVL;

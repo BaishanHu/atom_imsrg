@@ -69,10 +69,10 @@ namespace imsrg_util
  double Calculate_r1r2(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
  double HO_density(int n, int l, double hw, double r);
  double HO_Radial_psi(int n, int l, double hw, double r);
- double RadialIntegral(int na, int la, int nb, int lb, int L);
- double RadialIntegral_RpowK(int na, int la, int nb, int lb, int k);
+ double RadialIntegral(int na, int la, int nb, int lb, int L, ModelSpace& ms);
+ double RadialIntegral_RpowK(int na, int la, int nb, int lb, int k, ModelSpace& ms);
  double TalmiI(int p, double k);
- double TalmiB(int na, int la, int nb, int lb, int p);
+ double TalmiB(int na, int la, int nb, int lb, int p, ModelSpace& ms);
  vector<double> GetOccupationsHF(HartreeFock& hf);
  vector<double> GetOccupations(HartreeFock& hf, IMSRGSolver& imsrgsolver);
  vector<double> GetDensity(vector<double>& occ, vector<double>& R, vector<int>& orbits, ModelSpace& modelspace);

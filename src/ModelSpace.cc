@@ -4,7 +4,23 @@
 #include <vector>
 #include <cmath>
 #include <sstream>
+#include <gsl/gsl_math.h>
 
+#include "imsrg_util.hh"
+#include "AngMom.hh"
+#include <boost/multiprecision/cpp_bin_float.hpp>
+#include <boost/implicit_cast.hpp>
+#include <gsl/gsl_integration.h>
+#include <list>
+
+#include "ModelSpace.hh"
+#include "Operator.hh"
+#include "HartreeFock.hh"
+#include "IMSRGSolver.hh"
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_sf_laguerre.h>
+#include <gsl/gsl_sf_gamma.h>
+#include <vector>
 
 using namespace std;
 
@@ -65,7 +81,7 @@ TwoBodyChannel::TwoBodyChannel()
 
 TwoBodyChannel::TwoBodyChannel(int j, int p, int t, ModelSpace *ms)
 {
-  Initialize(ms->GetTwoBodyChannelIndex(j,p,t), ms);
+   Initialize(ms->GetTwoBodyChannelIndex(j,p,t), ms);
 }
 
 TwoBodyChannel::TwoBodyChannel(int N, ModelSpace *ms)
@@ -363,8 +379,13 @@ void ModelSpace::Init(int emax, string reference, string valence, int Lmax, stri
 {
 //  int Aref,Zref;
   GetAZfromString(reference,Aref,Zref);
-  map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
-  Init(emax,hole_list,valence,Lmax, SystemType);
+  if (SystemType == "nuclear"){
+	map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
+	Init(emax,hole_list,valence,Lmax, SystemType);}
+  else if (SystemType == "atomic"){
+	map<index_t,double> hole_list = GetOrbitsE(Zref); // This was an attempt to redo the way modelspaces are built
+	//map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
+	Init(emax,hole_list,valence,Lmax, SystemType);}
 }
 
 void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, int Lmax, string SystemType)
@@ -394,7 +415,8 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, i
   
     //core_map = GetOrbitsAZ(Ac,Zc);
     //for (auto& it_core : core_map) core_list.push_back(it_core.first);
-    for (auto& it_core : GetOrbitsAZ(Ac,Zc) ) core_list.push_back(it_core.first);
+    if (SystemType == "atomic") for (auto& it_core : GetOrbitsE(Zc) ) core_list.push_back(it_core.first);
+    if (SystemType == "nuclear") for (auto& it_core : GetOrbitsAZ(Ac,Zc) ) core_list.push_back(it_core.first);
   }
 
   target_mass = Aref;
@@ -477,8 +499,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    norbits = (Emax+1)*(Emax+2); // Need to take into account effect of Lmax
    Orbits.resize(norbits);
    int real_norbits = 0;
-   int offset = 0;
-   for (int N=0; N<=Emax+offset; ++N)
+   for (int N=0; N<=Emax; ++N)
    {
      //min(N,Lmax)
      //cout << "Lmax=" << Lmax << " N=" << N << endl;
@@ -510,8 +531,6 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
 	    } else {
 		//offset++; // In case we don't add an orbit, iterate a bit further to try to get all the orbits in.
 	    }
-	    cout << "Next iteration of the loop; indexMap=" << endl;
-            for (int i=0; i<indx; i++) cout << " " << indexMap[i];
          }
        }
      }
@@ -609,7 +628,10 @@ map<index_t,double> ModelSpace::GetOrbitsAZ(int A, int Z)
       if (zz < Z)
       {
         int dz = min(Z-zz,j2+1);
-        holesAZ[Index1(n,l,j2,-1)] = dz/(j2+1.0);
+	int indx = Index1(n,l,j2,-1);
+	//if (SystemType == "atomic"){ 
+	//  indx = indexMap[indx];}
+        holesAZ[indx] = dz/(j2+1.0);
         zz += dz;
       }
       if (nn < A-Z)
@@ -627,6 +649,36 @@ map<index_t,double> ModelSpace::GetOrbitsAZ(int A, int Z)
   cout << "Trouble! Model space not big enough to fill A=" << A << " Z="<< Z << "  emax = " << Emax << endl;
   return holesAZ;
 
+}
+
+map<index_t,double> ModelSpace::GetOrbitsE(int Z)
+{
+    int z=0;
+    map<index_t,double> holesE;
+   for (int N=0; N<=Emax; ++N)
+   {
+	//cout << "Gettin' ready!" << endl;
+	for (int l=0; l <= N and l <= Lmax; l++)
+	{
+	    for (int j2=abs(2*l-1); j2 <= 2*l +1; j2+=2)
+	    {
+		int n = (N-l)/2;
+		//cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index1=" << Index1(n,l,j2,-1) << endl;
+		if (z < Z)
+		{
+		    int dz = min(Z-z, j2+1);
+		    //cout << "dz=" << dz << " z=" << z << endl;
+		    //indexMap[Index1(n,l,j2,-1)] = indexMap.size()-1;
+		    //holesE[indexMap[Index1(n,l,j2,-1)]] = dz/(j2+1.0);
+		    holesE[Index1(n,l,j2,-1)/2] = dz/(j2+1.0);
+		    z += dz;
+		}
+	    }
+	}
+	if (z == Z) return holesE; // We're all done here.
+    }
+    cout << "Didn't set ModelSpace big enough to fill Z=" << Z << " with emax = " << Emax << endl;
+    return holesE;
 }
 
 
@@ -850,20 +902,42 @@ int ModelSpace::GetTwoBodyChannelIndex(int j, int p, int t)
 
 void ModelSpace::SetupKets()
 {
+   cout << "Entering SetupKets()" << endl;
    int index = 0;
-
-   Kets.resize(Index2(norbits-1,norbits-1)+1);
+   //if (SystemType == "nuclear")
+   //{
+      Kets.resize(Index2(norbits-1,norbits-1)+1);
+   //} else {
+   //   Kets.resize(0);
+   //}
+   //Kets.resize(0.5*norbits*norbits + 0.5*norbits);
+   //int count = 0;
    for (int p=0;p<norbits;p++)
    {
      for (int q=p;q<norbits;q++)
      {
-        index = Index2(p,q);
+	if (SystemType == "atomic")
+	{
+	   //index = Kets.size();
+	   //Kets.emplace_back(Ket(GetOrbit(p),GetOrbit(q)));
+	   Orbit& o1 = GetOrbit(p);
+	   Orbit& o2 = GetOrbit(q);
+	   //index = Index2(o1.index,o2.index);
+	   index = Index2(p,q);
+	   Kets[index] = Ket(o1,o2);
+	   //Kets[count] = Ket(GetOrbit(p),GetOrbit(q));
+	   //count++;
+	} else
+	{
+	   index = Index2(p,q);
+	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
+	}
         //cout << "index=" << index << " p=" << p << " q=" << q << endl;
         //Orbit& orbp = GetOrbit(p);
 	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
 	//Orbit& orbq = GetOrbit(q);
 	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
-        Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
+        
      }
    }
   
@@ -1103,7 +1177,7 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
 //                                +                 L;
    auto it = MoshList.find(key);
    if ( it != MoshList.end() )  return it->second * phase_mosh;
-
+   cout << "Didn't find Moshinsky key, making a new one" << endl;
    // if we didn't find it, we need to calculate it.
    double mosh = AngMom::Moshinsky(N,Lam,n,lam,n1,l1,n2,l2,L);
 //   cout << "Shouldn't be here..." << N << " " << Lam << " " <<  n << " " << lam << " " << n1 << " " << l1 << " " << n2 << " " << l2 << " " << L << endl;
@@ -1112,6 +1186,33 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
    return mosh * phase_mosh;
 
 }
+
+void ModelSpace::GenerateFactorialList(double m){
+  //vector<double>f(m+1);
+  //cout << "Entering GenerateFactorialList." << endl;
+  int t = 1;
+  factorialList.emplace_back(t);
+  for (int i=1; i <= m; i++)
+  {
+     //cout << "Generating factorial for i=" << i << endl;
+     t *= i;
+     factorialList.emplace_back(t);
+     //vector[i] = t;
+     
+  }
+  //factorialList = f;
+}
+
+double ModelSpace::GetFactorial(double m){
+   if(std::find(factorialList.begin(), factorialList.end(), m) == factorialList.end())
+   {
+      factorialList[m] = gsl_sf_fact(m); 
+   }
+   //cout  << "Returning factorialList[" << m << "]=" << factorialList[m] << endl;
+   return factorialList[m];
+}
+
+
 
 
 

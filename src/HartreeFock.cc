@@ -21,32 +21,46 @@ HartreeFock::HartreeFock(Operator& hbare)
     KE(Hbare.OneBody), energies(Hbare.OneBody.diag()),
     tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0)
 {
+   cout << "Entering HartreeFock." << endl;
    int norbits = modelspace->GetNumberOrbits();
 
    C             = arma::mat(norbits,norbits,arma::fill::eye);
    Vij           = arma::mat(norbits,norbits,arma::fill::zeros);
    V3ij          = arma::mat(norbits,norbits,arma::fill::zeros);
    F             = arma::mat(norbits,norbits);
+   cout << "Assigned matrices." << endl;
    for (int Tz=-1;Tz<=1;++Tz)
    {
+     cout << "Iterating over Tz; Tz=" << Tz << endl;
      for (int parity=0; parity<=1; ++parity)
      {
+       cout << "Iterating over parity, parity=" << parity << endl;
        int nKetsMon = modelspace->MonopoleKets[Tz+1][parity].size();
+       cout << "retrieved nKetsMon" << endl;
        Vmon[Tz+1][parity] = arma::mat(nKetsMon,nKetsMon);
+       cout << "Assigned Vmon[Tz+1][parity]." << endl;
        Vmon_exch[Tz+1][parity] = arma::mat(nKetsMon,nKetsMon);
+       cout << "Assigned Vmon_exch[Tz+1][parity]." << endl;
      }
    }
    prev_energies = arma::vec(norbits,arma::fill::zeros);
    vector<double> occvec;
+   cout << "Pushing back occvec." << endl;
    for (auto& h : modelspace->holes) occvec.push_back(modelspace->GetOrbit(h).occ);
+   cout << "making hole_orbs" << endl;
    holeorbs = arma::uvec(modelspace->holes);
+   cout << "making hole_occ" << endl;
    hole_occ = arma::rowvec(occvec);
+   cout << "calling BuildMonopoleV()" << endl;
    BuildMonopoleV();
+   cout << "Checking particle rank, should be ignored in atomic systems." << endl;
    if (hbare.GetParticleRank()>2)
    {
       BuildMonopoleV3();
    }
+   cout << "Updating Density Matrix." << endl;
    UpdateDensityMatrix();
+   cout << "Updating F()" << endl;
    UpdateF();
 
 }
@@ -215,31 +229,45 @@ void HartreeFock::Diagonalize()
 //*********************************************************************
 void HartreeFock::BuildMonopoleV()
 {
+   cout << "Entering BuildMonopoleV()." << endl;
    for (int Tz=-1; Tz<=1; ++Tz)
    {
+     cout << "Iterating over Tz=" << Tz << endl;
      for (int parity=0; parity<=1; ++parity)
      {
+	cout << "Iterating over parity=" << parity << endl;
         Vmon[Tz+1][parity].zeros();
         Vmon_exch[Tz+1][parity].zeros();
         for ( auto& itbra : modelspace->MonopoleKets[Tz+1][parity] )
         {
+	   cout << "Iterating over modelspace->MonopoleKets" << endl;
            Ket & bra = modelspace->GetKet(itbra.first);
+	   cout << "Retrieved first bra." << endl;
            int a = bra.p;
            int b = bra.q;
            Orbit & oa = modelspace->GetOrbit(a);
+	   cout << "Got first orbit, getting second; a=" << a << " b=" << b << endl;
            Orbit & ob = modelspace->GetOrbit(b);
+	   cout << "Got both, beginning iteration over kets." << endl;
            double norm = (oa.j2+1)*(ob.j2+1);
            for ( auto& itket : modelspace->MonopoleKets[Tz+1][parity] )
            {
+	      cout << "Iterating over MonopoleKets." << endl;
               if (itket.second < itbra.second) continue;
               Ket & ket = modelspace->GetKet(itket.first);
+	      cout << "Got ket, getting indecies." << endl;
               int c = ket.p;
               int d = ket.q;
+	      cout << "c=" << c << " d=" << d << endl;
               Vmon[Tz+1][parity](itbra.second,itket.second)       = Hbare.TwoBody.GetTBMEmonopole(a,b,c,d)*norm;
+	      cout << "Set Vmon." << endl;
               Vmon_exch[Tz+1][parity](itbra.second,itket.second)  = Hbare.TwoBody.GetTBMEmonopole(a,b,d,c)*norm;
+	      cout << "Set Vmon_exch." << endl;
            }
         }
+	cout << "Setting Vmon with symmatu." << endl;
         Vmon[Tz+1][parity] = arma::symmatu(Vmon[Tz+1][parity]);
+	cout << "Setting Vmon_exch with symmatu." << endl;
         Vmon_exch[Tz+1][parity] = arma::symmatu(Vmon_exch[Tz+1][parity]);
     }
   }
@@ -350,9 +378,12 @@ void HartreeFock::BuildMonopoleV3()
 //*********************************************************************
 void HartreeFock::UpdateDensityMatrix()
 {
+  cout << "Entering UpdateDensityMatrix()." << endl;
   arma::mat tmp = C.cols(holeorbs);
+  cout << "tmp set, setting rho." << endl;
   rho = (tmp.each_row() % hole_occ) * tmp.t();
   rho = rho;
+  cout << "Leaving UpdateDensityMatrix." << endl;
   //cout << "holeorbs=" << endl;
   //cout << holeorbs << endl;
   //cout << "hole_occ=" << endl;
@@ -374,31 +405,40 @@ void HartreeFock::UpdateDensityMatrix()
 //*********************************************************************
 void HartreeFock::UpdateF()
 {
+   cout << "Entering UpdateF()." << endl;
    double start_time = omp_get_wtime();
    int norbits = modelspace->GetNumberOrbits();
    Vij.zeros();
    V3ij.zeros();
-
+   cout << "Set Vij and V3ij to zeroes." << endl;
 
    // This loop isn't thread safe for some reason. Regardless, parallelizing it makes it slower. 
    for (int i=0;i<norbits;i++)
    {
+      cout << "Iterating over norbits; i=" << i << endl;
       Orbit& oi = modelspace->GetOrbit(i);
       for (int j : Hbare.OneBodyChannels.at({oi.l,oi.j2,oi.tz2}) )
       {
+	 cout << "Iterating over OneBodyChannels; j=" << j << endl;
          if (j<i) continue;
          for (int a=0;a<norbits;++a)
          {
+	    cout << "Iterating over different norbits; a=" << a << endl;
             Orbit& oa = modelspace->GetOrbit(a);
             int Tz = (oi.tz2+oa.tz2)/2;
             int parity = (oi.l+oa.l)%2;
+	    cout << "Calculated Tz and parity, getting int bra." << endl;
             int bra = modelspace->GetKetIndex(min(i,a),max(i,a));
+	    cout << "Getting int local_bra." << endl;
             int local_bra = modelspace->MonopoleKets[Tz+1][parity][bra];
             for (int b : Hbare.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
             {
+	       cout << "Iterating over more OneBodyChannels; b=" << b << endl;
                int ket = modelspace->GetKetIndex(min(j,b),max(j,b));
+	       cout << "Got ket, getting local_ket." << endl;
                int local_ket = modelspace->MonopoleKets[Tz+1][parity][ket];
                // 2body term <ai|V|bj>
+	       cout << "Got local_ket, moving into xor." << endl;
                if ((a>i) xor (b>j))  // code needed some obfuscation, so threw an xor in there...
                   Vij(i,j) += rho(a,b)*Vmon_exch[Tz+1][parity](local_bra,local_ket); // <a|rho|b> * <ai|Vmon|jb>
                else
@@ -408,7 +448,7 @@ void HartreeFock::UpdateF()
       }
       Vij.col(i) /= (oi.j2+1);
    }
-
+   cout << "Got past that loop, checking particle rank." << endl;
    if (Hbare.GetParticleRank()>=3) 
    {
 //      # pragma omp parallel for num_threads(2)  // Note that this is risky and not fully thread safe.
@@ -426,15 +466,16 @@ void HartreeFock::UpdateF()
         V3ij(i,j) += rho(a,b) * rho(c,d) * v ;
       }
    }
+   cout << "Making Vij and V3ij symmatu." << endl;
 
    Vij  = arma::symmatu(Vij);
    V3ij = arma::symmatu(V3ij);
-
+   cout << "V are symmetric, adding energies." << endl;
    F = KE + Vij + 0.5*V3ij;
 
    //cout << "F=" << endl;
    //cout << F << endl;
-
+   cout << "Leaving UpdateF" << endl;
    profiler.timer["HF_UpdateF"] += omp_get_wtime() - start_time;
 }
 
