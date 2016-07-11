@@ -147,6 +147,7 @@ void IMSRGSolver::UpdateEta()
 
 void IMSRGSolver::Solve_magnus_euler()
 {
+   //cout << "Entering Solve_magnus_euler." << endl;
    istep = 0;
    generator.Update(&FlowingOps[0],&Eta);
 
@@ -156,17 +157,20 @@ void IMSRGSolver::Solve_magnus_euler()
    }
 
     // Write details of the flow
+   //cout << "Writing details of the flow to flowfile." << endl;
    WriteFlowStatus(flowfile);
+   //cout << "Writing details of the flow to cout." << endl;
    WriteFlowStatus(cout);
 
    for (istep=1;s<smax;++istep)
    {
-
+      //cout << "stepping through istep; istep=" << istep << " s=" << s << endl;
       double norm_eta = Eta.Norm();
       if (norm_eta < eta_criterion )
       {
         break;
       }
+      //cout << "norm_eta >= eta_criterion." << endl;
       double norm_omega = Omega.back().Norm();
       if (norm_omega > omega_norm_max)
       {
@@ -177,37 +181,44 @@ void IMSRGSolver::Solve_magnus_euler()
       if (magnus_adaptive)
          ds = min( min( min(norm_domega/norm_eta, norm_domega / norm_eta / (norm_omega+1.0e-9)), omega_norm_max/norm_eta), ds_max); 
       ds = min(ds,smax-s);
+      //cout << "ds reset; ds=" << ds << endl;
 //      if (s+ds > smax) ds = smax-s;
       s += ds;
+      //cout << "s reset; s=" << s << endl;
       Eta *= ds; // Here's the Euler step.
-
+      //cout << "Eta calculated" << endl;
       // accumulated generator (aka Magnus operator) exp(Omega) = exp(dOmega) * exp(Omega_last)
       Omega.back() = Eta.BCH_Product( Omega.back() ); 
-
+      //cout << "Running Omega.back()." << endl;
       // transformed Hamiltonian H_s = exp(Omega) H_0 exp(-Omega)
       if ((Omega.size()+n_omega_written)<2)
       {
+	//cout << "(Omega.size()+n_omega_written)<2) satisfied, BCH_Transform on H_0." << endl;
         FlowingOps[0] = H_0->BCH_Transform( Omega.back() );
       }
       else
       {
+	//cout << "(Omega.size()+n_omega_written)<2) satisfied, BCH_Transform on H_saved." << endl;
         FlowingOps[0] = H_saved.BCH_Transform( Omega.back() );
       }
-
+      //cout << "Passed the BCH_Transform." << endl;
       if (norm_eta<1.0 and generator.GetType() == "shell-model-atan")
       {
         generator.SetDenominatorCutoff(1e-6);
       }
-        
+      //cout << "Past setting the demonimator cutoff, updating generator." << endl;  
       generator.Update(&FlowingOps[0],&Eta);
 
       // Write details of the flow
+      //cout << "Writing loop details for flowfile." << endl;
       WriteFlowStatus(flowfile);
+      //cout << "writing loop details to cout." << endl;
       WriteFlowStatus(cout);
+      //cout << "Return to loop." << endl;
 //      profiler.PrintMemory();
 
    }
-
+   //cout << "Leaving Solve_magnus_euler." << endl;
 }
 
 

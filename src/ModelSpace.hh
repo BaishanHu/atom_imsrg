@@ -192,11 +192,12 @@ class ModelSpace
    string Index2String(index_t ind);
    void Get0hwSpace(int Aref, int Zref, vector<index_t>& core_list, vector<index_t>& valence_list);
 
-   void SetupKets();
+   void SetupKets(string Sys);
    void AddOrbit(Orbit orb);
    void AddOrbit(int n, int l, int j2, int tz2, double occ, int io);
    // Setter/Getters
-   Orbit& GetOrbit(int i) {return (Orbit&) Orbits[i];}; 
+   //Orbit& GetOrbit(int i) {return (Orbit&) Orbits[i];}; 
+   Orbit& GetOrbit(int i);
 //   Orbit& GetOrbit(int i) const {return (Orbit&) Orbits[i];}; 
    Ket& GetKet(int i) const {return (Ket&) Kets[i];};
    Ket& GetKet(int p, int q) const {return (Ket&) Kets[Index2(p,q)];};

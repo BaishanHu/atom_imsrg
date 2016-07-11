@@ -101,9 +101,11 @@ void TwoBodyChannel::Initialize(int N, ModelSpace *ms)
    KetMap.resize(nk,-1); // set all values to -1
    for (int i=0;i<nk;i++)
    {
+      cout << "Geting Ketmap init'd; i=" << i << endl;
       Ket &ket = modelspace->GetKet(i);
       if ( CheckChannel_ket(ket) )
       {
+	 cout << "Got into check_channel." << endl;
          KetMap[i] = NumberKets;
          KetList.push_back(i);
          NumberKets++;
@@ -548,7 +550,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      if (oh.tz2 < 0) Zref += (oh.j2+1)*oh.occ;
    }
    //cout << "Setting up kets." << endl;
-   SetupKets();
+   SetupKets(SystemType);
    //cout << "Set up kets." << endl;
 }
 
@@ -608,6 +610,16 @@ void ModelSpace::GetAZfromString(string str,int& A, int& Z) // TODO: accept diff
     Z =-1;
    cout << "ModelSpace::GetAZfromString :  Trouble parsing " << str << endl;
   }
+}
+
+// Returns the mapped orbit back to the function in the event that the system is atomic.
+
+Orbit& ModelSpace::GetOrbit(int i){
+   //if(SystemType == "atomic"){
+   //   return (Orbit&) Orbits[indexMap[i]];
+   //} else {
+      return (Orbit&) Orbits[i];
+   //}
 }
 
 // Fill A orbits with Z protons and A-Z neutrons
@@ -900,7 +912,7 @@ int ModelSpace::GetTwoBodyChannelIndex(int j, int p, int t)
 
 
 
-void ModelSpace::SetupKets()
+void ModelSpace::SetupKets(string Sys)
 {
    cout << "Entering SetupKets()" << endl;
    int index = 0;
@@ -916,7 +928,7 @@ void ModelSpace::SetupKets()
    {
      for (int q=p;q<norbits;q++)
      {
-	if (SystemType == "atomic")
+	if (Sys == "atomic")
 	{
 	   //index = Kets.size();
 	   //Kets.emplace_back(Ket(GetOrbit(p),GetOrbit(q)));
@@ -925,7 +937,7 @@ void ModelSpace::SetupKets()
 	   //index = Index2(o1.index,o2.index);
 	   index = Index2(p,q);
 	   Kets[index] = Ket(o1,o2);
-	   //Kets[count] = Ket(GetOrbit(p),GetOrbit(q));
+	   //Kets[index] = Ket(GetOrbit(indexMap[p]),GetOrbit(indexMap[q]));
 	   //count++;
 	} else
 	{
@@ -988,6 +1000,8 @@ void ModelSpace::SetupKets()
       TwoBodyChannels_CC.push_back(move(TwoBodyChannel_CC(ch,this)));
       SortedTwoBodyChannels[ch] = ch;
       SortedTwoBodyChannels_CC[ch] = ch;
+      //cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
+      //cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
    }
    // Sort the two body channels in descending order of matrix dimension and discard the size-0 ones.
    // Hopefully this can help with load balancing.

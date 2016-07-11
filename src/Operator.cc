@@ -1155,19 +1155,24 @@ Operator Operator::Brueckner_BCH_Transform( const Operator &Omega)
 Operator Operator::BCH_Product(  Operator &Y)
 {
    double tstart = omp_get_wtime();
+   cout << "Entering BCH_Product." << endl;
    Operator& X = *this;
    double nx = X.Norm();
+   cout << "Normalized X, nx=" << nx << endl;
    vector<double> bernoulli = {1.0, -0.5, 1./6, 0.0, -1./30, 0.0 , 1./42, 0, -1./30};
    vector<double> factorial = {1.0,  1.0,  2.0, 6.0,    24., 120., 720., 5040., 40320.};
 
 
    Operator Z = X + Y;
    Operator Nested = Y;
+   cout << "Built Z and Nested; setting commutators." << endl;
    Nested.SetToCommutator(Y,X);
    double nxy = Nested.Norm();
+   cout << "Normalized Nested, nxy=" << nxy << endl;
    // We assume X is small, but just in case, we check if we should include the [X,[X,Y]] term.
    if ( nxy*nx > bch_product_threshold)
    {
+     cout << "nxy*nx > bch_product_threshold" << endl;
      Z += (1./12) * Commutator(Nested,X);
 //     cout << "Operator::BCH_Product -- Included X^2 term. " << nx << " " << ny << " " << nxy << endl;
    }
@@ -1175,6 +1180,7 @@ Operator Operator::BCH_Product(  Operator &Y)
    int k = 1;
    while( Nested.Norm() > bch_product_threshold and k<9)
    {
+     cout << "Iterating over k; k=" << k << endl;
      if (k<2 or k%2==0)
         Z += (bernoulli[k]/factorial[k]) * Nested;
      Nested = Commutator(Y,Nested);
@@ -1276,11 +1282,14 @@ Operator Commutator( const Operator& X, const Operator& Y)
 
 void Operator::SetToCommutator( const Operator& X, const Operator& Y)
 {
+   cout << "Entering SetToCommutator." << endl;
    profiler.counter["N_Commutators"] += 1;
    double t_start = omp_get_wtime();
    Operator& Z = *this;
    int xrank = X.rank_J + X.rank_T + X.parity;
+   cout << "xrank=" << xrank << endl;
    int yrank = Y.rank_J + Y.rank_T + Y.parity;
+   cout << "yrank=" << yrank << endl;
    if (xrank==0)
    {
       if (yrank==0)
@@ -1303,6 +1312,7 @@ void Operator::SetToCommutator( const Operator& X, const Operator& Y)
       cout << " Tensor-Tensor commutator not yet implemented." << endl;
    }
    profiler.timer["Commutator"] += omp_get_wtime() - t_start;
+   cout << "Leaving SetToCommutator." << endl;
 }
 
 
@@ -1310,13 +1320,14 @@ void Operator::SetToCommutator( const Operator& X, const Operator& Y)
 /// Should be called through Commutator()
 void Operator::CommutatorScalarScalar( const Operator& X, const Operator& Y) 
 {
+   cout << "Entering CommunatorScalarScalar." << endl;
    double t_css = omp_get_wtime();
    Operator& Z = *this;
    Z = X.GetParticleRank()>Y.GetParticleRank() ? X : Y;
    Z.EraseZeroBody();
    Z.EraseOneBody();
    Z.EraseTwoBody();
-
+   cout << "Initialized stuff, checking for hermit/anti-hermit." << endl;
    if ( (X.IsHermitian() and Y.IsHermitian()) or (X.IsAntiHermitian() and Y.IsAntiHermitian()) ) Z.SetAntiHermitian();
    else if ( (X.IsHermitian() and Y.IsAntiHermitian()) or (X.IsAntiHermitian() and Y.IsHermitian()) ) Z.SetHermitian();
    else Z.SetNonHermitian();
@@ -1326,35 +1337,40 @@ void Operator::CommutatorScalarScalar( const Operator& X, const Operator& Y)
       Z.comm110ss(X, Y);
       Z.comm220ss(X, Y) ;
    }
-
+   cout << "About to do a bunch of commNNNss." << endl;
    double t_start = omp_get_wtime();
    Z.comm111ss(X, Y);
    profiler.timer["comm111ss"] += omp_get_wtime() - t_start;
-
+   cout << "comm111ss passed." << endl;
     t_start = omp_get_wtime();
    Z.comm121ss(X,Y);
    profiler.timer["comm121ss"] += omp_get_wtime() - t_start;
+   cout << "comm121ss passed." << endl;
 
     t_start = omp_get_wtime();
    Z.comm122ss(X,Y); 
    profiler.timer["comm122ss"] += omp_get_wtime() - t_start;
-
+   cout << "comm122ss passed." << endl;
    if (X.particle_rank>1 and Y.particle_rank>1)
    {
+     cout << "both ranks>1." << endl;
      t_start = omp_get_wtime();
      Z.comm222_pp_hh_221ss(X, Y);
      profiler.timer["comm222_pp_hh_221ss"] += omp_get_wtime() - t_start;
-      
+     cout << "comm222_pp_hh_221ss passed." << endl;
      t_start = omp_get_wtime();
      Z.comm222_phss(X, Y);
      profiler.timer["comm222_phss"] += omp_get_wtime() - t_start;
+     cout << "comm222_phss passed." << endl;
    }
 
-
-   if ( Z.IsHermitian() )
-      Z.Symmetrize();
-   else if (Z.IsAntiHermitian() )
-      Z.AntiSymmetrize();
+   cout << "About to symmeterize (or anti)." << endl;
+   if ( Z.IsHermitian() ) {
+      cout << "Z is hermitian, symmetrizing." << endl;
+      Z.Symmetrize();}
+   else if (Z.IsAntiHermitian() ) {
+      cout << "Zis anti-hermit, anti-symm." << endl;
+      Z.AntiSymmetrize();}
 
    profiler.timer["CommutatorScalarScalar"] += omp_get_wtime() - t_css;
 
@@ -2101,29 +2117,37 @@ void Operator::AddInversePandyaTransformation(deque<arma::mat>& Zbar)
     // Do the inverse Pandya transform
     // Only go parallel if we've previously calculated the SixJ's. Otherwise, it's not thread safe.
    int n_nonzeroChannels = modelspace->SortedTwoBodyChannels.size();
-   #pragma omp parallel for schedule(dynamic,1) if (not modelspace->SixJ_is_empty())
+   //#pragma omp parallel for schedule(dynamic,1) if (not modelspace->SixJ_is_empty())
    for (int ich = 0; ich < n_nonzeroChannels; ++ich)
    {
       int ch = modelspace->SortedTwoBodyChannels[ich];
       TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
+      //cout << "iterating over channels; ch=" << ch << " ich=" << ich << endl;
       int J = tbc.J;
+      //cout << "J=" << J << endl;
       int nKets = tbc.GetNumberKets();
+      //cout << "nKets=" << nKets << endl;
 
       for (int ibra=0; ibra<nKets; ++ibra)
       {
+	 //cout << "Iterating over bras; ibra=" << ibra << endl;
          Ket & bra = tbc.GetKet(ibra);
          int i = bra.p;
          int j = bra.q;
+	 //cout << "Getting orbits for i=" << i << " j=" << j << endl;
          Orbit & oi = modelspace->GetOrbit(i);
          Orbit & oj = modelspace->GetOrbit(j);
          double ji = oi.j2/2.;
          double jj = oj.j2/2.;
          int ketmin = IsHermitian() ? ibra : ibra+1;
+	 //cout << "About to enter iket loop; ketmin=" << ketmin << endl;
          for (int iket=ketmin; iket<nKets; ++iket)
          {
+	    //cout << "Looping through iket loop; iket=" << iket << endl;
             Ket & ket = tbc.GetKet(iket);
             int k = ket.p;
             int l = ket.q;
+	    //cout << "Getting orbits for k=" << k << " l=" << l << endl;
             Orbit & ok = modelspace->GetOrbit(k);
             Orbit & ol = modelspace->GetOrbit(l);
             double jk = ok.j2/2.;
@@ -2136,17 +2160,26 @@ void Operator::AddInversePandyaTransformation(deque<arma::mat>& Zbar)
             int Tz_cc = abs(oi.tz2+ol.tz2)/2;
             int jmin = max(abs(int(ji-jl)),abs(int(jk-jj)));
             int jmax = min(int(ji+jl),int(jk+jj));
+	    //cout << "About to loop through first Jprime; jmin=" << jmin << " jmax=" << jmax << endl;
             for (int Jprime=jmin; Jprime<=jmax; ++Jprime)
             {
+	       //cout << "in Jprime loop; Jprime=" << Jprime << endl;
                double sixj = modelspace->GetSixJ(ji,jj,J,jk,jl,Jprime);
+	       //cout << "Got sixj; sixj=" << sixj << endl;
                if (abs(sixj)<1e-8) continue;
                int ch_cc = modelspace->GetTwoBodyChannelIndex(Jprime,parity_cc,Tz_cc);
+	       //cout << "Got ch_cc; ch_cc=" << ch_cc << endl;
                TwoBodyChannel_CC& tbc_cc = modelspace->GetTwoBodyChannel_CC(ch_cc);
+	       //cout << "Got tbc_cc." << endl;
                int indx_il = tbc_cc.GetLocalIndex(min(i,l),max(i,l));
+	       //cout << "Got indx_il=" << indx_il << endl;
                int indx_kj = tbc_cc.GetLocalIndex(min(j,k),max(j,k));
+	       //cout << "Got indx_kj=" << indx_kj << endl;
+	       if (indx_il == -1 or indx_kj == -1) continue;
                if (i>l) indx_il += tbc_cc.GetNumberKets();
                if (k>j) indx_kj += tbc_cc.GetNumberKets();
                double me1 = Zbar[ch_cc](indx_il,indx_kj);
+	       //cout << "Got past the pair of 'ifs'; me1=" << me1 << endl;
                commij += (2*Jprime+1) * sixj * me1;
 
             }
@@ -2156,23 +2189,34 @@ void Operator::AddInversePandyaTransformation(deque<arma::mat>& Zbar)
             Tz_cc = abs(oi.tz2+ok.tz2)/2;
             jmin = max(abs(int(jj-jl)),abs(int(jk-ji)));
             jmax = min(int(jj+jl),int(jk+ji));
+	    //cout << "Leaving first Jprime Loop, moving to second; jmin=" << jmin << " jmax=" << jmax << endl;
             for (int Jprime=jmin; Jprime<=jmax; ++Jprime)
             {
+	       //cout << "in Jprime loop; Jprime=" << Jprime << endl;
                double sixj = modelspace->GetSixJ(jj,ji,J,jk,jl,Jprime);
+	       //cout << "Got sixj; sixj=" << sixj << endl;
                if (abs(sixj)<1e-8) continue;
                int ch_cc = modelspace->GetTwoBodyChannelIndex(Jprime,parity_cc,Tz_cc);
+	       //cout << "Got ch_cc; ch_cc=" << ch_cc << endl;
                TwoBodyChannel_CC& tbc_cc = modelspace->GetTwoBodyChannel_CC(ch_cc);
+	       //cout << "Got tbc_cc." << endl;
                int indx_jl = tbc_cc.GetLocalIndex(min(j,l),max(j,l));
+	       //cout << "Got indx_jl=" << indx_jl << endl;
                int indx_ki = tbc_cc.GetLocalIndex(min(i,k),max(i,k));
+	       //cout << "Got indx_ki=" << indx_ki << endl;
+	       if (indx_jl == -1 or indx_ki == -1) continue;
                if (j>l) indx_jl += tbc_cc.GetNumberKets();
                if (k>i) indx_ki += tbc_cc.GetNumberKets();
                double me1 = Zbar[ch_cc](indx_jl,indx_ki);
+	       //cout << "Got past the pair of 'ifs'; me1=" << me1 << endl;
                commji += (2*Jprime+1) *  sixj * me1;
 
             }
 
             double norm = bra.delta_pq()==ket.delta_pq() ? 1+bra.delta_pq() : SQRT2;
+	    //cout << "Got past second Jprime loop; norm=" << norm << endl;
             TwoBody.GetMatrix(ch,ch)(ibra,iket) += (commij - modelspace->phase(ji+jj-J)*commji) / norm;
+	    //cout << "Got TwoBody.GetMatrix(ch,ch)..." << endl;
          }
       }
    }
@@ -2289,7 +2333,6 @@ void Operator::comm222_phss( const Operator& X, const Operator& Y )
    for (int ich=0; ich<nch; ++ich )
    {
       int ch = modelspace->SortedTwoBodyChannels_CC[ich];
-
       Z_bar[ch] =  (Xt_bar_ph[ch] * Y_bar_ph[ch]);
       // If Z is hermitian, then XY is anti-hermitian, and so XY - YX = XY + (XY)^T
       if ( Z.IsHermitian() )
@@ -2298,9 +2341,9 @@ void Operator::comm222_phss( const Operator& X, const Operator& Y )
          Z_bar[ch] -= Z_bar[ch].t();
    }
    profiler.timer["Build Z_bar"] += omp_get_wtime() - t_start;
-
    // Perform inverse Pandya transform on Z_bar to get Z
    t_start = omp_get_wtime();
+   // << "About to AddInvers..." << endl;
    Z.AddInversePandyaTransformation(Z_bar);
    profiler.timer["InversePandyaTransformation"] += omp_get_wtime() - t_start;
 

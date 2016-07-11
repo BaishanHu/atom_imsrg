@@ -300,7 +300,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
          Orbit & o2 = modelspace.GetOrbit(bra.q);
 	 //#pragma omp parallel for
 	 
-	 for (int jket = ibra; jket < nkets; jket++)
+	 for (int jket = 0; jket <= ibra; jket++)
 	 {
 	    //cout << "----- jket is " << jket << " -----" << endl;
 	    if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
@@ -347,7 +347,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 			double n3, double l3, double s3, double j3,
 			double n4, double l4, double s4, double j4, ModelSpace& modelspace, double J)
 {
-    cout << "Entering CalculateCMInvR" << endl;
+    //cout << "Entering CalculateCMInvR" << endl;
     // Declare limits here, easier to read/modify
     int Lambda_lower = abs(l1 - l2); 
     int Lambdap_lower = abs(l3 - l4);
@@ -463,7 +463,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 	    } // Lambdap
 	} // S
     } // Lambda
-    cout << "Leaving CMInvR" << endl;
+    //cout << "Leaving CMInvR" << endl;
     return T * HBARC / (137.) / (BOHR_RADIUS);
 }
 
