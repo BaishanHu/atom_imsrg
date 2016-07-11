@@ -1320,14 +1320,14 @@ void Operator::SetToCommutator( const Operator& X, const Operator& Y)
 /// Should be called through Commutator()
 void Operator::CommutatorScalarScalar( const Operator& X, const Operator& Y) 
 {
-   cout << "Entering CommunatorScalarScalar." << endl;
+   //cout << "Entering CommunatorScalarScalar." << endl;
    double t_css = omp_get_wtime();
    Operator& Z = *this;
    Z = X.GetParticleRank()>Y.GetParticleRank() ? X : Y;
    Z.EraseZeroBody();
    Z.EraseOneBody();
    Z.EraseTwoBody();
-   cout << "Initialized stuff, checking for hermit/anti-hermit." << endl;
+   //cout << "Initialized stuff, checking for hermit/anti-hermit." << endl;
    if ( (X.IsHermitian() and Y.IsHermitian()) or (X.IsAntiHermitian() and Y.IsAntiHermitian()) ) Z.SetAntiHermitian();
    else if ( (X.IsHermitian() and Y.IsAntiHermitian()) or (X.IsAntiHermitian() and Y.IsHermitian()) ) Z.SetHermitian();
    else Z.SetNonHermitian();
@@ -1337,39 +1337,39 @@ void Operator::CommutatorScalarScalar( const Operator& X, const Operator& Y)
       Z.comm110ss(X, Y);
       Z.comm220ss(X, Y) ;
    }
-   cout << "About to do a bunch of commNNNss." << endl;
+   //cout << "About to do a bunch of commNNNss." << endl;
    double t_start = omp_get_wtime();
    Z.comm111ss(X, Y);
    profiler.timer["comm111ss"] += omp_get_wtime() - t_start;
-   cout << "comm111ss passed." << endl;
+   //cout << "comm111ss passed." << endl;
     t_start = omp_get_wtime();
    Z.comm121ss(X,Y);
    profiler.timer["comm121ss"] += omp_get_wtime() - t_start;
-   cout << "comm121ss passed." << endl;
+   //cout << "comm121ss passed." << endl;
 
     t_start = omp_get_wtime();
    Z.comm122ss(X,Y); 
    profiler.timer["comm122ss"] += omp_get_wtime() - t_start;
-   cout << "comm122ss passed." << endl;
+   //cout << "comm122ss passed." << endl;
    if (X.particle_rank>1 and Y.particle_rank>1)
    {
-     cout << "both ranks>1." << endl;
+     //cout << "both ranks>1." << endl;
      t_start = omp_get_wtime();
      Z.comm222_pp_hh_221ss(X, Y);
      profiler.timer["comm222_pp_hh_221ss"] += omp_get_wtime() - t_start;
-     cout << "comm222_pp_hh_221ss passed." << endl;
+     //cout << "comm222_pp_hh_221ss passed." << endl;
      t_start = omp_get_wtime();
      Z.comm222_phss(X, Y);
      profiler.timer["comm222_phss"] += omp_get_wtime() - t_start;
-     cout << "comm222_phss passed." << endl;
+     //cout << "comm222_phss passed." << endl;
    }
 
-   cout << "About to symmeterize (or anti)." << endl;
+   //cout << "About to symmeterize (or anti)." << endl;
    if ( Z.IsHermitian() ) {
-      cout << "Z is hermitian, symmetrizing." << endl;
+      //cout << "Z is hermitian, symmetrizing." << endl;
       Z.Symmetrize();}
    else if (Z.IsAntiHermitian() ) {
-      cout << "Zis anti-hermit, anti-symm." << endl;
+      //cout << "Zis anti-hermit, anti-symm." << endl;
       Z.AntiSymmetrize();}
 
    profiler.timer["CommutatorScalarScalar"] += omp_get_wtime() - t_css;

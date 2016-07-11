@@ -101,11 +101,11 @@ void TwoBodyChannel::Initialize(int N, ModelSpace *ms)
    KetMap.resize(nk,-1); // set all values to -1
    for (int i=0;i<nk;i++)
    {
-      cout << "Geting Ketmap init'd; i=" << i << endl;
+      //cout << "Geting Ketmap init'd; i=" << i << endl;
       Ket &ket = modelspace->GetKet(i);
       if ( CheckChannel_ket(ket) )
       {
-	 cout << "Got into check_channel." << endl;
+	 //cout << "Got into check_channel." << endl;
          KetMap[i] = NumberKets;
          KetList.push_back(i);
          NumberKets++;
@@ -501,6 +501,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    norbits = (Emax+1)*(Emax+2); // Need to take into account effect of Lmax
    Orbits.resize(norbits);
    int real_norbits = 0;
+   int count = 0;
    for (int N=0; N<=Emax; ++N)
    {
      //min(N,Lmax)
@@ -517,14 +518,17 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
             int cvq = 2;
             int indx = Index1(n,l,j2,tz);
 	    if (SystemType == "atomic" and tz < 0){ // Checks twice, this looks like garbage
-		indexMap[indx] = indexMap.size()-1; // Map atomic orbits as well as nuclear
-		indx = indexMap[indx];}
+		//indexMap[real_norbits] = indexMap.size()-1; // Map atomic orbits as well as nuclear
+		//indx = indexMap[real_norbits]; }
+		indexMap[count] = count;
+		indx = count;
+		count++;}
             if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
             if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
             if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
 	    cout << "Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
 	    if (SystemType == "atomic" and tz < 0) { // Only allow isospin -1/2.  this simulates only protons being added
-		AddOrbit(n,l,j2,tz,occ,cvq);
+		AddOrbit(n,l,j2,tz,occ,cvq,indx);
 		cout << "Added orbit." << endl;
 		real_norbits++;
 	    } else if (SystemType == "nuclear" ) {
@@ -862,11 +866,16 @@ void ModelSpace::AddOrbit(Orbit orb)
   AddOrbit(orb.n, orb.l, orb.j2, orb.tz2, orb.occ, orb.cvq);
 }
 
-void ModelSpace::AddOrbit(int n, int l, int j2, int tz2, double occ, int cvq)
+void ModelSpace::AddOrbit(int n, int l, int j2, int tz2, double occ, int cvq, int index)
 {
-   index_t ind = Index1(n, l, j2, tz2);
-   ind = indexMap[ind];
-   Orbits[ind] = Orbit(n,l,j2,tz2,occ,cvq,ind);
+   int ind = index;
+   if (index == -1)
+	index = Index1(n, l, j2, tz2);
+   else
+	ind = index;
+   //index_t ind = Index1(n, l, j2, tz2)
+   //ind = indexMap[ind];
+   Orbits[index] = Orbit(n,l,j2,tz2,occ,cvq,index);
 
    if (j2 > OneBodyJmax)
    {
@@ -937,6 +946,7 @@ void ModelSpace::SetupKets(string Sys)
 	   //index = Index2(o1.index,o2.index);
 	   index = Index2(p,q);
 	   Kets[index] = Ket(o1,o2);
+	   cout << "Grabbing ket with p=" << p << " q=" << q << " and setting to index=" << index << endl;
 	   //Kets[index] = Ket(GetOrbit(indexMap[p]),GetOrbit(indexMap[q]));
 	   //count++;
 	} else
@@ -944,11 +954,11 @@ void ModelSpace::SetupKets(string Sys)
 	   index = Index2(p,q);
 	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
 	}
-        //cout << "index=" << index << " p=" << p << " q=" << q << endl;
-        //Orbit& orbp = GetOrbit(p);
-	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
-	//Orbit& orbq = GetOrbit(q);
-	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
+        cout << "index=" << index << " p=" << p << " q=" << q << endl;
+        Orbit& orbp = GetOrbit(p);
+	cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
+	Orbit& orbq = GetOrbit(q);
+	cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         
      }
    }
@@ -956,14 +966,15 @@ void ModelSpace::SetupKets(string Sys)
   //cout << "Set up Kets[], moving to Ket& ket; Kets[].size()=" << Kets.size() << endl;
   for (index_t index=0;index<Kets.size();++index)
   {
-    //cout << "index=" << index << endl;
+    cout << "index=" << index << endl;
     Ket& ket = Kets[index];
+    cout << "Got the ket, checking parity and Tz." << endl;
     int Tz = (ket.op->tz2 + ket.oq->tz2)/2;
     int parity = (ket.op->l + ket.oq->l)%2;
-    //cout << "ket.op->l=" << ket.op->l << " ket.oq->l=" << ket.oq->l << endl;
-    //cout << "About to add MonopoleKet with Tz=" << Tz << " parity=" << parity << " at index=" << index << endl;
+    cout << "ket.op->l=" << ket.op->l << " ket.oq->l=" << ket.oq->l << endl;
+    cout << "About to add MonopoleKet with Tz=" << Tz << " parity=" << parity << " at index=" << index << endl;
     MonopoleKets[Tz+1][parity][index] = MonopoleKets[Tz+1][parity].size()-1;
-    //cout << "Added MonopoleKet." << endl;
+    cout << "Added MonopoleKet." << endl;
     double occp = ket.op->occ;
     double occq = ket.oq->occ;
     int cvq_p = ket.op->cvq;
@@ -988,9 +999,9 @@ void ModelSpace::SetupKets(string Sys)
        Ket_occ_hh.push_back(occp*occq);
        Ket_unocc_hh.push_back((1-occp)*(1-occq));
     }
-    //cout << "About to loop again." << endl;
+    cout << "About to loop again." << endl;
    }
-   //cout << "Got past Ket&; resizing TB." << endl;
+   cout << "Got past Ket&; resizing TB." << endl;
    SortedTwoBodyChannels.resize(nTwoBodyChannels);
    SortedTwoBodyChannels_CC.resize(nTwoBodyChannels);
    //cout << "Resized TB; sorting TB." << endl;

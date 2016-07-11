@@ -194,7 +194,7 @@ class ModelSpace
 
    void SetupKets(string Sys);
    void AddOrbit(Orbit orb);
-   void AddOrbit(int n, int l, int j2, int tz2, double occ, int io);
+   void AddOrbit(int n, int l, int j2, int tz2, double occ, int io, int index=-1);
    // Setter/Getters
    //Orbit& GetOrbit(int i) {return (Orbit&) Orbits[i];}; 
    Orbit& GetOrbit(int i);
