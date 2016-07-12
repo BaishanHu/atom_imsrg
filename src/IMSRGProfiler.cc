@@ -13,8 +13,12 @@ IMSRGProfiler::IMSRGProfiler()
 {
   if (start_time < 0)
   {
+    cout << "New profiler..." << endl;
     start_time = omp_get_wtime();
+    counter["N_Commutators"] = 0;
+    counter["N_Operators"] = 0;
     counter["N_Threads"] = omp_get_max_threads();
+    cout << "Initiliation complete! N_threads=" << counter["N_Threads"] << endl;
   }
 }
 /// Check how much memory is being used.
@@ -52,6 +56,7 @@ map<string,float> IMSRGProfiler::GetTimes()
 
 void IMSRGProfiler::PrintTimes()
 {
+   cout << "Where in the world is this segfault." << endl;
    auto time_tot = GetTimes();
    
    cout << "====================== TIMES (s) ====================" << endl;
@@ -76,8 +81,16 @@ void IMSRGProfiler::PrintCounters()
 {
    cout << "===================== COUNTERS =====================" << endl;
    cout.setf(ios::fixed);
+   int N_counters = 0;
+   for ( auto jt : counter ) {
+      N_counters++;
+      cout << "N_Counters=" << N_counters << endl;
+      cout << jt.first << endl;
+      cout << jt.second << endl;}
+
    for ( auto it : counter )
      cout << setw(40) << std::left << it.first + ":  " << setw(12) << setprecision(0) << std::right << it.second  << endl;
+   cout << "Got past counters." << endl;
 }
 
 void IMSRGProfiler::PrintMemory()
@@ -87,6 +100,7 @@ void IMSRGProfiler::PrintMemory()
      cout << fixed << setw(40) << std::left << it.first + ":  " << setw(12) << setprecision(3) << std::right << it.second/1024. << endl;
 
    cout << fixed << setw(40) << std::left << "Max Used:  " << setw(12) << setprecision(3) << std::right << MaxMemUsage()/1024.  << endl;
+   cout << "Got past Memory." << endl;
 }
 
 void IMSRGProfiler::PrintAll()

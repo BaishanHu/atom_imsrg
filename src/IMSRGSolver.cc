@@ -666,30 +666,50 @@ void IMSRGSolver::WriteFlowStatus(string fname)
 }
 void IMSRGSolver::WriteFlowStatus(ostream& f)
 {
+   //cout << "Really? In here?" << endl;
    if ( f.good() )
    {
+      //cout << "f is good..." << endl;
       int fwidth = 16;
+      //cout << "fwidth is good..." << endl;
       int fprecision = 9;
+      //cout << "fprecision is good..." << endl;
       auto& H_s = FlowingOps[0];
+      //cout << "H_s is good." << endl;
       f.setf(ios::fixed);
-      f << setw(5) << istep
-        << setw(10) << setprecision(3) << s
-        << setw(fwidth) << setprecision(fprecision) << H_s.ZeroBody 
-        << setw(fwidth) << setprecision(fprecision) << H_s.OneBodyNorm()
-        << setw(fwidth) << setprecision(fprecision) << H_s.TwoBodyNorm()
+      //cout << "Set f.setf." << endl;
+      f << setw(5) << istep;
+      //cout << " istep good." << endl;
+      f << setw(10) << setprecision(3) << s;
+      //cout << " S good." << endl;
+      f << setw(fwidth) << setprecision(fprecision) << H_s.ZeroBody ;
+      //cout << " H_s.ZeroBody good." << endl;
+      f << setw(fwidth) << setprecision(fprecision) << H_s.OneBodyNorm();
+      //cout << " H_s.OneBodyNorm() good." << endl;
+      f << setw(fwidth) << setprecision(fprecision) << H_s.TwoBodyNorm();
+      //cout << " H_s.TwoBodyNorm() good." << endl;
 //        << setw(fwidth) << setprecision(fprecision) << Omega.Norm()
-        << setw(fwidth) << setprecision(fprecision) << Omega.back().Norm()
-        << setw(fwidth) << setprecision(fprecision) << Eta.OneBodyNorm()
-        << setw(fwidth) << setprecision(fprecision) << Eta.TwoBodyNorm()
-        << setw(7)      << setprecision(0)          << profiler.counter["N_Commutators"]
-        << setw(fwidth) << setprecision(fprecision) << H_s.GetMP2_Energy()
-        << setw(7)      << setprecision(0)          << profiler.counter["N_Operators"]
-        << setprecision(fprecision)
-        << setw(12) << setprecision(3) << profiler.GetTimes()["real"]
-        << setw(12) << setprecision(3) << profiler.CheckMem()["RSS"]/1024. << " / " << skipws << profiler.MaxMemUsage()/1024. << fixed
-        << endl;
+      f << setw(fwidth) << setprecision(fprecision) << Omega.back().Norm();
+      //cout << " Omega.back().Norm() good." << endl;
+      f << setw(fwidth) << setprecision(fprecision) << Eta.OneBodyNorm();
+      //cout << " Eta.OneBodyNorm() good." << endl;
+      f << setw(fwidth) << setprecision(fprecision) << Eta.TwoBodyNorm();
+      //cout << " Eta.TwoBodyNorm() good." << endl;
+      f << setw(7)      << setprecision(0)          << profiler.counter["N_Commutators"];
+      //cout << " N_Commutators good." << endl;
+      f << setw(fwidth) << setprecision(fprecision) << H_s.GetMP2_Energy();
+      //cout << " H_s.GetMP2_Energy() good." << endl;
+      f << setw(7)      << setprecision(0)          << profiler.counter["N_Operators"];
+      //cout << " N_Operators good." << endl;
+      f << setprecision(fprecision);
+      //cout << " setprecision good." << endl;
+      f << setw(12) << setprecision(3) << profiler.GetTimes()["real"];
+      //cout << " real good." << endl;
+      f << setw(12) << setprecision(3) << profiler.CheckMem()["RSS"]/1024. << " / " << skipws << profiler.MaxMemUsage()/1024. << fixed;
+      //cout << " CheckMem()['RSS']/1024 good." << endl;
+      f << endl;
    }
-
+   //cout << "Maybe not..." << endl;
 }
 
 void IMSRGSolver::WriteFlowStatusHeader(string fname)

@@ -1155,24 +1155,24 @@ Operator Operator::Brueckner_BCH_Transform( const Operator &Omega)
 Operator Operator::BCH_Product(  Operator &Y)
 {
    double tstart = omp_get_wtime();
-   cout << "Entering BCH_Product." << endl;
+   //cout << "Entering BCH_Product." << endl;
    Operator& X = *this;
    double nx = X.Norm();
-   cout << "Normalized X, nx=" << nx << endl;
+   //cout << "Normalized X, nx=" << nx << endl;
    vector<double> bernoulli = {1.0, -0.5, 1./6, 0.0, -1./30, 0.0 , 1./42, 0, -1./30};
    vector<double> factorial = {1.0,  1.0,  2.0, 6.0,    24., 120., 720., 5040., 40320.};
 
 
    Operator Z = X + Y;
    Operator Nested = Y;
-   cout << "Built Z and Nested; setting commutators." << endl;
+   //cout << "Built Z and Nested; setting commutators." << endl;
    Nested.SetToCommutator(Y,X);
    double nxy = Nested.Norm();
-   cout << "Normalized Nested, nxy=" << nxy << endl;
+   //cout << "Normalized Nested, nxy=" << nxy << endl;
    // We assume X is small, but just in case, we check if we should include the [X,[X,Y]] term.
    if ( nxy*nx > bch_product_threshold)
    {
-     cout << "nxy*nx > bch_product_threshold" << endl;
+     //cout << "nxy*nx > bch_product_threshold" << endl;
      Z += (1./12) * Commutator(Nested,X);
 //     cout << "Operator::BCH_Product -- Included X^2 term. " << nx << " " << ny << " " << nxy << endl;
    }
@@ -1180,7 +1180,7 @@ Operator Operator::BCH_Product(  Operator &Y)
    int k = 1;
    while( Nested.Norm() > bch_product_threshold and k<9)
    {
-     cout << "Iterating over k; k=" << k << endl;
+     //cout << "Iterating over k; k=" << k << endl;
      if (k<2 or k%2==0)
         Z += (bernoulli[k]/factorial[k]) * Nested;
      Nested = Commutator(Y,Nested);
@@ -1282,14 +1282,14 @@ Operator Commutator( const Operator& X, const Operator& Y)
 
 void Operator::SetToCommutator( const Operator& X, const Operator& Y)
 {
-   cout << "Entering SetToCommutator." << endl;
+   //cout << "Entering SetToCommutator." << endl;
    profiler.counter["N_Commutators"] += 1;
    double t_start = omp_get_wtime();
    Operator& Z = *this;
    int xrank = X.rank_J + X.rank_T + X.parity;
-   cout << "xrank=" << xrank << endl;
+   //cout << "xrank=" << xrank << endl;
    int yrank = Y.rank_J + Y.rank_T + Y.parity;
-   cout << "yrank=" << yrank << endl;
+   //cout << "yrank=" << yrank << endl;
    if (xrank==0)
    {
       if (yrank==0)
@@ -1312,7 +1312,7 @@ void Operator::SetToCommutator( const Operator& X, const Operator& Y)
       cout << " Tensor-Tensor commutator not yet implemented." << endl;
    }
    profiler.timer["Commutator"] += omp_get_wtime() - t_start;
-   cout << "Leaving SetToCommutator." << endl;
+   //cout << "Leaving SetToCommutator." << endl;
 }
 
 
@@ -2117,7 +2117,7 @@ void Operator::AddInversePandyaTransformation(deque<arma::mat>& Zbar)
     // Do the inverse Pandya transform
     // Only go parallel if we've previously calculated the SixJ's. Otherwise, it's not thread safe.
    int n_nonzeroChannels = modelspace->SortedTwoBodyChannels.size();
-   //#pragma omp parallel for schedule(dynamic,1) if (not modelspace->SixJ_is_empty())
+   #pragma omp parallel for schedule(dynamic,1) if (not modelspace->SixJ_is_empty())
    for (int ich = 0; ich < n_nonzeroChannels; ++ich)
    {
       int ch = modelspace->SortedTwoBodyChannels[ich];

@@ -245,7 +245,7 @@ void HartreeFock::BuildMonopoleV()
 	   //cout << "Retrieved first bra." << endl;
            int a = bra.p;
            int b = bra.q;
-	   cout << "a=" << a << " b=" << b << endl;
+	   //cout << "a=" << a << " b=" << b << endl;
 	   if (a == -1 or b == -1) continue;
            Orbit & oa = modelspace->GetOrbit(a);
 	   //Orbit & oa = bra->op;

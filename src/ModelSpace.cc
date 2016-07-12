@@ -946,7 +946,7 @@ void ModelSpace::SetupKets(string Sys)
 	   //index = Index2(o1.index,o2.index);
 	   index = Index2(p,q);
 	   Kets[index] = Ket(o1,o2);
-	   cout << "Grabbing ket with p=" << p << " q=" << q << " and setting to index=" << index << endl;
+	   //cout << "Grabbing ket with p=" << p << " q=" << q << " and setting to index=" << index << endl;
 	   //Kets[index] = Ket(GetOrbit(indexMap[p]),GetOrbit(indexMap[q]));
 	   //count++;
 	} else
@@ -954,11 +954,11 @@ void ModelSpace::SetupKets(string Sys)
 	   index = Index2(p,q);
 	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
 	}
-        cout << "index=" << index << " p=" << p << " q=" << q << endl;
+        //cout << "index=" << index << " p=" << p << " q=" << q << endl;
         Orbit& orbp = GetOrbit(p);
-	cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
+	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
 	Orbit& orbq = GetOrbit(q);
-	cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
+	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         
      }
    }
@@ -966,15 +966,15 @@ void ModelSpace::SetupKets(string Sys)
   //cout << "Set up Kets[], moving to Ket& ket; Kets[].size()=" << Kets.size() << endl;
   for (index_t index=0;index<Kets.size();++index)
   {
-    cout << "index=" << index << endl;
+    //cout << "index=" << index << endl;
     Ket& ket = Kets[index];
-    cout << "Got the ket, checking parity and Tz." << endl;
+    //cout << "Got the ket, checking parity and Tz." << endl;
     int Tz = (ket.op->tz2 + ket.oq->tz2)/2;
     int parity = (ket.op->l + ket.oq->l)%2;
-    cout << "ket.op->l=" << ket.op->l << " ket.oq->l=" << ket.oq->l << endl;
-    cout << "About to add MonopoleKet with Tz=" << Tz << " parity=" << parity << " at index=" << index << endl;
+    //cout << "ket.op->l=" << ket.op->l << " ket.oq->l=" << ket.oq->l << endl;
+    //cout << "About to add MonopoleKet with Tz=" << Tz << " parity=" << parity << " at index=" << index << endl;
     MonopoleKets[Tz+1][parity][index] = MonopoleKets[Tz+1][parity].size()-1;
-    cout << "Added MonopoleKet." << endl;
+    //cout << "Added MonopoleKet." << endl;
     double occp = ket.op->occ;
     double occq = ket.oq->occ;
     int cvq_p = ket.op->cvq;
@@ -999,9 +999,9 @@ void ModelSpace::SetupKets(string Sys)
        Ket_occ_hh.push_back(occp*occq);
        Ket_unocc_hh.push_back((1-occp)*(1-occq));
     }
-    cout << "About to loop again." << endl;
+    //cout << "About to loop again." << endl;
    }
-   cout << "Got past Ket&; resizing TB." << endl;
+   //cout << "Got past Ket&; resizing TB." << endl;
    SortedTwoBodyChannels.resize(nTwoBodyChannels);
    SortedTwoBodyChannels_CC.resize(nTwoBodyChannels);
    //cout << "Resized TB; sorting TB." << endl;
