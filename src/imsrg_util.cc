@@ -280,15 +280,16 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    V12.SetHermitian();
    //cout << "nchan is " << nchan << endl;
    //modelspace.PreCalculateMoshinsky(); // Precalculate to speed parallization; already done in Atomic.cc
-   //#pragma omp parallel for // Doesn't seem to be thread-safe
-   for (int ch = 0; ch < nchan; ++ch)
+   //#pragma omp parallel for // Doesn't seem to be thread-safe // Sorted
+   for ( int ch : modelspace.SortedTwoBodyChannels )
    {
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
       //cout << "+++++ Channel is " << ch << " +++++" << endl;
+      if (tbc.GetNumberKets() == NULL) continue;
       int nkets = tbc.GetNumberKets();
       //cout << "nkets is " << nkets << endl;
       if (nkets == 0) continue;
-      bool trunc[nkets][nkets] = { {false} };
+      //bool trunc[nkets][nkets] = { {false} };
       //cout << "created trunc, moving into ibra loop." << endl;
       for (int ibra = 0; ibra < nkets; ++ibra)
       {
@@ -303,7 +304,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	 for (int jket = 0; jket <= ibra; jket++)
 	 {
 	    //cout << "----- jket is " << jket << " -----" << endl;
-	    if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
+	    //if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
 	    //cout << "Got past if(trunc[ch][ibra][jket]..." << endl;
 	    //cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
 	    Ket & ket = tbc.GetKet(jket);
@@ -327,10 +328,10 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //cout << "Got past CalcCMInvR." << endl;
 	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
 	    V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
-	    trunc[ibra][jket] = true;
+	    //trunc[ibra][jket] = true;
 	    //cout << "Set ibra,jket, setting jket,ibra." << endl; // TwoBodyKE only sets ibra,jket, should mimick this?
-	    V12.TwoBody.SetTBME(ch,jket,ibra,cmInvR);
-	    trunc[jket][ibra] = true;
+	    //V12.TwoBody.SetTBME(ch,jket,ibra,cmInvR);
+	    //trunc[jket][ibra] = true;
 	    //cout << "Got past setting TBME." << endl;
 	 } // jket
       } // ibra

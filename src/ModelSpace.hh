@@ -131,7 +131,7 @@ class TwoBodyChannel
 // private:
    //Fields
    ModelSpace * modelspace;
-   int NumberKets;  // Number of pq configs that participate in this channel
+   int NumberKets=0;  // Number of pq configs that participate in this channel
    vector<int> KetList; // eg [2, 4, 7, ...] Used for looping over all the kets in the channel
    vector<int> KetMap;  // eg [ -1, -1, 0, -1, 1, -1, -1, 2 ...] Used for asking what is the local index of this ket. -1 means the ket doesn't participate in this channel
    //Methods

@@ -360,7 +360,7 @@ ModelSpace::ModelSpace(int emax, vector<string> hole_list, vector<string> core_l
 ModelSpace::ModelSpace(int emax, string reference, string valence, int Lmax, string SystemType)
 : Emax(emax), E2max(2*emax), E3max(3*emax), Lmax(Lmax), Lmax2(emax), Lmax3(emax), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0),hbar_omega(20)
 {
-  Init(emax,reference,valence,Lmax, SystemType);
+  Init(emax,reference,valence,Lmax, SystemType); // Need to ensure all of these are init'd before passed.
 }
 
 ModelSpace::ModelSpace(int emax, string valence, int Lmax, string SystemType)
@@ -387,7 +387,7 @@ void ModelSpace::Init(int emax, string reference, string valence, int Lmax, stri
   else if (SystemType == "atomic"){
 	map<index_t,double> hole_list = GetOrbitsE(Zref); // This was an attempt to redo the way modelspaces are built
 	//map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
-	Init(emax,hole_list,valence,Lmax, SystemType);}
+	Init(emax,hole_list,valence,Lmax, SystemType);} // Need to ensure all of these are init'd before passed.
 }
 
 void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, int Lmax, string SystemType)
@@ -423,7 +423,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, i
 
   target_mass = Aref;
   target_Z = Zref;
-  Init(emax, hole_list,core_list, valence_list, Lmax, SystemType);
+  Init(emax, hole_list,core_list, valence_list, Lmax, SystemType); // Need to ensure all of these are init'd before passed.
   
 }
 
@@ -554,7 +554,11 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      if (oh.tz2 < 0) Zref += (oh.j2+1)*oh.occ;
    }
    //cout << "Setting up kets." << endl;
-   SetupKets(SystemType);
+   if (SystemType != ""){
+      SetupKets(SystemType);
+   } else {
+      SetupKets("nuclear");
+   }
    //cout << "Set up kets." << endl;
 }
 
@@ -955,9 +959,9 @@ void ModelSpace::SetupKets(string Sys)
 	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
 	}
         //cout << "index=" << index << " p=" << p << " q=" << q << endl;
-        Orbit& orbp = GetOrbit(p);
+        //Orbit& orbp = GetOrbit(p);
 	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
-	Orbit& orbq = GetOrbit(q);
+	//Orbit& orbq = GetOrbit(q);
 	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         
      }
@@ -1001,26 +1005,102 @@ void ModelSpace::SetupKets(string Sys)
     }
     //cout << "About to loop again." << endl;
    }
-   //cout << "Got past Ket&; resizing TB." << endl;
+   cout << "Got past Ket&; resizing TB." << endl;
    SortedTwoBodyChannels.resize(nTwoBodyChannels);
    SortedTwoBodyChannels_CC.resize(nTwoBodyChannels);
-   //cout << "Resized TB; sorting TB." << endl;
+   cout << "Resized TB; sorting TB., nTwoBodyChannels=" << nTwoBodyChannels << endl;
    for (int ch=0;ch<nTwoBodyChannels;++ch)
    {
       TwoBodyChannels.push_back(move(TwoBodyChannel(ch,this)));
       TwoBodyChannels_CC.push_back(move(TwoBodyChannel_CC(ch,this)));
       SortedTwoBodyChannels[ch] = ch;
       SortedTwoBodyChannels_CC[ch] = ch;
-      //cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
-      //cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
+      cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
+      cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
    }
+   cout << "Initialized dem channels." << endl;
    // Sort the two body channels in descending order of matrix dimension and discard the size-0 ones.
    // Hopefully this can help with load balancing.
-   sort(SortedTwoBodyChannels.begin(),SortedTwoBodyChannels.end(),[this](int i, int j){ return TwoBodyChannels[i].GetNumberKets() > TwoBodyChannels[j].GetNumberKets(); }  );
-   sort(SortedTwoBodyChannels_CC.begin(),SortedTwoBodyChannels_CC.end(),[this](int i, int j){ return TwoBodyChannels_CC[i].GetNumberKets() > TwoBodyChannels_CC[j].GetNumberKets(); }  );
-   //cout << "About to pop_back." << endl;
+   bool isSorted = true;
+   int maxSort = 10000;
+   int count = 0;
+   int temp;
+   do {
+      isSorted = true;
+      for (int i=0; i < nTwoBodyChannels-1; i++) {
+	 count++;
+	 //
+	 if (TwoBodyChannels[i].GetNumberKets() > TwoBodyChannels[i+1].GetNumberKets()) {
+	    temp = SortedTwoBodyChannels[i];
+	    SortedTwoBodyChannels[i] = SortedTwoBodyChannels[i+1];
+	    SortedTwoBodyChannels[i+1] = temp;
+	    isSorted = false;
+	 }
+      }
+   } while (!isSorted and count < maxSort);
+   for (int i=nTwoBodyChannels-1; i >= 0; i--){
+      cout << "TwoBodyChannels[" << i << "].GetNumberKets()=" << TwoBodyChannels[i].GetNumberKets() << endl;
+      //if (TwoBodyChannels[i].GetNumberKets() == 0) {
+	// TwoBodyChannels.erase(TwoBodyChannels.begin() + i);
+	 //continue;
+      //}
+   }
+	 
+   //sort(
+   //   SortedTwoBodyChannels.begin(),
+   //   SortedTwoBodyChannels.end(),
+   //   [this](int i, int j){
+	// int in = TwoBodyChannels[i].GetNumberKets();
+	// int jn = TwoBodyChannels[j].GetNumberKets();
+        // return in > jn;
+     // }
+   //); // Neet to ensure GetNumberKets is handled properly?
+   cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
+   int temp2;
+   count = 0;
+   isSorted = true;
+   do {
+      isSorted = true;
+      for (int i=0; i < nTwoBodyChannels-1; i++) {
+	 count++;
+	 //if (TwoBodyChannels_CC[i-1].GetNumberKets() == 0) {
+	 //   TwoBodyChannels_CC.erase(TwoBodyChannels_CC.begin() + i-1);
+	 //   continue;
+	 //}
+	 if (TwoBodyChannels_CC[i].GetNumberKets() > TwoBodyChannels_CC[i+1].GetNumberKets()) {
+	    temp2 = SortedTwoBodyChannels_CC[i];
+	    SortedTwoBodyChannels_CC[i] = SortedTwoBodyChannels_CC[i+1];
+	    SortedTwoBodyChannels_CC[i+1] = temp2;
+	    isSorted = false;
+	 }
+      }
+   } while (!isSorted and count < maxSort);
+   for (int i=nTwoBodyChannels-1; i >= 0; i--){
+      cout << "TwoBodyChannels_CC[" << i << "].GetNumberKets()=" << TwoBodyChannels_CC[i].GetNumberKets() << endl;
+      //if (TwoBodyChannels_CC[i].GetNumberKets() == 0) {
+	// SortedTwoBodyChannels_CC.erase(TwoBodyChannels_CC.begin() + i);
+	 //continue;
+      //}
+   }
+   //sort(
+   //   SortedTwoBodyChannels_CC.begin(),
+   //   SortedTwoBodyChannels_CC.end(),
+   //   [this](int i, int j){ 
+   //      int in = TwoBodyChannels[i].GetNumberKets();
+//	 int jn = TwoBodyChannels[j].GetNumberKets();
+   //      return in > jn;
+   //   }  
+   //); // Neet to ensure GetNumberKets is handled properly?
+   cout << "About to pop_back." << endl;
    while (  TwoBodyChannels[ SortedTwoBodyChannels.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels.pop_back();
    while (  TwoBodyChannels_CC[ SortedTwoBodyChannels_CC.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels_CC.pop_back();
+   //for (int i=0; i < SortedTwoBodyChannels.size(); i++){
+   //   cout << "Sorted TwoBodyChannels[" << i << "].GetNumberKets()=" << TwoBodyChannels[i].GetNumberKets() << endl;
+   //}
+   //for (int i=0; i < SortedTwoBodyChannels_CC.size(); i++){
+   //   cout << "Sorted TwoBodyChannels_CC[" << i << "].GetNumberKets()=" << TwoBodyChannels_CC[i].GetNumberKets() << endl;
+   //}
+   //nTwoBodyChannels = TwoBodyChannels.size();
 }
 
 

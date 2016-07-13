@@ -170,7 +170,7 @@ vector<string> Parameters::v(string key)
 
 string Parameters::DefaultFlowFile()
 {
-  char strbuf[200];
+  char strbuf[200] = { 0 };
   sprintf(strbuf, "output/BCH_%s_%s_%s_hw%.0f_e%d_A%d.dat",string_par["method"].c_str(),string_par["reference"].c_str(),string_par["valence_space"].c_str(),double_par["hw"],int_par["emax"],int_par["A"]);
   return string(strbuf);
 }
