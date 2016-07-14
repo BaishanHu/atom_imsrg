@@ -250,6 +250,7 @@ double HO_Radial_psi(int n, int l, double hw, double r)
 Operator InverseR_Op(ModelSpace& modelspace)
 {
    Operator InvR(modelspace);
+   InvR.SetHermitian();
    double t_start = omp_get_wtime();
    int norbits = modelspace.GetNumberOrbits();
    #pragma omp parallel for
@@ -261,14 +262,16 @@ Operator InverseR_Op(ModelSpace& modelspace)
 	Orbit& oj = modelspace.GetOrbit(j);
 	if ( oi.l != oj.l ) continue; 
 	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1, modelspace); // consider n +/- 1; selection rules
+	//InvR.SetOneBody(i,j,temp);
 	InvR.OneBody(i,j) = temp;
 	InvR.OneBody(j,i) = temp;
      }
    }
    // 1/137 comes from fine struct const {alpha} = e^2/(4pi{epsilon}{hbar}c) ~= 1/137 
    // Therefore e^2/(4pi{epsilon}) = {hbar}{c}{alpha}; Bohr Rad from R^L_ab = b^L * ~R^L_ab; b = BohrRad
+   InvR *= HBARC / (137.) / BOHR_RADIUS;
    InvR.profiler.timer["InverseR_Op"] += omp_get_wtime() - t_start;
-   return InvR  * HBARC / (137.) / BOHR_RADIUS;
+   return InvR  ;
 }
 
 Operator ElectronTwoBody(ModelSpace& modelspace)
@@ -278,6 +281,11 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    int nchan = modelspace.GetNumberTwoBodyChannels();
    Operator V12(modelspace);
    V12.SetHermitian();
+   V12.Erase();
+   //V12.EraseZeroBody(); // Throwing an error in some mapping function, which I /think/ is in OneBodyChannel or OneBody
+   //V12.EraseOneBody();
+   //V12.EraseTwoBody();
+   
    //cout << "nchan is " << nchan << endl;
    //modelspace.PreCalculateMoshinsky(); // Precalculate to speed parallization; already done in Atomic.cc
    //#pragma omp parallel for // Doesn't seem to be thread-safe // Sorted
@@ -285,12 +293,12 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    {
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
       //cout << "+++++ Channel is " << ch << " +++++" << endl;
-      if (tbc.GetNumberKets() == NULL) continue;
       int nkets = tbc.GetNumberKets();
       //cout << "nkets is " << nkets << endl;
-      if (nkets == 0) continue;
+      if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
       //bool trunc[nkets][nkets] = { {false} };
       //cout << "created trunc, moving into ibra loop." << endl;
+      //#pragma omp parallel for
       for (int ibra = 0; ibra < nkets; ++ibra)
       {
 	 //cout << "----- ibra is " << ibra << " -----" << endl;
@@ -300,8 +308,8 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	 //cout << "Got o1, getting o2." << endl;
          Orbit & o2 = modelspace.GetOrbit(bra.q);
 	 //#pragma omp parallel for
-	 
 	 for (int jket = 0; jket <= ibra; jket++)
+	 //for (int jket = ibra; jket < nkets; jket++)
 	 {
 	    //cout << "----- jket is " << jket << " -----" << endl;
 	    //if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
@@ -319,12 +327,12 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //cout << "o2.index=" << o2.index << endl;
 	    //cout << "o3.index=" << o3.index << endl;
 	    //cout << "o4.index=" << o4.index << endl;
-	    double t2_start = omp_get_wtime();
+	    //double t2_start = omp_get_wtime();
             double cmInvR = CalculateCMInvR(o1.n, o1.l, 1./2, o1.j2/2.0,
 					    o2.n, o2.l, 1./2, o2.j2/2.0,
 					    o3.n, o3.l, 1./2, o3.j2/2.0,
 					    o4.n, o4.l, 1./2, o4.j2/2.0, modelspace, tbc.J);
-	    V12.profiler.timer["CalculateCMInvR"] += (omp_get_wtime() - t2_start);//12;
+	    //V12.profiler.timer["CalculateCMInvR"] += (omp_get_wtime() - t2_start);//12;
 	    //cout << "Got past CalcCMInvR." << endl;
 	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
 	    V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
@@ -333,9 +341,19 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //V12.TwoBody.SetTBME(ch,jket,ibra,cmInvR);
 	    //trunc[jket][ibra] = true;
 	    //cout << "Got past setting TBME." << endl;
+	    //delete &ket;
+	    //delete &o3;
+	    //delete &o4;
+	    //delete &cmInvR;
 	 } // jket
+	 //delete &bra;
+	 //delete &o1;
+         //delete &o2;
       } // ibra
    } // ch
+   //delete &tbc;
+   //delete &modelspace;
+   #pragma omp master
    V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
    cout << "Leaving ElectronTwoBody." << endl;
    return V12;
@@ -392,7 +410,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
     double m = 0;
 
     // There has got to be a better way...
-    #pragma omp parallel for // Almost certainly thread safe, I think
+    //#pragma omp parallel for // Almost certainly thread safe, I think
     for (int Lambda = Lambda_lower; Lambda <= Lambda_upper; Lambda++)
     {
 	//cout << "Looping Lambda=" << Lambda << endl;
@@ -400,21 +418,24 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 	{
 	    //cout << "Looping S=" << S << endl;
 	    if (J < abs(Lambda-S) or J > Lambda+S) continue;
-	    for (int Lambdap = Lambdap_lower; Lambdap <= Lambdap_upper; Lambdap++)
-	    {
+	    //for (int Lambdap = Lambdap_lower; Lambdap <= Lambdap_upper; Lambdap++)
+	    int Lambdap = Lambda;
+	    //{
 		//cout << "Looping Lambdap=" << Lambdap << endl;
-		for (int Sp = Sp_lower; Sp <= Sp_upper; Sp++)
-		{
+		//for (int Sp = Sp_lower; Sp <= Sp_upper; Sp++)
+		int Sp = S;
+		//{
 		    if ( J < abs(Lambdap - Sp) or J > (Lambdap + Sp) ) continue;
 		    //cout << "Looping J34=" << J34 << endl;
 		    //cout << "About to calculate some NormNineJ" << endl;
-		    double i = NormNineJ(l1,s1,j1,l2,s2,j2,Lambda,S,J);
-		    double j = NormNineJ(l3,s3,j3,l4,s4,j4,Lambdap,Sp,J);
-		    temp = i * j;
+		    double i = NormNineJ(l1,s1,j1, l2,s2,j2, Lambda, S, J);
+		    if(i == 0) continue;
+		    double j = NormNineJ(l3,s3,j3, l4,s4,j4, Lambdap,Sp,J);
+		    if(j == 0) continue;
 		    //cout << "i=" << i << endl;
 		    //cout << "j=" << j << endl;
-		    if (abs(temp) <= 1e-8) continue;
-		    
+		    temp = i * j;
+		    //if (abs(temp) < 1e-8) continue;
 		    //cout << "temp = " << temp << endl;
 		    m = 0;
 		    for (int n = nMin; n <= p12/2; n++)
@@ -430,9 +451,12 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 				    
 				if (p12 != 2*n+2*N+l+L) continue; // Cons of Energy
 				if (Lambda < abs(l-L) or Lambda > (l+L)) continue; 
+				double gm1 = modelspace.GetMoshinsky(n1,l1,n2,l2, n, l, N, L, Lambda);
+				if (abs(gm1) < 1e-8) continue;
 				for (int np = npMin; np <= p34/2; np++)
 				{
 				    //cout << "Looping np=" << np << endl;
+				    //#pragma omp parallel
 				    for (int Np = 0; Np <= p34/2-np; Np++)
 				    {
 					//cout << "Looping Np=" << Np << endl;
@@ -442,15 +466,18 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 					    int Lp = p34-2*np-2*Np-lp;
 					    if (p34 != 2*np+2*Np+lp+Lp or Lambdap < abs(lp-Lp) or Lambdap > (lp+Lp)) continue;
 					    if (L != Lp or N != Np) continue;
-
+					    double gm2 = modelspace.GetMoshinsky(n3,l3,n4,l4, np,lp,Np,Lp,Lambdap);
+					    if (abs(gm2) < 1e-8) continue;
+					    double ri = RadialIntegral(n, l, np, lp, -1, modelspace);
+					    if (abs(ri) < 1e-8) continue;
 					    // Factor of sqrt(2) comes from r=(r1-r2)/sqrt(2), R=(r1+r2)/sqrt(2)
 					    //double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
-					    m +=1/sqrt(2) * modelspace.GetMoshinsky(n1,l1,n2,l2, n, l, N, L, Lambda)
+					    m +=1/sqrt(2) * gm1
  						//  * modelspace.GetMoshinsky(np,lp,Np,Lp, n3,l3,n4,l4,Lambdap)
 					    //m +=1/sqrt(2) * modelspace.GetMoshinsky(n,l,N,L, n1, l1, n2, l2, Lambda)
- 						* modelspace.GetMoshinsky(n3,l3,n4,l4, np,lp,Np,Lp,Lambdap)
+ 						* gm2
 						//* RadialIntegral(N, L, Np, Lp, 0)
-						* RadialIntegral(n, l, np, lp, -1, modelspace);
+						* ri;
 						//cout << "Calculated m=" << m << endl;
 					} // lp
 				    } // Np
@@ -460,12 +487,13 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
 		    } // n
 		T += temp*m;
 		//cout << "Calculated T=" << T << endl;
-		} // Sp
-	    } // Lambdap
+		//} // Sp
+	    //} // Lambdap
 	} // S
     } // Lambda
     //cout << "Leaving CMInvR" << endl;
-    return T * HBARC / (137.) / (BOHR_RADIUS);
+    T *= HBARC / (137.) / (BOHR_RADIUS);
+    return T;
 }
 
 
@@ -491,6 +519,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
+   #pragma omp master
    T.profiler.timer["KineticEnergy_Op"] += omp_get_wtime() - t_start;
    return T;
 }
@@ -1057,6 +1086,134 @@ Operator Energy_Op(ModelSpace& modelspace)
    // normalize.
    r1r2 *=  sqrt((1.0+bra.delta_pq())*(1.0+ket.delta_pq()));
    return r1r2 ;
+
+ }
+
+ /* Copied from other operator */
+ Operator CorrE2b(ModelSpace& modelspace)
+ {
+   double t_start = omp_get_wtime();
+   Operator E = Operator(modelspace);
+
+   int nchan = modelspace.GetNumberTwoBodyChannels();
+   modelspace.PreCalculateMoshinsky();
+   #pragma omp parallel for schedule(dynamic,1) 
+   for (int ch=0; ch<nchan; ++ch)
+   {
+      TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+      int nkets = tbc.GetNumberKets();
+      for (int ibra=0;ibra<nkets;++ibra)
+      {
+         Ket & bra = tbc.GetKet(ibra);
+         for (int iket=ibra;iket<nkets;++iket)
+         {
+            Ket & ket = tbc.GetKet(iket);
+            double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J); 
+             
+            E.TwoBody.SetTBME(ch,ibra,iket,mat_el);
+            E.TwoBody.SetTBME(ch,iket,ibra,mat_el);
+         }
+      }
+   }
+   E.profiler.timer["CorrE2b"] += omp_get_wtime() - t_start;
+   return E;
+ }
+
+ /* Copied from r1r2 calculation */
+ // Evaluate <bra | 1/|r1-r2| | ket>, omitting the factor (hbar * omega) /(m * omega^2)
+/// Returns the normalized, anti-symmetrized, J-coupled, two-body matrix element of \f$ \frac{m\omega^2}{\hbar \omega} \vec{r}_1\cdot\vec{r}_2 \f$.
+/// Calculational details are similar to Calculate_p1p2().
+ double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
+ {
+   Orbit & oa = modelspace.GetOrbit(bra.p);
+   Orbit & ob = modelspace.GetOrbit(bra.q);
+   Orbit & oc = modelspace.GetOrbit(ket.p);
+   Orbit & od = modelspace.GetOrbit(ket.q);
+
+   int na = oa.n;
+   int nb = ob.n;
+   int nc = oc.n;
+   int nd = od.n;
+
+   int la = oa.l;
+   int lb = ob.l;
+   int lc = oc.l;
+   int ld = od.l;
+
+   double ja = oa.j2/2.0;
+   double jb = ob.j2/2.0;
+   double jc = oc.j2/2.0;
+   double jd = od.j2/2.0;
+
+   int fab = 2*na + 2*nb + la + lb;
+   int fcd = 2*nc + 2*nd + lc + ld;
+   //if (abs(fab-fcd)%2 >0) return 0; // p1*p2 only connects kets with delta N = 0,1
+   //if (abs(fab-fcd)>2) return 0; // p1*p2 only connects kets with delta N = 0,1
+
+   double sa,sb,sc,sd;
+   sa=sb=sc=sd=0.5;
+
+   double invr=0;
+
+   // First, transform to LS coupling using 9j coefficients
+   for (int Lab=abs(la-lb); Lab<= la+lb; ++Lab)
+   {
+     for (int Sab=0; Sab<=1; ++Sab)
+     {
+       if ( abs(Lab-Sab)>J or Lab+Sab<J) continue;
+
+       double njab = NormNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
+       if (njab == 0) continue;
+       int Scd = Sab;
+       int Lcd = Lab;
+       double njcd = NormNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
+       if (njcd == 0) continue;
+
+       // Next, transform to rel / com coordinates with Moshinsky tranformation
+       for (int N_ab=0; N_ab<=fab/2; ++N_ab)  // N_ab = CoM n for a,b
+       {
+         for (int Lam_ab=0; Lam_ab<= fab-2*N_ab; ++Lam_ab) // Lam_ab = CoM l for a,b
+         {
+           int Lam_cd = Lam_ab; // tcm and trel conserve lam and Lam, ie relative and com orbital angular momentum
+           for (int lam_ab=(fab-2*N_ab-Lam_ab)%2; lam_ab<= (fab-2*N_ab-Lam_ab); lam_ab+=2) // lam_ab = relative l for a,b
+           {
+              if (Lab<abs(Lam_ab-lam_ab) or Lab>(Lam_ab+lam_ab) ) continue;
+              // factor to account for antisymmetrization
+
+              //int asymm_factor = (abs(bra.op->tz2+ket.op->tz2) + abs(bra.op->tz2+ket.oq->tz2)*modelspace.phase( lam_ab + Sab ))/ 2; // Shouldn't need this ?
+              //if ( asymm_factor ==0 ) continue;
+
+              int lam_cd = lam_ab; // tcm and trel conserve lam and Lam
+              int n_ab = (fab - 2*N_ab-Lam_ab-lam_ab)/2; // n_ab is determined by energy conservation
+	      if (n_ab < 0) continue;
+
+              double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
+
+              if (abs(mosh_ab)<1e-8) continue;
+
+              for (int N_cd=max(0,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
+              {
+                int n_cd = (fcd - 2*N_cd-Lam_cd-lam_cd)/2; // n_cd is determined by energy conservation
+                if (n_cd < 0) continue;
+                //if  (n_ab != n_cd and N_ab != N_cd) continue;
+
+                double mosh_cd = modelspace.GetMoshinsky(N_cd,Lam_cd,n_cd,lam_cd,nc,lc,nd,ld,Lcd);
+                if (abs(mosh_cd)<1e-8) continue;
+
+                double rad = RadialIntegral(na, la, nc, lc, -1, modelspace);
+		if (abs(rad) < 1e-8) continue;
+
+		invr += njab * njcd * mosh_ab * mosh_cd * rad / sqrt(2) * HBARC / 137. / BOHR_RADIUS;
+
+              } // N_cd
+           } // lam_ab
+         } // Lam_ab
+       } // N_ab
+
+     } // Sab
+   } // Lab
+
+   return invr ;
 
  }
 

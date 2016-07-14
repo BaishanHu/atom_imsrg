@@ -48,6 +48,9 @@ namespace imsrg_util
  Operator RpSpinOrbitCorrection(ModelSpace& modelspace);
  Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<index_t> index_list);
 
+ Operator CorrE2b(ModelSpace& modelspace);
+ double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
+
  Operator Isospin2_Op(ModelSpace& modelspace);
  Operator AllowedFermi_Op(ModelSpace& modelspace);
  Operator AllowedGamowTeller_Op(ModelSpace& modelspace);

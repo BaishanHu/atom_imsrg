@@ -927,7 +927,7 @@ int ModelSpace::GetTwoBodyChannelIndex(int j, int p, int t)
 
 void ModelSpace::SetupKets(string Sys)
 {
-   cout << "Entering SetupKets()" << endl;
+   //cout << "Entering SetupKets()" << endl;
    int index = 0;
    //if (SystemType == "nuclear")
    //{
@@ -1005,20 +1005,20 @@ void ModelSpace::SetupKets(string Sys)
     }
     //cout << "About to loop again." << endl;
    }
-   cout << "Got past Ket&; resizing TB." << endl;
+   //cout << "Got past Ket&; resizing TB." << endl;
    SortedTwoBodyChannels.resize(nTwoBodyChannels);
    SortedTwoBodyChannels_CC.resize(nTwoBodyChannels);
-   cout << "Resized TB; sorting TB., nTwoBodyChannels=" << nTwoBodyChannels << endl;
+   //cout << "Resized TB; sorting TB., nTwoBodyChannels=" << nTwoBodyChannels << endl;
    for (int ch=0;ch<nTwoBodyChannels;++ch)
    {
       TwoBodyChannels.push_back(move(TwoBodyChannel(ch,this)));
       TwoBodyChannels_CC.push_back(move(TwoBodyChannel_CC(ch,this)));
       SortedTwoBodyChannels[ch] = ch;
       SortedTwoBodyChannels_CC[ch] = ch;
-      cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
-      cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
+      //cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
+      //cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
    }
-   cout << "Initialized dem channels." << endl;
+   //cout << "Initialized dem channels." << endl;
    // Sort the two body channels in descending order of matrix dimension and discard the size-0 ones.
    // Hopefully this can help with load balancing.
    bool isSorted = true;
@@ -1038,13 +1038,13 @@ void ModelSpace::SetupKets(string Sys)
 	 }
       }
    } while (!isSorted and count < maxSort);
-   for (int i=nTwoBodyChannels-1; i >= 0; i--){
-      cout << "TwoBodyChannels[" << i << "].GetNumberKets()=" << TwoBodyChannels[i].GetNumberKets() << endl;
+   //for (int i=nTwoBodyChannels-1; i >= 0; i--){
+      //cout << "TwoBodyChannels[" << i << "].GetNumberKets()=" << TwoBodyChannels[i].GetNumberKets() << endl;
       //if (TwoBodyChannels[i].GetNumberKets() == 0) {
 	// TwoBodyChannels.erase(TwoBodyChannels.begin() + i);
 	 //continue;
       //}
-   }
+   //}
 	 
    //sort(
    //   SortedTwoBodyChannels.begin(),
@@ -1055,7 +1055,7 @@ void ModelSpace::SetupKets(string Sys)
         // return in > jn;
      // }
    //); // Neet to ensure GetNumberKets is handled properly?
-   cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
+   //cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
    int temp2;
    count = 0;
    isSorted = true;
@@ -1075,13 +1075,13 @@ void ModelSpace::SetupKets(string Sys)
 	 }
       }
    } while (!isSorted and count < maxSort);
-   for (int i=nTwoBodyChannels-1; i >= 0; i--){
-      cout << "TwoBodyChannels_CC[" << i << "].GetNumberKets()=" << TwoBodyChannels_CC[i].GetNumberKets() << endl;
+   //for (int i=nTwoBodyChannels-1; i >= 0; i--){
+      //cout << "TwoBodyChannels_CC[" << i << "].GetNumberKets()=" << TwoBodyChannels_CC[i].GetNumberKets() << endl;
       //if (TwoBodyChannels_CC[i].GetNumberKets() == 0) {
 	// SortedTwoBodyChannels_CC.erase(TwoBodyChannels_CC.begin() + i);
 	 //continue;
       //}
-   }
+   //}
    //sort(
    //   SortedTwoBodyChannels_CC.begin(),
    //   SortedTwoBodyChannels_CC.end(),
@@ -1091,7 +1091,7 @@ void ModelSpace::SetupKets(string Sys)
    //      return in > jn;
    //   }  
    //); // Neet to ensure GetNumberKets is handled properly?
-   cout << "About to pop_back." << endl;
+   //cout << "About to pop_back." << endl;
    while (  TwoBodyChannels[ SortedTwoBodyChannels.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels.pop_back();
    while (  TwoBodyChannels_CC[ SortedTwoBodyChannels_CC.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels_CC.pop_back();
    //for (int i=0; i < SortedTwoBodyChannels.size(); i++){
