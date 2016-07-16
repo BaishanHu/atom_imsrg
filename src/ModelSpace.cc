@@ -1293,28 +1293,24 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
 }
 
 void ModelSpace::GenerateFactorialList(double m){
-  //vector<double>f(m+1);
-  //cout << "Entering GenerateFactorialList." << endl;
-  int t = 1;
-  factorialList.emplace_back(t);
-  for (int i=1; i <= m; i++)
-  {
-     //cout << "Generating factorial for i=" << i << endl;
-     t *= i;
-     factorialList.emplace_back(t);
-     //vector[i] = t;
-     
-  }
-  //factorialList = f;
+    cout << "Entering GenerateFactorialList for m=" << m << endl;
+    factorialList.resize(m+1);
+    #pragma omp parallel for
+    for (int i=0; i < factorialList.size(); i++)
+    {
+	factorialList[i] = gsl_sf_fact(i);
+	//cout << "Generating factorial for " << i << "!=" << factorialList[i] << endl;
+    }
 }
 
 double ModelSpace::GetFactorial(double m){
-   if(std::find(factorialList.begin(), factorialList.end(), m) == factorialList.end())
-   {
-      factorialList[m] = gsl_sf_fact(m); 
-   }
-   //cout  << "Returning factorialList[" << m << "]=" << factorialList[m] << endl;
-   return factorialList[m];
+    #pragma omp critical
+    if (m > factorialList.size())
+    {
+	cout << m << "! not in Factorial List, regenerating." << endl;
+	GenerateFactorialList(m);
+    }
+    return factorialList[m];
 }
 
 

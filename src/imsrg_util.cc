@@ -1200,7 +1200,7 @@ Operator Energy_Op(ModelSpace& modelspace)
                 double mosh_cd = modelspace.GetMoshinsky(N_cd,Lam_cd,n_cd,lam_cd,nc,lc,nd,ld,Lcd);
                 if (abs(mosh_cd)<1e-8) continue;
 
-                double rad = RadialIntegral(na, la, nc, lc, -1, modelspace);
+                double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace);
 		if (abs(rad) < 1e-8) continue;
 
 		invr += njab * njcd * mosh_ab * mosh_cd * rad / sqrt(2) * HBARC / 137. / BOHR_RADIUS;
