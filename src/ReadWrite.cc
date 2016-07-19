@@ -719,7 +719,7 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
   vector<int> orbits_remap;
 
   if (emax < 0)  emax = modelspace->Emax;
-  if (lmax < 0)  lmax = emax;
+  if (lmax < 0)  lmax = modelspace->Lmax;
 
   for (int e=0; e<=min(emax,modelspace->Emax); ++e)
   {
@@ -794,12 +794,12 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
              if (norm_factor>0.9 or J%2==0)
              {
                 Hbare.TwoBody.SetTBME(J,parity,-1,a,b,c,d,tbme_pp*norm_factor);
-                Hbare.TwoBody.SetTBME(J,parity,1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
-                Hbare.TwoBody.Set_pn_TBME_from_iso(J,1,0,a,b,c,d,tbme_10*norm_factor);
+                if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.SetTBME(J,parity,1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
+                if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.Set_pn_TBME_from_iso(J,1,0,a,b,c,d,tbme_10*norm_factor);
              }
              if (norm_factor>0.9 or J%2!=0)
              { 
-                Hbare.TwoBody.Set_pn_TBME_from_iso(J,0,0,a,b,c,d,tbme_00*norm_factor);
+                if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.Set_pn_TBME_from_iso(J,0,0,a,b,c,d,tbme_00*norm_factor);
              }
 
           }
@@ -1569,7 +1569,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
   vector<int> orbits_remap;
 
   if (emax < 0)  emax = modelspace->GetEmax();
-  if (lmax < 0)  lmax = emax;
+  if (lmax < 0)  lmax = modelspace->GetLmax();
 
   for (int e=0; e<=min(emax,modelspace->GetEmax()); ++e)
   {
@@ -1600,6 +1600,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
 
   for(int nlj1=0; nlj1<=nljmax; ++nlj1)
   {
+    cout << "Entering nlj1 loop; nlj1=" << nlj1 << endl;
     int a =  orbits_remap[nlj1];
     Orbit & o1 = modelspace->GetOrbit(a);
     int e1 = 2*o1.n + o1.l;
@@ -1607,6 +1608,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
 
     for(int nlj2=0; nlj2<=nlj1; ++nlj2)
     {
+      cout << "Entering nlj2 loop; nlj2=" << nlj2 << endl;
       int b =  orbits_remap[nlj2];
       Orbit & o2 = modelspace->GetOrbit(b);
       int e2 = 2*o2.n + o2.l;
@@ -1615,14 +1617,18 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
 
       for(int nlj3=0; nlj3<=nlj1; ++nlj3)
       {
+	cout << "Entering nlj3 loop; nlj3=" << nlj3 << endl;
         int c =  orbits_remap[nlj3];
         Orbit & o3 = modelspace->GetOrbit(c);
         int e3 = 2*o3.n + o3.l;
 
         for(int nlj4=0; nlj4<=(nlj3==nlj1 ? nlj2 : nlj3); ++nlj4)
         {
+	  cout << "Entering nlj4 loop; nlj4=" << nlj4 << endl;
           int d =  orbits_remap[nlj4];
+	  cout << "got d=" << d << endl;
           Orbit & o4 = modelspace->GetOrbit(d);
+	  cout << "Retrieved orbit at d." << endl;
           int e4 = 2*o4.n + o4.l;
           if (e3+e4 > Emax) break;
           if ( (o1.l + o2.l + o3.l + o4.l)%2 != 0) continue;
@@ -1631,17 +1637,24 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
           if (Jmin > Jmax) continue;
           for (int J=Jmin; J<=Jmax; ++J)
           {
+	     cout << "Entering J loop; J=" << J << endl;
              // me2j format is unnormalized
              double norm_factor = 1;
              if (a==b)  norm_factor *= SQRT2;
              if (c==d)  norm_factor *= SQRT2;
-
+	     cout << "About to get Hbare parts; parity=" << parity << " a=" << a << " b=" << b << " c=" << c << " d=" << d << endl;
              // Matrix elements are written in the file with (T,Tz) = (0,0) (1,1) (1,0) (1,-1)
              tbme_pp = Hbare.TwoBody.GetTBME(J,parity,-1,a,b,c,d);
-             tbme_nn = Hbare.TwoBody.GetTBME(J,parity,1,a+1,b+1,c+1,d+1);
-             tbme_10 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,1,0,a,b,c,d);
-             tbme_00 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,0,0,a,b,c,d);
-
+	     cout << "Got PP; tbme_pp=" << tbme_pp << endl;
+             if (modelspace->SystemType == "nuclear" ) {
+		tbme_nn = Hbare.TwoBody.GetTBME(J,parity,1,a+1,b+1,c+1,d+1);
+		tbme_10 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,1,0,a,b,c,d);
+		tbme_00 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,0,0,a,b,c,d);
+	     } else {
+		tbme_nn = 0;
+		tbme_10 = 0;
+		tbme_00 = 0;
+	     }
              
              outfile << setprecision(7) << setw(12) << tbme_00*norm_factor<< " "  ;
              if ((icount++)%10==9)
@@ -1664,7 +1677,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
                outfile << endl;
              }
 
-
+	     cout << "Leaving J loop." << endl;
           }
         }
       }

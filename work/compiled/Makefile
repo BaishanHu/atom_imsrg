@@ -12,7 +12,7 @@ ifeq ($(DEBUG),on)
 endif
 
 all: exe
-exe: Atomic
+exe: Atomic writeAtomicTBME
 
 %:	%.cc
 	$(CC) $(INCLUDE) $^ -o $@ $(FLAGS) $(LIBS)

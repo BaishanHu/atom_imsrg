@@ -1108,8 +1108,9 @@ Operator Energy_Op(ModelSpace& modelspace)
          for (int iket=ibra;iket<nkets;++iket)
          {
             Ket & ket = tbc.GetKet(iket);
+	    //if (bra.p.index == bra.q.index or ket.p.index == ket.q.index) continue; // Pauli Principal
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J); 
-             
+            cout << "Setting TBME(" << ch << "," << ibra << "," << iket << "," << mat_el << ")" << endl;
             E.TwoBody.SetTBME(ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,iket,ibra,mat_el);
          }
@@ -1163,10 +1164,12 @@ Operator Energy_Op(ModelSpace& modelspace)
        if ( abs(Lab-Sab)>J or Lab+Sab<J) continue;
 
        double njab = NormNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
+       //if (njab < 0) cout << "njab=" << njab << " la=" << la << " sa=" << sa << " ja=" << ja << " lb=" << lb << " sb=" << sb << " jb=" << jb << " Lab=" << Lab << " Sab=" << Sab << " J=" << J << endl;
        if (njab == 0) continue;
        int Scd = Sab;
        int Lcd = Lab;
        double njcd = NormNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
+       //if (njcd < 0) cout << "njcd=" << njcd << " lc=" << lc << " sa=" << sc << " jc=" << jc << " ld=" << ld << " sd=" << sd << " jd=" << jd << " Lcd=" << Lcd << " Scd=" << Scd << " J=" << J << endl;
        if (njcd == 0) continue;
 
        // Next, transform to rel / com coordinates with Moshinsky tranformation
@@ -1188,7 +1191,7 @@ Operator Energy_Op(ModelSpace& modelspace)
 	      if (n_ab < 0) continue;
 
               double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
-
+	      //if (mosh_ab < 0) cout << "Mosh_ab=" << mosh_ab << " N_ab=" << N_ab << " Lam_ab=" << Lam_ab << " n_ab=" << n_ab << " lam_ab=" << lam_ab << " na=" << na << " la=" << la << " nb=" << nb << " lb=" << lb << " Lab=" << Lab;
               if (abs(mosh_ab)<1e-8) continue;
 
               for (int N_cd=max(0,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
@@ -1198,10 +1201,13 @@ Operator Energy_Op(ModelSpace& modelspace)
                 //if  (n_ab != n_cd and N_ab != N_cd) continue;
 
                 double mosh_cd = modelspace.GetMoshinsky(N_cd,Lam_cd,n_cd,lam_cd,nc,lc,nd,ld,Lcd);
+		//if (mosh_cd < 0) cout << "Mosh_cd=" << mosh_cd << " N_cd=" << N_cd << " Lam_cd=" << Lam_cd << " n_cd=" << n_cd << " lam_cd=" << lam_cd << " nc=" << nc << " lc=" << lc << " nd=" << nd << " ld=" << ld << " Lcd=" << Lcd;
                 if (abs(mosh_cd)<1e-8) continue;
 
                 double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace);
+		if (rad < 0) cout << "Rad=" << rad << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
 		if (abs(rad) < 1e-8) continue;
+
 
 		invr += njab * njcd * mosh_ab * mosh_cd * rad / sqrt(2) * HBARC / 137. / BOHR_RADIUS;
 
@@ -1212,7 +1218,7 @@ Operator Energy_Op(ModelSpace& modelspace)
 
      } // Sab
    } // Lab
-
+   if (invr < 0) cout << "Invr=" << invr << " oa.index=" << oa.index << " ob.index=" << ob.index << " oc.index=" << oc.index << "od.index=" << od.index << endl;
    return invr ;
 
  }

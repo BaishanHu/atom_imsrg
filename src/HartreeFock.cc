@@ -498,7 +498,7 @@ bool HartreeFock::CheckConvergence()
    CalcEHF();
    convergence_EHF.push_back(EHF);
    convergence_EHF.pop_front();
-   double ediff = arma::norm(energies-prev_energies, "frob") / energies.size();
+   double ediff = arma::norm(energies-prev_energies, "frob") / energies.size(); // Default argument is arma::norm(..., "frob") / ...
    convergence_ediff.push_back(ediff); // update list of convergence checks
    convergence_ediff.pop_front();
    return (ediff < tolerance);
