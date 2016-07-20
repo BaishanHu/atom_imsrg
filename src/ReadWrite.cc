@@ -721,17 +721,38 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
   if (emax < 0)  emax = modelspace->Emax;
   if (lmax < 0)  lmax = modelspace->Lmax;
 
-  for (int e=0; e<=min(emax,modelspace->Emax); ++e)
+  map<index_t,int> tempMap;
+  int count = 0;
+  int jMax = 0;
+  vector<Orbit> tOrbits;
+  for (int e=0; e<=emax; ++e) // e<=min(emax,modelspace->Emax)
   {
-    int lmin = e%2;
-    for (int l=lmin; l<=min(e,lmax); l+=2)
+    int lmin = 0; // =e%2;
+    int lmax = min(emax,lmax);
+    for (int l=e; l>=0; l-=2) // l<=min(e,lmax); l+= 2
     {
       int n = (e-l)/2;
       int twojMin = abs(2*l-1);
       int twojMax = 2*l+1;
-      for (int twoj=twojMin; twoj<=twojMax; twoj+=2)
+      for (int twoj=twojMax; twoj>=twojMin; twoj-=2)
       {
-         orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+	 int  index = modelspace->GetOrbitIndex(n,l,twoj,-1);
+	 if (modelspace->SystemType == "atomic"){
+		tempMap[index] = count; // Remapping a temporary list that should exten
+		index = tempMap[index];  
+		//indexMap[count] = count;
+		//indx = count;
+		count++;
+		//indx /= 2;
+		if (twoj > jMax and l < modelspace->Lmax) jMax = twoj;
+		tOrbits.emplace_back(Orbit(n,l,twoj,-1,0,0,index)); // Make a temporary list of orbits that span emax=lmax
+	 }
+	 //if (modelspace->SystemType == "atomic") {
+	 //    if (index != 0 and modelspace->indexMap[index] == 0) continue;
+	 //    index = modelspace->indexMap[index]; // index /=2 
+	 //}
+	 cout << "In Read: Pushing back index " << index << " With n=" << e << " l=" << l << " j2=" << twoj << endl;
+         orbits_remap.push_back( index );
       }
     }
   }
@@ -746,29 +767,49 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
   for(int nlj1=0; nlj1<=nljmax; ++nlj1)
   {
     int a =  orbits_remap[nlj1];
-    Orbit & o1 = modelspace->GetOrbit(a);
+    Orbit & o1 = tOrbits[a];
+    //if (modelspace->SystemType=="atomic") {
+//	o1 = tOrbits[a];
+  //  } else {
+//	o1 = modelspace->GetOrbit(a);
+  //  }
     int e1 = 2*o1.n + o1.l;
-    if (e1 > modelspace->Emax) break;
 
     for(int nlj2=0; nlj2<=nlj1; ++nlj2)
     {
       int b =  orbits_remap[nlj2];
-      Orbit & o2 = modelspace->GetOrbit(b);
+      Orbit & o2 = tOrbits[b];
+      //if (modelspace->SystemType=="atomic") {
+	//  o2 = tOrbits[b];
+     // } else {
+       //   o2 = modelspace->GetOrbit(b);
+      //}
       int e2 = 2*o2.n + o2.l;
       if (e1+e2 > Emax) break;
-      int parity = (o1.l + o2.l) % 2;
+      int parity_bra = (o1.l + o2.l) % 2;
 
       for(int nlj3=0; nlj3<=nlj1; ++nlj3)
       {
         int c =  orbits_remap[nlj3];
-        Orbit & o3 = modelspace->GetOrbit(c);
+	Orbit & o3 = tOrbits[c];
+        //if (modelspace->SystemType=="atomic") {
+	  //  o3 = tOrbits[c];
+        //} else {
+         //   o3 = modelspace->GetOrbit(c);
+	//}
         int e3 = 2*o3.n + o3.l;
 
         for(int nlj4=0; nlj4<=(nlj3==nlj1 ? nlj2 : nlj3); ++nlj4)
         {
           int d =  orbits_remap[nlj4];
-          Orbit & o4 = modelspace->GetOrbit(d);
+	  Orbit & o4 = tOrbits[d];
+	  //if (modelspace->SystemType=="atomic") {
+	   //   o4 = tOrbits[d];
+	  //} else {
+	  //    o4 = modelspace->GetOrbit(d);
+	  //}
           int e4 = 2*o4.n + o4.l;
+	  int parity_ket = (o3.l + o4.l)%2;
           if (e3+e4 > Emax) break;
           if ( (o1.l + o2.l + o3.l + o4.l)%2 != 0) continue;
           int Jmin = max( abs(o1.j2 - o2.j2), abs(o3.j2 - o4.j2) )/2;
@@ -782,7 +823,54 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
              infile >> tbme_00 >> tbme_nn >> tbme_10 >> tbme_pp;
 
              if (a>=norb or b>=norb or c>=norb or d>=norb) continue;
+	     if (o1.l > lmax or o2.l > lmax or o3.l > lmax or o4.l > lmax) continue;
+	     if (J > modelspace->TwoBodyJmax) continue;
 
+	     cout << "J=" << J << endl;
+	     cout << "parity_bra=" << parity_bra << endl;
+	     cout << "parity_ket=" << parity_ket << endl;
+
+	     int Tz_bra = (o1.tz2+o2.tz2)/2;
+	     int Tz_ket = (o3.tz2+o4.tz2)/2;
+
+	     bool gotA = false;
+	     bool gotB = false;
+	     bool gotC = false;
+	     bool gotD = false;
+
+	     int w = 0;
+	     int x = 0;
+	     int y = 0;
+	     int z = 0;
+
+	     for (int j=0; j < norb; j++) { // Remap our temp orbits to our regular orbits
+		 Orbit& o = modelspace->GetOrbit(j);
+		 if (!gotA and tOrbits[a].n == o.n and tOrbits[a].l == o.l  and tOrbits[a].j2 == o.j2){
+			cout << "Orbit at " << j << " has same qn as " << a << endl;
+			w = o.index;
+			gotA = true;
+		 }
+		 if (!gotB and tOrbits[b].n == o.n and tOrbits[b].l == o.l  and tOrbits[b].j2 == o.j2){
+			cout << "Orbit at " << j << " has same qn as " << b << endl;
+			x = o.index;
+			gotB = true;
+		 }
+		 if (!gotC and tOrbits[c].n == o.n and tOrbits[c].l == o.l  and tOrbits[c].j2 == o.j2){
+			cout << "Orbit at " << j << " has same qn as " << c << endl;
+			y = o.index;
+			gotC = true;
+		 }
+		 if (!gotD and tOrbits[d].n == o.n and tOrbits[d].l == o.l  and tOrbits[d].j2 == o.j2){
+			cout << "Orbit at " << j << " has same qn as " << d << endl;
+			z = o.index;
+			gotD = true;
+		 }
+		 if (gotA and gotB and gotC and gotD){
+			break;
+		 }
+	     }
+	     if (!gotA or !gotB or !gotC or !gotD) continue; // Failed to get one of our orbits, move on.
+	     cout << "Got our orbits! a=" << a << " b=" << b << " c=" << c << " d=" << d << endl;
              // Normalization. The TBMEs are read in un-normalized.
              double norm_factor = 1;
              if (a==b)  norm_factor /= SQRT2;
@@ -793,15 +881,20 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
 
              if (norm_factor>0.9 or J%2==0)
              {
-                Hbare.TwoBody.SetTBME(J,parity,-1,a,b,c,d,tbme_pp*norm_factor);
-                if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.SetTBME(J,parity,1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
-                if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.Set_pn_TBME_from_iso(J,1,0,a,b,c,d,tbme_10*norm_factor);
+		//int ch = modelspace->GetTwoBodyChannelIndex(J,parity,-1);
+		//int ch = parity*(jMax+1) + J;
+	        int ch_bra = modelspace->GetTwoBodyChannelIndex(J,parity_bra,Tz_bra);
+   		int ch_ket = modelspace->GetTwoBodyChannelIndex(J,parity_ket,Tz_ket);
+	        cout << "In read: Got PP; tbme_pp=" << tbme_pp << " at bra channel " << ch_bra << " and ket channel " << ch_ket << " with norm_factor=" << norm_factor << endl;
+                //Hbare.TwoBody.SetTBME(J,parity_bra,-1,w,x,y,z,tbme_pp*norm_factor);
+		Hbare.TwoBody.SetTBME(ch_bra,ch_ket,w,x,y,z, tbme_pp*norm_factor);
+                //if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.SetTBME(J,parity,1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
+                //if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.Set_pn_TBME_from_iso(J,1,0,a,b,c,d,tbme_10*norm_factor);
              }
              if (norm_factor>0.9 or J%2!=0)
              { 
-                if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.Set_pn_TBME_from_iso(J,0,0,a,b,c,d,tbme_00*norm_factor);
+                //if (Hbare.GetModelSpace()->SystemType == "nuclear" ) Hbare.TwoBody.Set_pn_TBME_from_iso(J,0,0,a,b,c,d,tbme_00*norm_factor);
              }
-
           }
         }
       }
@@ -1581,7 +1674,10 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
       int twojMax = 2*l+1;
       for (int twoj=twojMin; twoj<=twojMax; twoj+=2)
       {
-         orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+	 int index = modelspace->GetOrbitIndex(n,l,twoj,-1);
+	 if (modelspace->SystemType == "atomic") index = modelspace->indexMap[index]; // index/2 ?
+	 cout << "In Write: Pushing back index " << index << endl;
+         orbits_remap.push_back( index );
       }
     }
   }
@@ -1596,11 +1692,11 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
   int icount = 0;
 
   outfile << setiosflags(ios::fixed);
-  cout << "Writing file " << outfilename << "  emax =  " << emax << "  e2max = " << Emax << "  lmax = " << lmax << "  nljmax = " << nljmax << endl;
+  //cout << "Writing file " << outfilename << "  emax =  " << emax << "  e2max = " << Emax << "  lmax = " << lmax << "  nljmax = " << nljmax << endl;
 
   for(int nlj1=0; nlj1<=nljmax; ++nlj1)
   {
-    cout << "Entering nlj1 loop; nlj1=" << nlj1 << endl;
+    //cout << "Entering nlj1 loop; nlj1=" << nlj1 << endl;
     int a =  orbits_remap[nlj1];
     Orbit & o1 = modelspace->GetOrbit(a);
     int e1 = 2*o1.n + o1.l;
@@ -1608,7 +1704,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
 
     for(int nlj2=0; nlj2<=nlj1; ++nlj2)
     {
-      cout << "Entering nlj2 loop; nlj2=" << nlj2 << endl;
+      //cout << "Entering nlj2 loop; nlj2=" << nlj2 << endl;
       int b =  orbits_remap[nlj2];
       Orbit & o2 = modelspace->GetOrbit(b);
       int e2 = 2*o2.n + o2.l;
@@ -1617,18 +1713,18 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
 
       for(int nlj3=0; nlj3<=nlj1; ++nlj3)
       {
-	cout << "Entering nlj3 loop; nlj3=" << nlj3 << endl;
+	//cout << "Entering nlj3 loop; nlj3=" << nlj3 << endl;
         int c =  orbits_remap[nlj3];
         Orbit & o3 = modelspace->GetOrbit(c);
         int e3 = 2*o3.n + o3.l;
 
         for(int nlj4=0; nlj4<=(nlj3==nlj1 ? nlj2 : nlj3); ++nlj4)
         {
-	  cout << "Entering nlj4 loop; nlj4=" << nlj4 << endl;
+	  //cout << "Entering nlj4 loop; nlj4=" << nlj4 << endl;
           int d =  orbits_remap[nlj4];
-	  cout << "got d=" << d << endl;
+	  //cout << "got d=" << d << endl;
           Orbit & o4 = modelspace->GetOrbit(d);
-	  cout << "Retrieved orbit at d." << endl;
+	  //cout << "Retrieved orbit at d." << endl;
           int e4 = 2*o4.n + o4.l;
           if (e3+e4 > Emax) break;
           if ( (o1.l + o2.l + o3.l + o4.l)%2 != 0) continue;
@@ -1637,16 +1733,17 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
           if (Jmin > Jmax) continue;
           for (int J=Jmin; J<=Jmax; ++J)
           {
-	     cout << "Entering J loop; J=" << J << endl;
+	     //cout << "Entering J loop; J=" << J << endl;
              // me2j format is unnormalized
              double norm_factor = 1;
-             if (a==b)  norm_factor *= SQRT2;
-             if (c==d)  norm_factor *= SQRT2;
-	     cout << "About to get Hbare parts; parity=" << parity << " a=" << a << " b=" << b << " c=" << c << " d=" << d << endl;
+             if ( a==b )  norm_factor *= SQRT2;
+             if ( c==d )  norm_factor *= SQRT2;
+	     //cout << "About to get Hbare parts; parity=" << parity << " a=" << a << " b=" << b << " c=" << c << " d=" << d << endl;
              // Matrix elements are written in the file with (T,Tz) = (0,0) (1,1) (1,0) (1,-1)
              tbme_pp = Hbare.TwoBody.GetTBME(J,parity,-1,a,b,c,d);
-	     cout << "Got PP; tbme_pp=" << tbme_pp << endl;
-             if (modelspace->SystemType == "nuclear" ) {
+	     int ch = modelspace->GetTwoBodyChannelIndex(J,parity,-1);
+	     cout << "In Write: Got PP; tbme_pp=" << tbme_pp/norm_factor << " at channel " << ch << " with norm_factor=" << norm_factor << endl;
+             if ( modelspace->SystemType == "nuclear" ) {
 		tbme_nn = Hbare.TwoBody.GetTBME(J,parity,1,a+1,b+1,c+1,d+1);
 		tbme_10 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,1,0,a,b,c,d);
 		tbme_00 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,0,0,a,b,c,d);
@@ -1677,7 +1774,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
                outfile << endl;
              }
 
-	     cout << "Leaving J loop." << endl;
+	     //cout << "Leaving J loop." << endl;
           }
         }
       }

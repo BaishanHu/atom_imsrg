@@ -1108,9 +1108,8 @@ Operator Energy_Op(ModelSpace& modelspace)
          for (int iket=ibra;iket<nkets;++iket)
          {
             Ket & ket = tbc.GetKet(iket);
-	    //if (bra.p.index == bra.q.index or ket.p.index == ket.q.index) continue; // Pauli Principal
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J); 
-            cout << "Setting TBME(" << ch << "," << ibra << "," << iket << "," << mat_el << ")" << endl;
+            if (iket == ibra and mat_el < 0) cout << "Setting TBME(" << ch << "," << ibra << "," << iket << "," << mat_el << ")" << endl;
             E.TwoBody.SetTBME(ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,iket,ibra,mat_el);
          }
@@ -1218,7 +1217,7 @@ Operator Energy_Op(ModelSpace& modelspace)
 
      } // Sab
    } // Lab
-   if (invr < 0) cout << "Invr=" << invr << " oa.index=" << oa.index << " ob.index=" << ob.index << " oc.index=" << oc.index << "od.index=" << od.index << endl;
+   // if (invr < 0) cout << "Invr=" << invr << " oa.index=" << oa.index << " ob.index=" << ob.index << " oc.index=" << oc.index << " od.index=" << od.index << endl;
    return invr ;
 
  }

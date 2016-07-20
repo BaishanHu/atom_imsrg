@@ -510,7 +510,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      {
        if (l>Lmax) continue;
        int n = (N-l)/2;
-       for (int j2=2*l+1; j2>=2*l-1 and j2>0; j2-=2)
+       for (int j2=2*l+1; j2>=abs(2*l-1) and j2>0; j2-=2)
        {
          for (int tz : {-1, 1} )
          {
@@ -518,11 +518,13 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
             int cvq = 2;
             int indx = Index1(n,l,j2,tz);
 	    if (SystemType == "atomic" and tz < 0){ // Checks twice, this looks like garbage
-		//indexMap[real_norbits] = indexMap.size()-1; // Map atomic orbits as well as nuclear
-		//indx = indexMap[real_norbits]; }
-		indexMap[count] = count;
-		indx = count;
-		count++;}
+		indexMap[indx] = count; // Map atomic orbits as well as nuclear
+		indx = indexMap[indx]; 
+		//indexMap[count] = count;
+		//indx = count;
+		count++;
+		//indx /= 2;
+	    }
             if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
             if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
             if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
@@ -542,9 +544,9 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      }
    }
    norbits = real_norbits;
-   //cout << "Reset norbits=" << norbits << endl;
+   cout << "Reset norbits=" << norbits << endl;
    Orbits.resize(norbits);
-   //cout << "Resized Orbits; Orbits.size()=" << Orbits.size() << endl;
+   cout << "Resized Orbits; Orbits.size()=" << Orbits.size() << endl;
    Aref = 0;
    Zref = 0;
    for (auto& h : holes)
@@ -553,13 +555,13 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      Aref += (oh.j2+1)*oh.occ;
      if (oh.tz2 < 0) Zref += (oh.j2+1)*oh.occ;
    }
-   //cout << "Setting up kets." << endl;
+   cout << "Setting up kets." << endl;
    if (SystemType != ""){
       SetupKets(SystemType);
    } else {
       SetupKets("nuclear");
    }
-   //cout << "Set up kets." << endl;
+   cout << "Set up kets." << endl;
 }
 
 
@@ -880,7 +882,6 @@ void ModelSpace::AddOrbit(int n, int l, int j2, int tz2, double occ, int cvq, in
    //index_t ind = Index1(n, l, j2, tz2)
    //ind = indexMap[ind];
    Orbits[index] = Orbit(n,l,j2,tz2,occ,cvq,index);
-
    if (j2 > OneBodyJmax)
    {
       OneBodyJmax = j2;
@@ -888,6 +889,7 @@ void ModelSpace::AddOrbit(int n, int l, int j2, int tz2, double occ, int cvq, in
       ThreeBodyJmax = OneBodyJmax*3-1;
       nTwoBodyChannels = 2*3*(TwoBodyJmax+1);
    }
+
 
    if ( occ < OCC_CUT) particles.push_back(ind);
    else holes.push_back(ind);
@@ -943,14 +945,14 @@ void ModelSpace::SetupKets(string Sys)
      {
 	if (Sys == "atomic")
 	{
+	   index = Index2(p,q);
+	   //cout << "Grabbing ket with p=" << p << " q=" << q << " at indexMap[p]= " << indexMap[p] << " and indexMap[q]=" << indexMap[q] << "and setting to index=" << index << endl;
 	   //index = Kets.size();
 	   //Kets.emplace_back(Ket(GetOrbit(p),GetOrbit(q)));
 	   Orbit& o1 = GetOrbit(p);
 	   Orbit& o2 = GetOrbit(q);
 	   //index = Index2(o1.index,o2.index);
-	   index = Index2(p,q);
 	   Kets[index] = Ket(o1,o2);
-	   //cout << "Grabbing ket with p=" << p << " q=" << q << " and setting to index=" << index << endl;
 	   //Kets[index] = Ket(GetOrbit(indexMap[p]),GetOrbit(indexMap[q]));
 	   //count++;
 	} else
