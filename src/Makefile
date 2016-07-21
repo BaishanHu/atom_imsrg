@@ -25,7 +25,7 @@ PYTHONFLAGS = -I/usr/include/python2.7 -lboost_python #-lpython
 THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; else echo other; fi)
 
 ALL = libIMSRG.so imsrg++
-LIBS = -lopenblas -lgsl -lz -lhdf5_cpp -lhdf5
+LIBS = -lopenblas -lgsl -lz -lhdf5_cpp -lhdf5 -I ~/jsoncpp/dist
 
 ifeq ($(THEHOST),jureca) # specific options for jureca cluster
 # FLAGS += -DOPENBLAS_NOUSEOMP=1

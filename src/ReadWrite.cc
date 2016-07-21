@@ -9,6 +9,10 @@
 #include <chrono>
 #include <ctime>
 #include <unordered_map>
+#include <json/json-forwards.h>
+#include <json/json.h>
+//#include <json/writer.h>
+#include <jsoncpp.cpp>
 
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
@@ -1645,6 +1649,115 @@ void ReadWrite::ReadTensorOperator_Nathan( string filename1b, string filename2b,
   cout << "Done reading 2b file." << endl;
 
 
+}
+
+void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version )
+{
+    
+    Json::Value JsOp;
+    Json::FastWriter writer;
+    JsOp["version"] = version; // For backwards compatibility! Not yet implemented
+    //JsOp["date"] = ctime(&time_now);
+    JsOp["emax"] = emax;
+    JsOp["e2max"] = e2max;
+    JsOp["lmax"] = lmax;
+
+    JsOp["data"]["isHerm"] = Op.IsHermitian(); 		// Currently meaningless, later can use this to truncate number of terms needed.
+    JsOp["data"]["isAntiHerm"] = Op.IsAntiHermitian(); 	// Currently meaningless, later can use this to truncate number of terms needed.
+    JsOp["data"]["zerobody"] = Op.ZeroBody;
+
+    ModelSpace * modelspace = Op.GetModelSpace();
+    int norb = modelspace->norbits;
+
+    // Save OneBody parts
+    for (int i=0; i < Op.OneBody.n_cols;  i++)
+    {
+	Orbit & oi = modelspace->GetOrbit(i);
+	for (int j=0; j < Op.OneBody.n_rows; j++)
+	{
+	    Orbit & oj = modelspace->GetOrbit(j);
+	    JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1] = Op.OneBody(i,j); // Save everything as qn, not indicies
+	} // j
+    } // i
+
+    // Save TwoBody parts
+    for (int h=0; h < norb; h++)
+    {
+	Orbit & oh = modelspace->GetOrbit(h);
+	for (int i=0; i < norb; i++)
+	{
+	    Orbit & oi = modelspace->GetOrbit(i);
+	    for (int j=0; j < norb; j++)
+	    {
+		Orbit & oj = modelspace->GetOrbit(j);
+		for (int k=0; k < norb; k++)
+		{
+		    Orbit & ok = modelspace->GetOrbit(k);
+		    int ch_bra = modelspace->Index2(h,i);
+		    int ch_ket = modelspace->Index2(j,k);
+			// Saves the data as <(n1,l1,j1,tz1)(n2,l2,j2,tz2)|ME|(n3,l3,j3,tz3)(n4,l4,j4,tz4)>
+		    JsOp["data"]["twobody"][oh.n][oh.l][oh.j2][oh.tz2+1][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oj.tz2+1][ok.n][ok.l][ok.j2][ok.tz2+1] = Op.TwoBody.GetTBME(ch_bra, ch_ket, h, i, j, k); // Save everything as qn, not indicies
+		} // k
+	    } // j
+	} // i
+    } // h
+    ofstream outfile(filename);
+    outfile << writer.write( JsOp );
+    
+}
+
+void ReadWrite::ReadOperatorToJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version )
+{
+   // ofstream outfile(filename);
+
+    Json::Value JsOp;
+    JsOp["version"] = version; // For backwards compatibility! Not yet implemented
+    //JsOp["date"] = ctime(&time_now);
+    JsOp["emax"] = emax;
+    JsOp["e2max"] = e2max;
+    JsOp["lmax"] = lmax;
+
+    JsOp["data"]["isHerm"] = Op.IsHermitian(); 		// Currently meaningless, later can use this to truncate number of terms needed.
+    JsOp["data"]["isAntiHerm"] = Op.IsAntiHermitian(); 	// Currently meaningless, later can use this to truncate number of terms needed.
+    JsOp["data"]["zerobody"] = Op.ZeroBody;
+
+    ModelSpace * modelspace = Op.GetModelSpace();
+    int norb = modelspace->norbits;
+
+    // Save OneBody parts
+    for (int i=0; i < Op.OneBody.n_cols;  i++)
+    {
+	Orbit & oi = modelspace->GetOrbit(i);
+	for (int j=0; j < Op.OneBody.n_rows; j++)
+	{
+	    Orbit & oj = modelspace->GetOrbit(j);
+	    JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2][oj.n][oj.l][oj.j2][oi.tz2] = Op.OneBody(i,j); // Save everything as qn, not indicies
+	} // j
+    } // i
+
+    // Save TwoBody parts
+    for (int h=0; h < norb; h++)
+    {
+	Orbit & oh = modelspace->GetOrbit(h);
+	for (int i=0; i < norb; i++)
+	{
+	    Orbit & oi = modelspace->GetOrbit(i);
+	    for (int j=0; j < norb; j++)
+	    {
+		Orbit & oj = modelspace->GetOrbit(j);
+		for (int k=0; k < norb; k++)
+		{
+		    Orbit & ok = modelspace->GetOrbit(k);
+		    int ch_bra = modelspace->Index2(h,i);
+		    int ch_ket = modelspace->Index2(j,k);
+			// Saves the data as <(n1,l1,j1,tz1)(n2,l2,j2,tz2)|ME|(n3,l3,j3,tz3)(n4,l4,j4,tz4)>
+		    JsOp["data"]["twobody"][oh.n][oh.l][oh.j2][oh.tz2][oi.n][oi.l][oi.j2][oi.tz2][oj.n][oj.l][oj.j2][oj.tz2][ok.n][ok.l][ok.j2][ok.tz2] = Op.TwoBody.GetTBME(ch_bra, ch_ket, h, i, j, k); // Save everything as qn, not indicies
+		} // k
+	    } // j
+	} // i
+    } // h
+
+    //writer.write(outfile,JsOp);
 }
 
 void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int Emax, int lmax)
