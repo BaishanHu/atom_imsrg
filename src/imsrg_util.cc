@@ -285,20 +285,17 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    //V12.EraseZeroBody(); // Throwing an error in some mapping function, which I /think/ is in OneBodyChannel or OneBody
    //V12.EraseOneBody();
    //V12.EraseTwoBody();
-   
-   //cout << "nchan is " << nchan << endl;
-   //modelspace.PreCalculateMoshinsky(); // Precalculate to speed parallization; already done in Atomic.cc
    //#pragma omp parallel for // Doesn't seem to be thread-safe // Sorted
    for ( int ch : modelspace.SortedTwoBodyChannels )
    {
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
-      //cout << "+++++ Channel is " << ch << " +++++" << endl;
+      if (ch == 1) cout << "+++++ Channel is " << ch << " +++++" << endl;
       int nkets = tbc.GetNumberKets();
       //cout << "nkets is " << nkets << endl;
       if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
       //bool trunc[nkets][nkets] = { {false} };
       //cout << "created trunc, moving into ibra loop." << endl;
-      //#pragma omp parallel for
+      #pragma omp parallel for
       for (int ibra = 0; ibra < nkets; ++ibra)
       {
 	 //cout << "----- ibra is " << ibra << " -----" << endl;
@@ -314,7 +311,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //cout << "----- jket is " << jket << " -----" << endl;
 	    //if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
 	    //cout << "Got past if(trunc[ch][ibra][jket]..." << endl;
-	    //cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
+	    cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
 	    Ket & ket = tbc.GetKet(jket);
 	    //cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
 	    Orbit & o3 = modelspace.GetOrbit(ket.p);
@@ -322,7 +319,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    Orbit & o4 = modelspace.GetOrbit(ket.q);
 	    //cout << "Got Past Orbit & o4..." << endl;
 	    
-	    if ( o1.index > o2.index or o3.index > o4.index ) continue;
+	    //if ( o1.index > o2.index or o3.index > o4.index ) continue;
 	    //cout << "o1.index=" << o1.index << endl;
 	    //cout << "o2.index=" << o2.index << endl;
 	    //cout << "o3.index=" << o3.index << endl;
@@ -335,6 +332,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //V12.profiler.timer["CalculateCMInvR"] += (omp_get_wtime() - t2_start);//12;
 	    //cout << "Got past CalcCMInvR." << endl;
 	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
+	    if (ch == 1 and ibra == 2 and jket == 1) cout << "About to set tbme." << endl;
 	    V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
 	    //trunc[ibra][jket] = true;
 	    //cout << "Set ibra,jket, setting jket,ibra." << endl; // TwoBodyKE only sets ibra,jket, should mimick this?
@@ -1094,6 +1092,7 @@ Operator Energy_Op(ModelSpace& modelspace)
  {
    double t_start = omp_get_wtime();
    Operator E = Operator(modelspace);
+   E.SetHermitian();
 
    int nchan = modelspace.GetNumberTwoBodyChannels();
    modelspace.PreCalculateMoshinsky();
@@ -1109,9 +1108,12 @@ Operator Energy_Op(ModelSpace& modelspace)
          {
             Ket & ket = tbc.GetKet(iket);
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J); 
-            if (iket == ibra and mat_el < 0) cout << "Setting TBME(" << ch << "," << ibra << "," << iket << "," << mat_el << ")" << endl;
-            E.TwoBody.SetTBME(ch,ibra,iket,mat_el);
-            E.TwoBody.SetTBME(ch,iket,ibra,mat_el);
+            cout << "Setting TBME(" << ch << "," << ibra << "," << iket << "," << mat_el << ")" << endl;
+	    if (ch == 2 and bra.p == 1 and bra.q == 1 and ket.p == 1 and ket.q == 1) cout << "At 2,0,0 " << bra.p << " " << bra.q << " " << ket.p << " " << ket.q  << " " << tbc.J << endl;
+	    if (ch == 0 and bra.p == 1 and bra.q == 1 and ket.p == 1 and ket.q == 1) cout << "At 0,1,1 " << bra.p << " " << bra.q << " " << ket.p << " " << ket.q  << " " << tbc.J << endl;
+	    if (ch == 1 and bra.p == 3 and bra.q == 4 and ket.p == 3 and ket.q == 4) cout << "At 1,2,2 " << bra.p << " " << bra.q << " " << ket.p << " " << ket.q  << " " << tbc.J << endl;
+            E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
+            E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
          }
       }
    }

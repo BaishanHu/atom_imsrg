@@ -1653,9 +1653,9 @@ void ReadWrite::ReadTensorOperator_Nathan( string filename1b, string filename2b,
 
 void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version )
 {
-    
+    cout << "Entering WriteOperatorToJSON." << endl;
     Json::Value JsOp;
-    Json::FastWriter writer;
+
     JsOp["version"] = version; // For backwards compatibility! Not yet implemented
     //JsOp["date"] = ctime(&time_now);
     JsOp["emax"] = emax;
@@ -1664,100 +1664,248 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 
     JsOp["data"]["isHerm"] = Op.IsHermitian(); 		// Currently meaningless, later can use this to truncate number of terms needed.
     JsOp["data"]["isAntiHerm"] = Op.IsAntiHermitian(); 	// Currently meaningless, later can use this to truncate number of terms needed.
+    cout << "About to write ZeroBody." << endl;
     JsOp["data"]["zerobody"] = Op.ZeroBody;
+    JsOp["data"]["onebody"] = Json::arrayValue;
+    JsOp["data"]["twobody"] = Json::arrayValue;
 
     ModelSpace * modelspace = Op.GetModelSpace();
     int norb = modelspace->norbits;
-
+    cout << "About to write OneBody." << endl;
     // Save OneBody parts
+    #pragma omp parallel for
     for (int i=0; i < Op.OneBody.n_cols;  i++)
     {
 	Orbit & oi = modelspace->GetOrbit(i);
 	for (int j=0; j < Op.OneBody.n_rows; j++)
 	{
 	    Orbit & oj = modelspace->GetOrbit(j);
+	    cout << "Writing OneBody to (" << i << "," << j << ")." << endl;
+	    //JsOp["data"]["onebody"]
 	    JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1] = Op.OneBody(i,j); // Save everything as qn, not indicies
 	} // j
     } // i
 
     // Save TwoBody parts
-    for (int h=0; h < norb; h++)
+    int nchan = modelspace->GetNumberTwoBodyChannels();
+    cout << "OneBody Written about to write TwoBody." << endl;
+
+    /*for ( int w=0; w < norb; w++ )
     {
-	Orbit & oh = modelspace->GetOrbit(h);
-	for (int i=0; i < norb; i++)
+	Orbit& wo = modelspace->GetOrbit(w);
+	for ( int x=0; x < norb; x++ )
 	{
-	    Orbit & oi = modelspace->GetOrbit(i);
-	    for (int j=0; j < norb; j++)
+	    Orbit& xo = modelspace->GetOrbit(x);
+	    Ket& bra = modelspace->GetKet(modelspace->GetKetIndex(w,x));
+	    for ( int y=0; y < norb; y++ )
 	    {
-		Orbit & oj = modelspace->GetOrbit(j);
-		for (int k=0; k < norb; k++)
+		Orbit& yo = modelspace->GetOrbit(y);
+		for ( int z=0; z < norb; z++ )
 		{
-		    Orbit & ok = modelspace->GetOrbit(k);
-		    int ch_bra = modelspace->Index2(h,i);
-		    int ch_ket = modelspace->Index2(j,k);
-			// Saves the data as <(n1,l1,j1,tz1)(n2,l2,j2,tz2)|ME|(n3,l3,j3,tz3)(n4,l4,j4,tz4)>
-		    JsOp["data"]["twobody"][oh.n][oh.l][oh.j2][oh.tz2+1][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oj.tz2+1][ok.n][ok.l][ok.j2][ok.tz2+1] = Op.TwoBody.GetTBME(ch_bra, ch_ket, h, i, j, k); // Save everything as qn, not indicies
-		} // k
-	    } // j
-	} // i
-    } // h
+		    Orbit& zo = modelspace->GetOrbit(z);
+		    Ket& ket = modelspace->GetKet(modelspace->GetKetIndex(y,z));
+		}
+	    }
+	}
+    } */
+    #pragma omp parallel for // 
+    for ( int ch=0; ch < nchan; ch++)
+    {
+	TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
+	//cout << "+++++ Channel is " << ch << " +++++" << endl;
+	int nkets = tbc.GetNumberKets();
+	/*for (int w = 0; w < norb; w++)
+	{
+	    Orbit& o1 = modelspace->GetOrbit(w);
+	    for ( int x=0; x < norb; x++ )
+	    {
+		Orbit& o2 = modelspace->GetOrbit(x);
+		//Ket& bra = modelspace->GetKet(modelspace->GetKetIndex(w,x));
+		for ( int y=0; y < norb; y++ )
+		{
+		    Orbit& o3 = modelspace->GetOrbit(y);
+		    for ( int z=0; z < norb; z++ )
+		    {
+			Orbit& o4 = modelspace->GetOrbit(z);
+			//Ket& ket = modelspace->GetKet(modelspace->GetKetIndex(y,z));
+			try
+			{
+			    JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = Op.TwoBody.GetTBME_norm( ch, ch, w, x, y, z );
+			}
+			catch (std::out_of_range e)
+			{
+			    JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = 0;
+			}
+		    } // z
+		} // y
+	    } // x
+	} // w */
+	for (int ibra = 0; ibra < nkets; ++ibra)
+	{
+	    //cout << "----- ibra is " << ibra << " -----" << endl;
+	    Ket & bra = tbc.GetKet(ibra);
+	    //cout << "Got bra, getting orbits." << endl;
+	    Orbit & o1 = modelspace->GetOrbit(bra.p);
+	    //cout << "Got o1, getting o2." << endl;
+	    Orbit & o2 = modelspace->GetOrbit(bra.q);
+	    //#pragma omp parallel for
+	    //JsOp["data"]["twobody"]["n"] = o1.n;
+	    //JsOp["data"]["twobody"][o1.n]["l"] = o1.l;
+	    //JsOp["data"]["twobody"][o1.n][o1.l]["j2"] = o1.j2;
+	    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2]["tz2"] = o1.tz2+1;
+	    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1]["n"] = o2.n;
+	    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n]["l"] = o2.l;
+	    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l]["j2"] = o2.j2;
+	    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2]["tz2"] = o2.tz2+1;
+	    int indy1 = modelspace->Index1(o1.n,o1.l,o1.j2,o1.tz2);
+	    //JsOp["data"]["twobody"][ indy1 ] = indy1;
+	    int indy2 = modelspace->Index1(o2.n,o2.l,o2.j2,o2.tz2);
+	    //JsOp["data"]["twobody"][ indy1 ][ indy2 ] = indy2;
+	    for (int jket = ibra; jket < nkets; jket++)
+	    //for (int jket = ibra; jket < nkets; jket++)
+	    {
+		//cout << "----- jket is " << jket << " -----" << endl;
+	    	cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
+	    	Ket & ket = tbc.GetKet(jket);
+	    	//cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
+	    	Orbit & o3 = modelspace->GetOrbit(ket.p);
+	    	//cout << "Got Past Orbit & o3..." << endl;
+	    	Orbit & o4 = modelspace->GetOrbit(ket.q);
+	    	//cout << "Got Past Orbit & o4..." << endl;
+		//cout << "Writing TwoBody at (" << ibra << "," << jket << ")." << endl;
+	    	//if ( o1.index > o2.index or o3.index > o4.index ) continue;
+		// Saves the data as <(n1,l1,j1,tz1)(n2,l2,j2,tz2)|ME|(n3,l3,j3,tz3)(n4,l4,j4,tz4)>
+		int indy3 = modelspace->Index1(o3.n,o3.l,o3.j2,o3.tz2);
+		int indy4 = modelspace->Index1(o4.n,o4.l,o4.j2,o4.tz2);
+		try
+		{
+		    
+		    //JsOp["data"]["twobody"][ indy1 ][ indy2 ][ indy3 ] = indy3;
+		    
+		    //JsOp["data"]["twobody"][ indy1 ][ indy2 ][ indy3 ][ indy4 ] = indy4;
+		    //JsOp["data"]["twobody"][ indy1 ][ indy2 ][ indy3 ][ indy4 ] = Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket );
+		    //JsOp["data"]["twobody"][ indy1 ][ indy2 ][ indy3 ][ indy4 ] = Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket );
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1]["n"] = o3.n;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n]["l"] = o3.l;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l]["j2"] = o3.j2;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2]["tz2"] = o3.tz2+1;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1]["n"] = o4.n;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n]["l"] = o4.l;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l]["j2"] = o4.j2;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2]["tz2"] = o4.tz2+1;
+		    //cout << "Retrieved: Op.TwoBody.GetTBME_norm("  << ibra << "," << jket << "," << bra.p << "," << bra.q << "," << ket.p << "," << ket.q << ")=" << Op.TwoBody.GetTBME_norm( ibra , jket , bra.p , bra.q , ket.p , ket.q ) << endl;
+		    JsOp["data"]["twobody"][tbc.J][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket ); // Save everything as qn, not indicies
+		    cout << "Retrieved: Op.TwoBody.GetTBME_norm("  << ch << "," << ch << "," << ibra << "," << jket << ")=" << Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket ) << endl;
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket ); // Save everything as qn, not indicies
+		}
+		catch (std::out_of_range e)
+		{
+		    cout << "Out of range." << endl;
+		    //JsOp["data"]["twobody"][ indy1 ][ indy2 ][ indy3 ][ indy4 ] = 0;
+		    JsOp["data"]["twobody"][tbc.J][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = 0;
+		}
+	    } // jket
+	} // ibra 
+    } // ch 
     ofstream outfile(filename);
+    cout << "About to write." << endl;
+    Json::FastWriter writer;
+    //Json::StyledWriter writer;
+    //writer.setIndentLength(4);
     outfile << writer.write( JsOp );
-    
+    cout << "File written, leaving WriteToJSON." << endl;
 }
 
-void ReadWrite::ReadOperatorToJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version )
+void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version )
 {
-   // ofstream outfile(filename);
-
+    cout << "Entering ReadOperatorFromJSON." << endl;
     Json::Value JsOp;
-    JsOp["version"] = version; // For backwards compatibility! Not yet implemented
-    //JsOp["date"] = ctime(&time_now);
-    JsOp["emax"] = emax;
-    JsOp["e2max"] = e2max;
-    JsOp["lmax"] = lmax;
+    Json::Reader reader;
+    ifstream file = ifstream(filename);
+    bool parsingSuccess = reader.parse( file, JsOp );
+    if ( !parsingSuccess ) {
+	cout << "Error parsing document, returning; Error:" << reader.getFormattedErrorMessages() << endl;
+	return;
+    }
 
-    JsOp["data"]["isHerm"] = Op.IsHermitian(); 		// Currently meaningless, later can use this to truncate number of terms needed.
-    JsOp["data"]["isAntiHerm"] = Op.IsAntiHermitian(); 	// Currently meaningless, later can use this to truncate number of terms needed.
-    JsOp["data"]["zerobody"] = Op.ZeroBody;
+    //JsOp["version"] = reader.get(version).asString(); // For backwards compatibility! Not yet implemented
+    //JsOp["date"] = ctime(&time_now);
+    cout << "Emax=" << JsOp["emax"] << endl;
 
     ModelSpace * modelspace = Op.GetModelSpace();
     int norb = modelspace->norbits;
-
-    // Save OneBody parts
+    cout << "About to read OneBody." << endl;
+    // Save OneBody parts; Confirmed reading of onebody works.
     for (int i=0; i < Op.OneBody.n_cols;  i++)
     {
 	Orbit & oi = modelspace->GetOrbit(i);
 	for (int j=0; j < Op.OneBody.n_rows; j++)
 	{
 	    Orbit & oj = modelspace->GetOrbit(j);
-	    JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2][oj.n][oj.l][oj.j2][oi.tz2] = Op.OneBody(i,j); // Save everything as qn, not indicies
+	    cout << "Reading OneBody to (" << i << "," << j << ")." << endl;
+	    Op.OneBody(i,j) = JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1].asDouble();
+	    //JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1] = Op.OneBody(i,j); // Save everything as qn, not indicies
 	} // j
     } // i
 
     // Save TwoBody parts
-    for (int h=0; h < norb; h++)
+    int nchan = modelspace->GetNumberTwoBodyChannels();
+    cout << "OneBody Read about to read TwoBody." << endl;
+    //#pragma omp parallel for // Doesn't seem to be thread-safe // Sorted
+    for ( int ch=0; ch < nchan; ch++)
     {
-	Orbit & oh = modelspace->GetOrbit(h);
-	for (int i=0; i < norb; i++)
+	TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
+	//cout << "+++++ Channel is " << ch << " +++++" << endl;
+	int nkets = tbc.GetNumberKets();
+	for (int ibra = 0; ibra < nkets; ++ibra)
 	{
-	    Orbit & oi = modelspace->GetOrbit(i);
-	    for (int j=0; j < norb; j++)
+	    //cout << "----- ibra is " << ibra << " -----" << endl;
+	    Ket & bra = tbc.GetKet(ibra);
+	    //cout << "Got bra, getting orbits." << endl;
+	    Orbit & o1 = modelspace->GetOrbit(bra.p);
+	    //cout << "Got o1, getting o2." << endl;
+	    Orbit & o2 = modelspace->GetOrbit(bra.q);
+	    int indy1 = modelspace->Index1(o1.n, o1.l, o1.j2, o1.tz2);
+	    int indy2 = modelspace->Index1(o2.n, o2.l, o2.j2, o2.tz2);
+	    //#pragma omp parallel for
+	    for (int jket = ibra; jket < nkets; jket++)
+	    //for (int jket = ibra; jket < nkets; jket++)
 	    {
-		Orbit & oj = modelspace->GetOrbit(j);
-		for (int k=0; k < norb; k++)
+		//cout << "----- jket is " << jket << " -----" << endl;
+	    	cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
+	    	Ket & ket = tbc.GetKet(jket);
+	    	//cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
+	    	Orbit & o3 = modelspace->GetOrbit(ket.p);
+	    	//cout << "Got Past Orbit & o3..." << endl;
+	    	Orbit & o4 = modelspace->GetOrbit(ket.q);
+		int indy3 = modelspace->Index1(o3.n, o3.l, o3.j2, o3.tz2);
+		int indy4 = modelspace->Index1(o4.n, o4.l, o4.j2, o4.tz2);
+	    	//cout << "Got Past Orbit & o4..." << endl;
+		//cout << "Writing TwoBody at (" << ibra << "," << jket << ")." << endl;
+	    	//if ( o1.index > o2.index or o3.index > o4.index ) continue;
+		// Saves the data as <(n1,l1,j1,tz1)(n2,l2,j2,tz2)|ME|(n3,l3,j3,tz3)(n4,l4,j4,tz4)>
+		try
 		{
-		    Orbit & ok = modelspace->GetOrbit(k);
-		    int ch_bra = modelspace->Index2(h,i);
-		    int ch_ket = modelspace->Index2(j,k);
-			// Saves the data as <(n1,l1,j1,tz1)(n2,l2,j2,tz2)|ME|(n3,l3,j3,tz3)(n4,l4,j4,tz4)>
-		    JsOp["data"]["twobody"][oh.n][oh.l][oh.j2][oh.tz2][oi.n][oi.l][oi.j2][oi.tz2][oj.n][oj.l][oj.j2][oj.tz2][ok.n][ok.l][ok.j2][ok.tz2] = Op.TwoBody.GetTBME(ch_bra, ch_ket, h, i, j, k); // Save everything as qn, not indicies
-		} // k
-	    } // j
-	} // i
-    } // h
-
-    //writer.write(outfile,JsOp);
+		    Op.TwoBody.SetTBME( ch, ch, ibra, jket, JsOp["data"]["twobody"][tbc.J][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1].asDouble() );
+		    //Op.TwoBody.SetTBME( ch, ch, ibra, jket, JsOp["data"]["twobody"][ indy1 ][ indy2 ][ indy3 ][ indy4 ].asDouble() );
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = Op.TwoBody.GetTBME( ibra, jket, bra.p, bra.q, ket.p, ket.q ); // Save everything as qn, not indicies
+		}
+		catch (std::out_of_range e)
+		{
+		    cout << "Out of range." << endl;
+		    Op.TwoBody.SetTBME( ch, ch, ibra, jket, 0 );
+		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = 0;
+		}
+	    } // jket
+	} // ibra
+    } // ch
+    //ofstream outfile(filename);
+    //cout << "About to write." << endl;
+    //Json::FastWriter writer;
+    //Json::StyledWriter writer;
+    //writer.setIndentLength(4);
+    //outfile << writer.write( JsOp );
+    cout << "Leaving ReadFromTBME." << endl;
 }
 
 void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int Emax, int lmax)
