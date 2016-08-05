@@ -51,6 +51,7 @@ map<string,string> Parameters::string_par = {
   {"valence_file_format",       "nushellx"}, 	// file format for valence space interaction
   {"occ_file",			"none"}, 	// name of file containing orbit occupations
   {"systemtype",		"nuclear"},	// nuclear, atomic, etc.
+  {"systemBasis",		"harmonic"},
 };
 
 

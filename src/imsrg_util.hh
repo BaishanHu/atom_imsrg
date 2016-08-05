@@ -49,7 +49,8 @@ namespace imsrg_util
  Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<index_t> index_list);
 
  Operator CorrE2b(ModelSpace& modelspace);
- double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
+ double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis);
+ double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
 
  Operator Isospin2_Op(ModelSpace& modelspace);
  Operator AllowedFermi_Op(ModelSpace& modelspace);

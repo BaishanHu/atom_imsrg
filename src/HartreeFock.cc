@@ -102,6 +102,13 @@ void HartreeFock::Solve()
       cout << "!!!! Last " << convergence_EHF.size() << "  EHF values: ";
       for (auto& x : convergence_EHF ) cout << x << " ";
       cout << endl;
+      cout << "OneBody=" << endl << hbare.OneBody << endl;
+      cout << "TwoBody=" << endl;
+      for (int ch = 0; ch < hbare.nChannels; ch++) {
+	cout << endl;
+	cout << "----- Channel " << ch << " -----" << endl;
+	hbare.PrintTwoBody(ch);
+     }
    }
    PrintEHF();
    //cout << "Rho=" << endl;

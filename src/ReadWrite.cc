@@ -1664,16 +1664,16 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 
     JsOp["data"]["isHerm"] = Op.IsHermitian(); 		// Currently meaningless, later can use this to truncate number of terms needed.
     JsOp["data"]["isAntiHerm"] = Op.IsAntiHermitian(); 	// Currently meaningless, later can use this to truncate number of terms needed.
-    cout << "About to write ZeroBody." << endl;
-    JsOp["data"]["zerobody"] = Op.ZeroBody;
+    //cout << "About to write ZeroBody." << endl;
+    //JsOp["data"]["zerobody"] = Op.ZeroBody;
     JsOp["data"]["onebody"] = Json::arrayValue;
     JsOp["data"]["twobody"] = Json::arrayValue;
 
     ModelSpace * modelspace = Op.GetModelSpace();
     int norb = modelspace->norbits;
-    cout << "About to write OneBody." << endl;
+    //cout << "About to write OneBody." << endl;
     // Save OneBody parts
-    #pragma omp parallel for
+    /*#pragma omp parallel for
     for (int i=0; i < Op.OneBody.n_cols;  i++)
     {
 	Orbit & oi = modelspace->GetOrbit(i);
@@ -1684,11 +1684,11 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 	    //JsOp["data"]["onebody"]
 	    JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1] = Op.OneBody(i,j); // Save everything as qn, not indicies
 	} // j
-    } // i
+    } // i */
 
     // Save TwoBody parts
     int nchan = modelspace->GetNumberTwoBodyChannels();
-    cout << "OneBody Written about to write TwoBody." << endl;
+    cout << "About to write TwoBody." << endl;
 
     /*for ( int w=0; w < norb; w++ )
     {
@@ -1708,7 +1708,7 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 	    }
 	}
     } */
-    #pragma omp parallel for // 
+    //#pragma omp parallel for // Should be tread-safe
     for ( int ch=0; ch < nchan; ch++)
     {
 	TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
@@ -1765,7 +1765,7 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 	    //for (int jket = ibra; jket < nkets; jket++)
 	    {
 		//cout << "----- jket is " << jket << " -----" << endl;
-	    	cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
+	    	//cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
 	    	Ket & ket = tbc.GetKet(jket);
 	    	//cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
 	    	Orbit & o3 = modelspace->GetOrbit(ket.p);
@@ -1774,6 +1774,7 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 	    	//cout << "Got Past Orbit & o4..." << endl;
 		//cout << "Writing TwoBody at (" << ibra << "," << jket << ")." << endl;
 	    	//if ( o1.index > o2.index or o3.index > o4.index ) continue;
+
 		// Saves the data as <(n1,l1,j1,tz1)(n2,l2,j2,tz2)|ME|(n3,l3,j3,tz3)(n4,l4,j4,tz4)>
 		int indy3 = modelspace->Index1(o3.n,o3.l,o3.j2,o3.tz2);
 		int indy4 = modelspace->Index1(o4.n,o4.l,o4.j2,o4.tz2);
@@ -1795,7 +1796,7 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2]["tz2"] = o4.tz2+1;
 		    //cout << "Retrieved: Op.TwoBody.GetTBME_norm("  << ibra << "," << jket << "," << bra.p << "," << bra.q << "," << ket.p << "," << ket.q << ")=" << Op.TwoBody.GetTBME_norm( ibra , jket , bra.p , bra.q , ket.p , ket.q ) << endl;
 		    JsOp["data"]["twobody"][tbc.J][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket ); // Save everything as qn, not indicies
-		    cout << "Retrieved: Op.TwoBody.GetTBME_norm("  << ch << "," << ch << "," << ibra << "," << jket << ")=" << Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket ) << endl;
+		    //cout << "Retrieved: Op.TwoBody.GetTBME_norm("  << ch << "," << ch << "," << ibra << "," << jket << ")=" << Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket ) << endl;
 		    //JsOp["data"]["twobody"][o1.n][o1.l][o1.j2][o1.tz2+1][o2.n][o2.l][o2.j2][o2.tz2+1][o3.n][o3.l][o3.j2][o3.tz2+1][o4.n][o4.l][o4.j2][o4.tz2+1] = Op.TwoBody.GetTBME_norm( ch, ch, ibra, jket ); // Save everything as qn, not indicies
 		}
 		catch (std::out_of_range e)
@@ -1834,9 +1835,9 @@ void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, 
 
     ModelSpace * modelspace = Op.GetModelSpace();
     int norb = modelspace->norbits;
-    cout << "About to read OneBody." << endl;
+    //cout << "About to read OneBody." << endl;
     // Save OneBody parts; Confirmed reading of onebody works.
-    for (int i=0; i < Op.OneBody.n_cols;  i++)
+    /*for (int i=0; i < Op.OneBody.n_cols;  i++)
     {
 	Orbit & oi = modelspace->GetOrbit(i);
 	for (int j=0; j < Op.OneBody.n_rows; j++)
@@ -1846,7 +1847,7 @@ void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, 
 	    Op.OneBody(i,j) = JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1].asDouble();
 	    //JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1] = Op.OneBody(i,j); // Save everything as qn, not indicies
 	} // j
-    } // i
+    } // i */
 
     // Save TwoBody parts
     int nchan = modelspace->GetNumberTwoBodyChannels();
@@ -1872,7 +1873,7 @@ void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, 
 	    //for (int jket = ibra; jket < nkets; jket++)
 	    {
 		//cout << "----- jket is " << jket << " -----" << endl;
-	    	cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
+	    	//cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
 	    	Ket & ket = tbc.GetKet(jket);
 	    	//cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
 	    	Orbit & o3 = modelspace->GetOrbit(ket.p);

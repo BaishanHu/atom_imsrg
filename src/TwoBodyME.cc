@@ -122,7 +122,7 @@ double TwoBodyME::GetTBME_norm(int ch_bra, int ch_ket, int a, int b, int c, int 
    int bra_ind = tbc_bra.GetLocalIndex(min(a,b),max(a,b));
    int ket_ind = tbc_ket.GetLocalIndex(min(c,d),max(c,d));
    if (bra_ind < 0 or ket_ind < 0 or bra_ind > tbc_bra.GetNumberKets() or ket_ind > tbc_ket.GetNumberKets() ) {
-     cout << " Couldn't get ket, returning 0 for bra_ind=" << bra_ind << " ket_ind=" << ket_ind << endl;
+     //cout << " Couldn't get ket, returning 0 for bra_ind=" << bra_ind << " ket_ind=" << ket_ind << endl;
      return 0;
    }
    Ket & bra = tbc_bra.GetKet(bra_ind);

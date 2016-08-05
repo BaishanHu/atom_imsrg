@@ -529,11 +529,12 @@ Operator Energy_Op(ModelSpace& modelspace)
    Operator E(modelspace);
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
+   int Z = modelspace.GetTargetZ();
 
    for (int a=0;a<norbits;++a)
    {
       Orbit & oa = modelspace.GetOrbit(a);
-      E.OneBody(a,a) = hw * (2*oa.n + oa.l + 3./2); 
+      E.OneBody(a,a) = -hw/2 * Z * Z / (oa.n * oa.n); 
       //cout << "E.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
       //for ( int b : E.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
       //{
@@ -1107,11 +1108,9 @@ Operator Energy_Op(ModelSpace& modelspace)
          for (int iket=ibra;iket<nkets;++iket)
          {
             Ket & ket = tbc.GetKet(iket);
-            double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J); 
-            cout << "Setting TBME(" << ch << "," << ibra << "," << iket << "," << mat_el << ")" << endl;
-	    if (ch == 2 and bra.p == 1 and bra.q == 1 and ket.p == 1 and ket.q == 1) cout << "At 2,0,0 " << bra.p << " " << bra.q << " " << ket.p << " " << ket.q  << " " << tbc.J << endl;
-	    if (ch == 0 and bra.p == 1 and bra.q == 1 and ket.p == 1 and ket.q == 1) cout << "At 0,1,1 " << bra.p << " " << bra.q << " " << ket.p << " " << ket.q  << " " << tbc.J << endl;
-	    if (ch == 1 and bra.p == 3 and bra.q == 4 and ket.p == 3 and ket.q == 4) cout << "At 1,2,2 " << bra.p << " " << bra.q << " " << ket.p << " " << ket.q  << " " << tbc.J << endl;
+	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
+            double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J, modelspace.systemBasis); 
+	    if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
             E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
          }
@@ -1125,8 +1124,9 @@ Operator Energy_Op(ModelSpace& modelspace)
  // Evaluate <bra | 1/|r1-r2| | ket>, omitting the factor (hbar * omega) /(m * omega^2)
 /// Returns the normalized, anti-symmetrized, J-coupled, two-body matrix element of \f$ \frac{m\omega^2}{\hbar \omega} \vec{r}_1\cdot\vec{r}_2 \f$.
 /// Calculational details are similar to Calculate_p1p2().
- double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
+ double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis)
  {
+   if (systemBasis == "hydrogen") return Corr_Invr_Hydrogen(modelspace, bra, ket, J);
    Orbit & oa = modelspace.GetOrbit(bra.p);
    Orbit & ob = modelspace.GetOrbit(bra.q);
    Orbit & oc = modelspace.GetOrbit(ket.p);
@@ -1166,12 +1166,12 @@ Operator Energy_Op(ModelSpace& modelspace)
 
        double njab = NormNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
        //if (njab < 0) cout << "njab=" << njab << " la=" << la << " sa=" << sa << " ja=" << ja << " lb=" << lb << " sb=" << sb << " jb=" << jb << " Lab=" << Lab << " Sab=" << Sab << " J=" << J << endl;
-       if (njab == 0) continue;
+       if (njab == 0 or abs(njab) < 1e-8) continue;
        int Scd = Sab;
        int Lcd = Lab;
        double njcd = NormNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
        //if (njcd < 0) cout << "njcd=" << njcd << " lc=" << lc << " sa=" << sc << " jc=" << jc << " ld=" << ld << " sd=" << sd << " jd=" << jd << " Lcd=" << Lcd << " Scd=" << Scd << " J=" << J << endl;
-       if (njcd == 0) continue;
+       if (njcd == 0 or abs(njcd) < 1e-8) continue;
 
        // Next, transform to rel / com coordinates with Moshinsky tranformation
        for (int N_ab=0; N_ab<=fab/2; ++N_ab)  // N_ab = CoM n for a,b
@@ -1221,8 +1221,106 @@ Operator Energy_Op(ModelSpace& modelspace)
    } // Lab
    // if (invr < 0) cout << "Invr=" << invr << " oa.index=" << oa.index << " ob.index=" << ob.index << " oc.index=" << oc.index << " od.index=" << od.index << endl;
    return invr ;
+}
 
- }
+
+double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
+{
+   Orbit & oa = modelspace.GetOrbit(bra.p);
+   Orbit & ob = modelspace.GetOrbit(bra.q);
+   Orbit & oc = modelspace.GetOrbit(ket.p);
+   Orbit & od = modelspace.GetOrbit(ket.q);
+
+   int na = oa.n;
+   int nb = ob.n;
+   int nc = oc.n;
+   int nd = od.n;
+
+   int la = oa.l;
+   int lb = ob.l;
+   int lc = oc.l;
+   int ld = od.l;
+
+   double ja = oa.j2/2.0;
+   double jb = ob.j2/2.0;
+   double jc = oc.j2/2.0;
+   double jd = od.j2/2.0;
+
+   int fab = 2*na + 2*nb + la + lb;
+   int fcd = 2*nc + 2*nd + lc + ld;
+   //if (abs(fab-fcd)%2 >0) return 0; // p1*p2 only connects kets with delta N = 0,1
+   //if (abs(fab-fcd)>2) return 0; // p1*p2 only connects kets with delta N = 0,1
+
+   double sa,sb,sc,sd;
+   sa=sb=sc=sd=0.5;
+
+   double invr=0;
+
+   // First, transform to LS coupling using 9j coefficients
+   for (int Lab=abs(la-lb); Lab<= la+lb; ++Lab)
+   {
+     for (int Sab=0; Sab<=1; ++Sab)
+     {
+       if ( abs(Lab-Sab)>J or Lab+Sab<J) continue;
+
+       double njab = NormNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
+       //if (njab < 0) cout << "njab=" << njab << " la=" << la << " sa=" << sa << " ja=" << ja << " lb=" << lb << " sb=" << sb << " jb=" << jb << " Lab=" << Lab << " Sab=" << Sab << " J=" << J << endl;
+       if (njab == 0) continue;
+       int Scd = Sab;
+       int Lcd = Lab;
+       double njcd = NormNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
+       //if (njcd < 0) cout << "njcd=" << njcd << " lc=" << lc << " sa=" << sc << " jc=" << jc << " ld=" << ld << " sd=" << sd << " jd=" << jd << " Lcd=" << Lcd << " Scd=" << Scd << " J=" << J << endl;
+       if (njcd == 0) continue;
+
+       // Next, transform to rel / com coordinates with Moshinsky tranformation
+       for (int N_ab=1; N_ab<=fab/2; ++N_ab)  // N_ab = CoM n for a,b
+       {
+         for (int Lam_ab=0; Lam_ab<= fab-2*N_ab; ++Lam_ab) // Lam_ab = CoM l for a,b
+         {
+           int Lam_cd = Lam_ab; // tcm and trel conserve lam and Lam, ie relative and com orbital angular momentum
+           for (int lam_ab=(fab-2*N_ab-Lam_ab)%2; lam_ab<= (fab-2*N_ab-Lam_ab); lam_ab+=2) // lam_ab = relative l for a,b
+           {
+              if (Lab<abs(Lam_ab-lam_ab) or Lab>(Lam_ab+lam_ab) ) continue;
+              // factor to account for antisymmetrization
+
+              //int asymm_factor = (abs(bra.op->tz2+ket.op->tz2) + abs(bra.op->tz2+ket.oq->tz2)*modelspace.phase( lam_ab + Sab ))/ 2; // Shouldn't need this ?
+              //if ( asymm_factor ==0 ) continue;
+
+              int lam_cd = lam_ab; // tcm and trel conserve lam and Lam
+              int n_ab = (fab - 2*N_ab-Lam_ab-lam_ab)/2; // n_ab is determined by energy conservation
+	      if (n_ab < 1 or lam_ab >= n_ab or N_ab < 1) continue;
+
+              double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
+	      //if (mosh_ab < 0) cout << "Mosh_ab=" << mosh_ab << " N_ab=" << N_ab << " Lam_ab=" << Lam_ab << " n_ab=" << n_ab << " lam_ab=" << lam_ab << " na=" << na << " la=" << la << " nb=" << nb << " lb=" << lb << " Lab=" << Lab;
+              if (abs(mosh_ab)<1e-8) continue;
+
+              for (int N_cd=max(1,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
+              {
+                int n_cd = (fcd - 2*N_cd-Lam_cd-lam_cd)/2; // n_cd is determined by energy conservation
+                if (n_cd < 1 or lam_cd >= n_cd or N_cd < 1) continue;
+                //if  (n_ab != n_cd and N_ab != N_cd) continue;
+
+                double mosh_cd = modelspace.GetMoshinsky(N_cd,Lam_cd,n_cd,lam_cd,nc,lc,nd,ld,Lcd);
+		//if (mosh_cd < 0) cout << "Mosh_cd=" << mosh_cd << " N_cd=" << N_cd << " Lam_cd=" << Lam_cd << " n_cd=" << n_cd << " lam_cd=" << lam_cd << " nc=" << nc << " lc=" << lc << " nd=" << nd << " ld=" << ld << " Lcd=" << Lcd;
+                if (abs(mosh_cd)<1e-8) continue;
+
+                double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace); // Not valid for atomic systems.
+		if (rad < 0) cout << "Rad=" << rad << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
+		if (abs(rad) < 1e-8) continue;
+
+
+		invr += njab * njcd * mosh_ab * mosh_cd * rad / sqrt(2) * HBARC / 137. / BOHR_RADIUS;
+
+              } // N_cd
+           } // lam_ab
+         } // Lam_ab
+       } // N_ab
+
+     } // Sab
+   } // Lab
+   // if (invr < 0) cout << "Invr=" << invr << " oa.index=" << oa.index << " ob.index=" << ob.index << " oc.index=" << oc.index << " od.index=" << od.index << endl;
+   return invr ;
+}
 
 
 
@@ -1961,6 +2059,11 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
 
   }
 
+  /* // Simple Hydrogen-like one-body bound energy operator
+  Operator HydrogenEnergy(Modelspace& modelspace)
+  {
+
+  } */
 
   Operator RadialOverlap(ModelSpace& modelspace)
   {

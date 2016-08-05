@@ -301,7 +301,8 @@ ModelSpace::ModelSpace(const ModelSpace& ms)
    nTwoBodyChannels(ms.nTwoBodyChannels),
    Orbits(ms.Orbits), Kets(ms.Kets),
    TwoBodyChannels(ms.TwoBodyChannels), TwoBodyChannels_CC(ms.TwoBodyChannels_CC),
-   SystemType(ms.SystemType)
+   SystemType(ms.SystemType),
+   systemBasis(ms.systemBasis)
 {
    for (TwoBodyChannel& tbc : TwoBodyChannels)   tbc.modelspace = this;
    for (TwoBodyChannel_CC& tbc_cc : TwoBodyChannels_CC)   tbc_cc.modelspace = this;
@@ -332,7 +333,8 @@ ModelSpace::ModelSpace(ModelSpace&& ms)
    nTwoBodyChannels(ms.nTwoBodyChannels),
    Orbits(move(ms.Orbits)), Kets(move(ms.Kets)),
    TwoBodyChannels(move(ms.TwoBodyChannels)), TwoBodyChannels_CC(move(ms.TwoBodyChannels_CC)),
-   SystemType(move(ms.SystemType))
+   SystemType(move(ms.SystemType)),
+   systemBasis(move(ms.systemBasis))
 {
    for (TwoBodyChannel& tbc : TwoBodyChannels)   tbc.modelspace = this;
    for (TwoBodyChannel_CC& tbc_cc : TwoBodyChannels_CC)   tbc_cc.modelspace = this;
@@ -343,54 +345,54 @@ ModelSpace::ModelSpace(ModelSpace&& ms)
 
 // orbit string representation is e.g. p0f7
 // Assumes that the core is hole states that aren't in the valence space.
-ModelSpace::ModelSpace(int emax, vector<string> hole_list, vector<string> valence_list, int Lmax, string SystemType)
+ModelSpace::ModelSpace(int emax, vector<string> hole_list, vector<string> valence_list, int Lmax, string SystemType, string systemBasis)
 :  Emax(emax), E2max(2*emax), E3max(3*emax), Lmax(Lmax), Lmax2(emax), Lmax3(emax), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0), norbits(0), hbar_omega(20), target_mass(16)
 {
-   Init(emax, hole_list, hole_list, valence_list,Lmax, SystemType); 
+   Init(emax, hole_list, hole_list, valence_list,Lmax, SystemType, systemBasis); 
 }
 
 // If we don't want the reference to be the core
-ModelSpace::ModelSpace(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax, string SystemType)
+ModelSpace::ModelSpace(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax, string SystemType, string systemBasis)
 : Emax(emax), E2max(2*emax), E3max(3*emax), Lmax(Lmax), Lmax2(emax), Lmax3(emax), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0), norbits(0), hbar_omega(20), target_mass(16)
 {
-   Init(emax, hole_list, core_list, valence_list,Lmax, SystemType); 
+   Init(emax, hole_list, core_list, valence_list,Lmax, SystemType, systemBasis); 
 }
 
 // Most conventient interface
-ModelSpace::ModelSpace(int emax, string reference, string valence, int Lmax, string SystemType)
+ModelSpace::ModelSpace(int emax, string reference, string valence, int Lmax, string SystemType, string systemBasis)
 : Emax(emax), E2max(2*emax), E3max(3*emax), Lmax(Lmax), Lmax2(emax), Lmax3(emax), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0),hbar_omega(20)
 {
-  Init(emax,reference,valence,Lmax, SystemType); // Need to ensure all of these are init'd before passed.
+  Init(emax,reference,valence,Lmax, SystemType, systemBasis); // Need to ensure all of these are init'd before passed.
 }
 
-ModelSpace::ModelSpace(int emax, string valence, int Lmax, string SystemType)
-: Emax(emax), E2max(2*emax), E3max(3*emax), Lmax(Lmax), Lmax2(emax), Lmax3(emax), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0),hbar_omega(20),SystemType("nuclear")
+ModelSpace::ModelSpace(int emax, string valence, int Lmax, string SystemType, string systemBasis)
+: Emax(emax), E2max(2*emax), E3max(3*emax), Lmax(Lmax), Lmax2(emax), Lmax3(emax), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0),hbar_omega(20),SystemType("nuclear"), systemBasis("harmonic")
 {
   auto itval = ValenceSpaces.find(valence);
   if ( itval != ValenceSpaces.end() ) // we've got a valence space
-     Init(emax,itval->second[0],valence,Lmax);
+     Init(emax,itval->second[0],valence,Lmax, systemBasis);
   else  // no valence space. we've got a single-reference.
-     Init(emax,valence,valence,Lmax, SystemType);
+     Init(emax,valence,valence,Lmax, SystemType, systemBasis);
 }
 
 
 
 // Specify the reference and either the core or valence
 // This is the most convenient interface
-void ModelSpace::Init(int emax, string reference, string valence, int Lmax, string SystemType)
+void ModelSpace::Init(int emax, string reference, string valence, int Lmax, string SystemType, string systemBasis)
 {
 //  int Aref,Zref;
   GetAZfromString(reference,Aref,Zref);
   if (SystemType == "nuclear"){
 	map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
-	Init(emax,hole_list,valence,Lmax, SystemType);}
+	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);}
   else if (SystemType == "atomic"){
 	map<index_t,double> hole_list = GetOrbitsE(Zref); // This was an attempt to redo the way modelspaces are built
 	//map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
-	Init(emax,hole_list,valence,Lmax, SystemType);} // Need to ensure all of these are init'd before passed.
+	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);} // Need to ensure all of these are init'd before passed.
 }
 
-void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, int Lmax, string SystemType)
+void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, int Lmax, string SystemType, string systemBasis)
 {
   int Ac,Zc;
   vector<index_t> valence_list, core_list;
@@ -423,14 +425,14 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, i
 
   target_mass = Aref;
   target_Z = Zref;
-  Init(emax, hole_list,core_list, valence_list, Lmax, SystemType); // Need to ensure all of these are init'd before passed.
+  Init(emax, hole_list,core_list, valence_list, Lmax, SystemType, systemBasis); // Need to ensure all of these are init'd before passed.
   
 }
 
 
 // Specify the model space with strings of orbit lists.
 // Less convenient, but more flexible
-void ModelSpace::Init(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax, string SystemType)
+void ModelSpace::Init(int emax, vector<string> hole_list, vector<string> core_list, vector<string> valence_list, int Lmax, string SystemType, string systemBasis)
 {
    cout << "Creating a model space with Emax = " << Emax << "  and hole orbits [";
    for (auto& h : hole_list)  cout << h << " ";
@@ -441,11 +443,11 @@ void ModelSpace::Init(int emax, vector<string> hole_list, vector<string> core_li
    cout << "]" << endl;
    map<index_t,double> hole_map;
    for (auto& h : String2Index(hole_list)) hole_map[h] = 1.0;
-  Init(emax, hole_map, String2Index(core_list), String2Index(valence_list), Lmax, SystemType);
+  Init(emax, hole_map, String2Index(core_list), String2Index(valence_list), Lmax, SystemType, systemBasis);
 }
 
 
-void ModelSpace::Init_occ_from_file(int emax, string valence, string occ_file, int Lmax, string SystemType)
+void ModelSpace::Init_occ_from_file(int emax, string valence, string occ_file, int Lmax, string SystemType, string systemBasis)
 {
   index_t orb;
   double occ;
@@ -471,13 +473,14 @@ void ModelSpace::Init_occ_from_file(int emax, string valence, string occ_file, i
     cout << orb << " " << occ << endl;
   }
 
-  Init(emax, hole_list, valence, Lmax, SystemType);
+  Init(emax, hole_list, valence, Lmax, SystemType, systemBasis);
 }
 
 
 // This is the Init which should inevitably be called
-void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list, int Lmax, string SystemType)
+void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list, int Lmax, string SystemType, string systemBasis)
 {
+   cout << "SystemBasis=" << systemBasis << endl;
    ClearVectors();
    if (Lmax < 0) Lmax = emax;
    emax = Emax;
@@ -502,47 +505,73 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    Orbits.resize(norbits);
    int real_norbits = 0;
    int count = 0;
-   for (int N=0; N<=Emax; ++N)
-   {
-     //min(N,Lmax)
-     //cout << "Lmax=" << Lmax << " N=" << N << endl;
-     for (int l=N; l>=0; l-=2)
-     {
-       if (l>Lmax) continue;
-       int n = (N-l)/2;
-       for (int j2=2*l+1; j2>=abs(2*l-1) and j2>0; j2-=2)
+   if (systemBasis == "harmonic"){
+       for (int N=0; N<=Emax; ++N)
        {
-         for (int tz : {-1, 1} )
+         //min(N,Lmax)
+         //cout << "Lmax=" << Lmax << " N=" << N << endl;
+         for (int l=N; l>=0; l-=2)
          {
-            double occ = 0;
-            int cvq = 2;
-            int indx = Index1(n,l,j2,tz);
-	    if (SystemType == "atomic" and tz < 0){ // Checks twice, this looks like garbage
-		indexMap[indx] = count; // Map atomic orbits as well as nuclear
-		indx = indexMap[indx]; 
-		//indexMap[count] = count;
-		//indx = count;
-		count++;
-		//indx /= 2;
-	    }
-            if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
-            if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
-            if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
-	    cout << "Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
-	    if (SystemType == "atomic" and tz < 0) { // Only allow isospin -1/2.  this simulates only protons being added
-		AddOrbit(n,l,j2,tz,occ,cvq,indx);
-		cout << "Added orbit." << endl;
-		real_norbits++;
-	    } else if (SystemType == "nuclear" ) {
-		AddOrbit(n,l,j2,tz,occ,cvq);
-		real_norbits++;
-	    } else {
-		//offset++; // In case we don't add an orbit, iterate a bit further to try to get all the orbits in.
-	    }
+           if (l>Lmax) continue;
+           int n = (N-l)/2;
+           for (int j2=2*l+1; j2>=abs(2*l-1) and j2>0; j2-=2)
+           {
+             for (int tz : {-1, 1} )
+             {
+                double occ = 0;
+                int cvq = 2;
+                int indx = Index1(n,l,j2,tz);
+    	    	if (SystemType == "atomic" and tz < 0){ // Checks twice, this looks like garbage
+    		    indexMap[indx] = count; // Map atomic orbits as well as nuclear
+    		    indx = indexMap[indx]; 
+    		    //indexMap[count] = count;
+    		    //indx = count;
+		    count++;
+		    //indx /= 2;
+	        }
+                if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
+                if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
+                if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
+                cout << "Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
+	        if (SystemType == "atomic" and tz < 0) { // Only allow isospin -1/2.  this simulates only protons being added
+		    AddOrbit(n,l,j2,tz,occ,cvq,indx);
+		    cout << "Added orbit." << endl;
+		    real_norbits++;
+	        } else if (SystemType == "nuclear" ) {
+		    AddOrbit(n,l,j2,tz,occ,cvq);
+		    real_norbits++;
+	        } else {
+		    //offset++; // In case we don't add an orbit, iterate a bit further to try to get all the orbits in.
+	        }
+             }
+           }
          }
        }
-     }
+   } else if (systemBasis == "hydrogen") {
+	for (int n=1; n<=Emax; n++) 
+	{
+	    for (int l=0; l<Lmax and l<n; l++)
+	    {
+		for (int j2=abs(2*l-1); j2 <= 2*l+1; j2+=2)
+		{
+		    int tz = -1;
+		    double occ = 0;
+		    int cvq = 2;
+		    int indx = Index1(n,l,j2,tz);
+		    indexMap[indx] = count;
+		    indx = indexMap[indx];
+		    count++;
+		    if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
+		    if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
+		    if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
+		    cout << "Hydrogen Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
+		    AddOrbit(n,l,j2,tz,occ,cvq,indx);
+		    real_norbits++;
+		}
+	    }
+	}
    }
+	
    norbits = real_norbits;
    cout << "Reset norbits=" << norbits << endl;
    Orbits.resize(norbits);
@@ -1300,7 +1329,8 @@ void ModelSpace::GenerateFactorialList(double m){
     #pragma omp parallel for
     for (int i=0; i < factorialList.size(); i++)
     {
-	factorialList[i] = gsl_sf_fact(i);
+	if (factorialList[i] == 0)
+	    factorialList[i] = gsl_sf_fact(i);
 	//cout << "Generating factorial for " << i << "!=" << factorialList[i] << endl;
     }
 }
