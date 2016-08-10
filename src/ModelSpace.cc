@@ -1326,11 +1326,15 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
 void ModelSpace::GenerateFactorialList(double m){
     cout << "Entering GenerateFactorialList for m=" << m << endl;
     factorialList.resize(m+1);
+    //long double t=1;
+    factorialList[0] = 1;
     #pragma omp parallel for
-    for (int i=0; i < factorialList.size(); i++)
+    for (int i=1; i < factorialList.size(); i++)
     {
 	if (factorialList[i] == 0)
 	    factorialList[i] = gsl_sf_fact(i);
+	//t *= abs(i);
+	//factorialList[i] = abs(t);
 	//cout << "Generating factorial for " << i << "!=" << factorialList[i] << endl;
     }
 }
@@ -1344,8 +1348,6 @@ double ModelSpace::GetFactorial(double m){
     }
     return factorialList[m];
 }
-
-
 
 
 

@@ -52,6 +52,10 @@ namespace imsrg_util
  double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis);
  double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
 
+ void GenerateRadialIntegrals(ModelSpace& modelspace);
+ double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace);
+
+
  Operator Isospin2_Op(ModelSpace& modelspace);
  Operator AllowedFermi_Op(ModelSpace& modelspace);
  Operator AllowedGamowTeller_Op(ModelSpace& modelspace);

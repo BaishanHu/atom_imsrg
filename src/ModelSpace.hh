@@ -256,6 +256,7 @@ class ModelSpace
    void ClearVectors();
    void GenerateFactorialList(double m);
 
+   
 
    // Data members
    vector<index_t> holes;           // in the reference Slater determinant
@@ -317,8 +318,9 @@ class ModelSpace
    vector<Ket> Kets;
    vector<TwoBodyChannel> TwoBodyChannels;
    vector<TwoBodyChannel_CC> TwoBodyChannels_CC;
-   vector<double> factorialList;
+   vector<long double> factorialList;
 //   map<long int,double> SixJList;
+   vector<long double> radList;
 
    static unordered_map<unsigned long int,double> SixJList;
    static unordered_map<long long unsigned int,double> NineJList;

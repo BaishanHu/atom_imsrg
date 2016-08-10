@@ -244,6 +244,69 @@ double HO_Radial_psi(int n, int l, double hw, double r)
    return rho;
  }
 
+void GenerateRadialIntegrals(ModelSpace& modelspace)
+{
+    cout << "Entering GenerateRadialIntegrals." << endl;
+    int size = 1100*modelspace.Emax+11*modelspace.Lmax;
+    cout << "Resizing radList; size=" << size << endl;
+    modelspace.radList.resize(size);
+    int norb = modelspace.norbits;
+    #pragma omp parallel for
+    for (int n1=0; n1<modelspace.Emax; n1++)
+    {
+	//Orbit& o1 = modelspace.GetOrbit(i);
+	for (int l1=0; l1<2*modelspace.Lmax; l1++)
+	{
+	    for (int n2=0; n2<=n1; n2++)
+	    {
+		//Orbit& o1 = modelspace.GetOrbit(i);
+		for (int l2=0; l2<=l1; l2++)
+		{
+		    int ind1 = 1000*n1+100*n2+10*l1+l2;
+		    //int ind2 = 1000*n2+100*n1+10*l2+l1;
+		    //if (modelspace.radList.size() < max(ind1,ind2)) modelspace.radList.resize(max(ind1,ind2));
+		    if (modelspace.radList.size() < ind1) modelspace.radList.resize(ind1);
+		    //if (modelspace.radList[1000*n1+100*n2+10*l1+l2] != 0 or modelspace.radList[1000*n2+100*n1+10*l2+l1] != 0)
+		    //{
+			
+			//cout << "Generating radial integral for ind1=" << ind1 << endl;
+			long double rad = RadialIntegral(n1, l1, n2, l2, -1, modelspace);
+			modelspace.radList[ind1] = rad;
+			//modelspace.radList[ind2] = rad;
+			//cout << "Generated, moving on." << endl;
+		    //}
+		}
+	    }
+	    //Orbit& o2 = modelspace.GetOrbit(j);
+	    /*if (modelspace.radList[1000*o1.n+100*o2.n+10*o1.l+o2.l] != 0 or modelspace.radList[1000*o2.n+100*o1.n+10*o2.l+o1.l] != 0)
+	    {
+		int rad = RadialIntegral(o1.n, o1.l, o2.n, o2.l, -1, modelspace);
+		modelspace.radList[1000*o1.n+100*o2.n+10*o1.l+o2.l] = rad;
+		modelspace.radList[1000*o2.n+100*o1.n+10*o2.l+o1.l] = rad;
+	    }*/
+	}
+    }
+    cout << "Exiting GenerateRadialIntegrals." << endl;
+}
+
+double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace)
+{
+    int ind = 0;
+    if (n2 > n1) ind = 1000*n2 + 10*l2 + 100*n1 + l1;
+    else ind = 1000*n1 + 10*l1 + 100*n2 + l2;
+    // Should be good for lmax < 10; could use some ordering to reduce the number of possiblities further
+    double rad;
+    #pragma omp critical
+    {
+    if (ind > modelspace.radList.size())
+    {
+	cout << ind << "! not in radList, generating." << endl;
+	GenerateRadialIntegrals(modelspace);
+    }
+    }
+    return modelspace.radList[ind];
+} 
+
 // Creates an operator that performs <k/r>
 // In oscillator basis: RadialIntegral() with L=-1; currently implemented correctly
 // In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
@@ -260,11 +323,16 @@ Operator InverseR_Op(ModelSpace& modelspace)
      for (int j=0; j<=i; j++)
      {
 	Orbit& oj = modelspace.GetOrbit(j);
-	if ( oi.l != oj.l ) continue; 
-	double temp = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1, modelspace); // consider n +/- 1; selection rules
+	if ( oi.l != oj.l ) continue; // From spherical harmonics orthogonality
+	double temp1 = 0-getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace);
+	//double temp2 = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1, modelspace); // consider n +/- 1; selection rules
+	//if (temp1 != temp2){
+	//	cout << "Temps are different for n1=" << oi.n << " l1=" << oi.l << " n2=" << oj.n << " l2=" << oj.l << endl;
+	//	cout << "getRad=" << temp1 << " radint=" << temp2 << endl;
+	//}
 	//InvR.SetOneBody(i,j,temp);
-	InvR.OneBody(i,j) = temp;
-	InvR.OneBody(j,i) = temp;
+	InvR.OneBody(i,j) = temp1;
+	InvR.OneBody(j,i) = temp1;
      }
    }
    // 1/137 comes from fine struct const {alpha} = e^2/(4pi{epsilon}{hbar}c) ~= 1/137 
@@ -1110,7 +1178,7 @@ Operator Energy_Op(ModelSpace& modelspace)
             Ket & ket = tbc.GetKet(iket);
 	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J, modelspace.systemBasis); 
-	    if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
+	    //if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
             E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
          }
@@ -1205,7 +1273,8 @@ Operator Energy_Op(ModelSpace& modelspace)
 		//if (mosh_cd < 0) cout << "Mosh_cd=" << mosh_cd << " N_cd=" << N_cd << " Lam_cd=" << Lam_cd << " n_cd=" << n_cd << " lam_cd=" << lam_cd << " nc=" << nc << " lc=" << lc << " nd=" << nd << " ld=" << ld << " Lcd=" << Lcd;
                 if (abs(mosh_cd)<1e-8) continue;
 
-                double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace);
+                //double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace);
+		double rad = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
 		if (rad < 0) cout << "Rad=" << rad << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
 		if (abs(rad) < 1e-8) continue;
 
@@ -1860,7 +1929,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    double lnh = (nb+lb);
    double lMax = max(lna, max(lnb, max(lnc, max(lnd, max(lne, max(lnf, max(lng, lnh)))))));
 
-   double B1 = AngMom::phase(p-q);
+   long double B1 = AngMom::phase(p-q);
    B1 /= pow(2,(na+nb));
 /*
    if (lMax > 10){
@@ -1908,13 +1977,13 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
    B1 /= ms.GetFactorial(lnb);
    B1 *= sqrt(ms.GetFactorial(lnc));
    B1 *= sqrt(ms.GetFactorial(lnd));
+   B1 /= sqrt(ms.GetFactorial(lng));
    B1 *= sqrt(ms.GetFactorial(lne));
    B1 *= sqrt(ms.GetFactorial(lnf));
-   B1 /= sqrt(ms.GetFactorial(lng));
    B1 /= sqrt(ms.GetFactorial(lnh));
 
    //boost::multiprecision::cpp_bin_float_100 B2 = 0;
-   double B2 = 0;
+   long double B2 = 0;
    int kmin = max(0, p-q-nb);
    int kmax = min(na, p-q);
    for (int k=kmin;k<=kmax;++k)
@@ -1928,7 +1997,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
       temp /= gsl_sf_fact(nb - p + q + k);
       temp /= gsl_sf_fact(p-q-k);
     */
-      long double temp = gsl_sf_fact(la+k);
+      long double temp = ms.GetFactorial(la+k);
       temp *= ms.GetFactorial(p-int((la-lb)/2)-k);
       temp /= ms.GetFactorial(k);
       temp /= ms.GetFactorial(2*la+2*k+1);
@@ -1938,7 +2007,7 @@ Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<ind
       temp /= ms.GetFactorial(p-q-k);
       B2 += temp;
    }
-    return double (B1 * B2);
+    return B1 * B2;
  }
 
   Operator AllowedFermi_Op(ModelSpace& modelspace)
