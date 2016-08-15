@@ -514,7 +514,20 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
          {
            if (l>Lmax) continue;
            int n = (N-l)/2;
-           for (int j2=2*l+1; j2>=abs(2*l-1) and j2>0; j2-=2)
+	   int jmax = 0;
+	   int jmin = 0;
+	   int jdiff = 0;
+	   if (SystemType == "atomic")
+	   {
+		jmax = 2*l+1;
+		jmin = abs(2*l-1);
+		jdiff = 2;
+	   } else {
+		jmax = abs(2*l-1);
+		jmin = 2*l+1;
+		jdiff = -2;
+	   }
+           for (int j2=jmin; j2<=jmax and j2>0; j2+=jdiff)
            {
              for (int tz : {-1, 1} )
              {
