@@ -510,7 +510,21 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
        {
          //min(N,Lmax)
          //cout << "Lmax=" << Lmax << " N=" << N << endl;
-         for (int l=N; l>=0; l-=2)
+	 int lmax = 0;
+	 int lmin = 0;
+	 int ldiff = 0;
+	 if (SystemType == "atomic")
+	   {
+		lmax = N;
+		if (N%2==0) lmin=0;
+		else lmin=1;
+		ldiff = 2;
+	   } else {
+		lmax = 0;
+		lmin = N;
+		ldiff = -2;
+	   }
+         for (int l=lmin; l<=lmax; l+=ldiff)
          {
            if (l>Lmax) continue;
            int n = (N-l)/2;
@@ -1334,6 +1348,78 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
    MoshList[key] = mosh;
    return mosh * phase_mosh;
 
+}
+
+double ModelSpace::OsToHydroCoeff( double x, void * p )
+{
+	struct my_f_params * params = (struct my_f_params *)p;
+        int n = (params->n);
+        int l = (params->l);
+	double c = 1 / (n * BOHR_RADIUS);
+	double m = 1; 			// Electron mass, in atomic units
+	double h = 1; 			// Reduced plancks' constant, in atomic units
+	double w = 13.605 * 2 / h; 	// wavelength of oscillator 13.605 *2 ? 
+	double v = m*w/(2*h);
+	
+	return pow( x, 2*l+2 ) * exp( -v*x*x - c*x ) * gsl_sf_laguerre_n(n, 0.5, 2*v*x*x) * gsl_sf_laguerre_n(n-l-1, 2*l-1, 2*x*c);
+}
+
+
+
+void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
+    cout << "Entering GenerateOsToHydroCoeff." << endl;
+    OsToHydroCoeffList.resize(nmax);
+
+    int size = 1000;
+
+    gsl_integration_workspace *work_ptr =
+    gsl_integration_workspace_alloc (size);
+
+    //gsl_set_error_handler_off ();
+
+    double lower_limit = 0;	/* start integral from lower_limit (to infinity) */
+    double abs_error = 1.0e-9;	/* to avoid round-off problems */
+    double rel_error = 1.0e-9;	/* the result will usually be much better */
+    double result;		/* the result from the integration */
+    double error;		/* the estimated error from the integration */
+
+    gsl_function My_function;
+    struct my_f_params alpha = {1,0,1};
+    My_function.function = &OsToHydroCoeff;
+    My_function.params = &alpha;
+
+    //#pragma omp parallel for
+    for (int n = 1.; n < nmax; n++)
+    {
+	for (int l = 0.; l < n and l < Lmax; l++)
+	{
+	    double hydrogenCoeff = sqrt( pow(2/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2/(n * BOHR_RADIUS),l);
+	    double temp = 0;
+	    for (int np = 0; np < 2*nmax; np++) // unsure about limits; inf? cons of energy?
+	    {
+		alpha.n = n;
+		alpha.l = l;
+		alpha.np = np;
+        
+		gsl_integration_qagiu (&My_function,
+			lower_limit,
+			abs_error,
+			rel_error,
+			size,
+			work_ptr,
+			&result,
+			&error);
+
+		
+
+	    	double OscilCoeff = sqrt( sqrt( 2* pow(13.605,3) / 3.14159 ) * pow(2,np+2*l+3) * GetFactorial(np) * pow(13.605,l) / gsl_sf_doublefact(2*np+2*l+1) ); // could split this
+	    	temp += OscilCoeff*result;
+	    } // np
+	    OsToHydroCoeffList[10*n+l] = 1/(hydrogenCoeff*temp*result); // indexing should be good up to l = 10
+	} // l
+    } // n
+
+    cout << "Exiting GenerateOsToHydroCoeff." << endl;
 }
 
 void ModelSpace::GenerateFactorialList(double m){
