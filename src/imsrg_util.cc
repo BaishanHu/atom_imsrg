@@ -1324,7 +1324,7 @@ Operator Energy_Op(ModelSpace& modelspace)
    Operator E = Operator(modelspace);
    E.SetHermitian();
 
-   int nmax = min(4*modelspace.Emax,46);
+   int nmax = 46; //min(4*modelspace.Emax,46); // 46 because integral returns NaN for n > 46, 32 because gamma overflows for nmax > 32
    float ta;
    float tb;
    float tc;
@@ -1352,28 +1352,42 @@ Operator Energy_Op(ModelSpace& modelspace)
 	    double result = 0;
 	    ta=tb=tc=td=0;
 	    //cout << "About to start big loop." << endl;
-	    //#pragma omp parallel for
+	    
+	    //#pragma omp parallel for schedule(dynamic,1) // should check out generateMoshinsky to see how it is done.
 	    for (int Na = 0; Na < nmax; Na++) // 46 because integral returns NaN for n > 46
 	    {
+		static unordered_map<unsigned long int,double> local_List;
 		int ia = 100*Na + 10*bra.op->n + bra.op->l;
 		double Dna = modelspace.OsToHydroCoeffList[ia];
 		tb=tc=td=0;
-		ta += Dna * (2*Na*+ bra.op->l + 3./2) * 2;
-		if ( ta > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(bra.op->n*bra.op->n) ) {
-		    cout << "Exceeded ta; Na=" << Na << endl;
-		    continue;}
+		//float opa = bra.op->n * 1.;
+		double elima = modelspace.GetTargetZ()*modelspace.GetTargetZ()/(double(bra.op->n)*double(bra.op->n));
+		/* if ( ta + Dna * Dna * (2*Na + bra.op->l + 3./2) * 2 > elima ) { // Conservation of Energy
+		    cout << "Exceeded ta; Na=" << Na << " ta=" << ta << " limit=" << elima << endl;
+		    cout << "modelspace.GetTargetZ()=" << modelspace.GetTargetZ() << endl;
+		    cout << "bra.op->n=" << bra.op->n << endl;
+		    continue;} */
+		ta += Dna * Dna * (2*Na+ bra.op->l + 3./2) * 2;
+		
+
 		//cout << "Getting Dna at " << ia << "=" << Dna << endl;
 		Orbit oa = Orbit(Na, bra.op->l, bra.op->j2, bra.op->tz2, bra.op->occ, bra.op->cvq, bra.op->index);
+		if ( 2*Na + bra.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/4 ) continue; // Crazy energy.
 		if ( abs(Dna) < 1e-8 ) continue;
-		for (int Nb = Na; Nb < nmax; Nb++) // 46 because integral returns NaN for n > 46
+		for (int Nb = 0; Nb <= Na; Nb++) // 46 because integral returns NaN for n > 46
 		{
 		    int ib = 100*Nb + 10*bra.oq->n + bra.oq->l;
 		    double Dnb = modelspace.OsToHydroCoeffList[ib];
 		    tc=td=0;
-		    tb += Dnb * (2*Nb*+ bra.op->l + 3./2) * 2;
-		    if ( tb > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(bra.oq->n*bra.oq->n) ) {
-			cout << "Exceeded tb; Nb=" << Nb << endl;
-			continue;}
+		    double elimb = modelspace.GetTargetZ()*modelspace.GetTargetZ()/(double(bra.oq->n)*double(bra.oq->n)) ;
+		    /* if ( tb + Dnb * Dnb * (2*Nb+ bra.oq->l + 3./2) * 2 > elimb ) { // Conservation of Energy
+			cout << "Exceeded tb; Nb=" << Nb << " tb=" << tb << " limit=" << elimb << endl;
+			cout << "modelspace.GetTargetZ()=" << modelspace.GetTargetZ() << endl;
+			cout << "bra.oq->n=" << bra.oq->n << endl;
+			continue;} */
+		    tb += Dnb * Dnb * (2*Nb + bra.op->l + 3./2) * 2;
+		    
+
 		    //cout << "Getting Dnb at " << ib << "=" << Dnb << endl;
 		    //if ( na == nb and bra.op->l == bra.oq->l and bra.op->j2 == bra.oq->j2 )
 		    //{
@@ -1381,6 +1395,8 @@ Operator Energy_Op(ModelSpace& modelspace)
 			//continue;
 		    //} 
 		    Orbit ob = Orbit(Nb, bra.oq->l, bra.oq->j2, bra.oq->tz2, bra.oq->occ, bra.oq->cvq, bra.oq->index);
+		    if ( ob.n == oa.n and ob.l == oa.l and ob.j2 == oa.j2 ) continue; // Pauli!
+		    if ( 2*Na + bra.op->l + 3./2 + 2*Nb + bra.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/4 ) continue; // Crazy energy.
 		    Ket brap = Ket(oa, ob);
 		    if ( abs(Dnb) < 1e-8 ) continue;
 		    for (int Nc = 0; Nc < nmax; Nc++) // 46 because integral returns NaN for n > 46
@@ -1388,21 +1404,32 @@ Operator Energy_Op(ModelSpace& modelspace)
 			int ic = 100*Nc + 10*ket.op->n + ket.op->l;
 			double Dnc = modelspace.OsToHydroCoeffList[ic];
 			td=0;
-			tc += Dnc * (2*Nc*+ ket.op->l + 3./2) * 2;
-			if ( tc > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(ket.op->n*ket.op->n) ) {
-			    cout << "Exceeded tc; Nc=" << Nc << endl;
-			    continue;}
+			double elimc = modelspace.GetTargetZ()*modelspace.GetTargetZ()/(double(ket.op->n)*double(ket.op->n));
+			/* if ( tc + Dnc * Dnc * (2*Nc+ ket.op->l + 3./2) * 2 > elimc ) { // Conservation of Energy
+			    cout << "Exceeded tc; Nc=" << Nc << " tc=" << tc << " limit=" << elimc << endl;
+			    cout << "modelspace.GetTargetZ()=" << modelspace.GetTargetZ() << endl;
+			    cout << "ket.op->n=" << ket.op->n << endl;
+			    continue;} */
+			tc += Dnc * Dnc * (2*Nc + ket.op->l + 3./2) * 2;
+			
+
 			//cout << "Getting Dnc at " << ic << "=" << Dnc << endl;
 			Orbit oc = Orbit(Nc, ket.op->l, ket.op->j2, ket.op->tz2, ket.op->occ, ket.op->cvq, ket.op->index);
+
+			if ( 2*Nc + ket.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/4 ) continue; // Crazy energy.
 			if ( abs(Dnc) < 1e-8 ) continue;
-			for (int Nd = Nc; Nd < nmax; Nd++) // 46 because integral returns NaN for n > 46
+			for (int Nd = 0; Nd <= Nc; Nd++) // 46 because integral returns NaN for n > 46
 			{
 			    int id = 100*Nd + 10*ket.oq->n + ket.oq->l;
 			    double Dnd = modelspace.OsToHydroCoeffList[id];
-			    td += Dnd * (2*Nb*+ ket.oq->l + 3./2) * 2;
-			    if ( td > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(ket.oq->n*ket.oq->n) ) {
-				cout << "Exceeded td; Nd=" << Nd << endl;
-				continue;};
+			    double elimd = modelspace.GetTargetZ()*modelspace.GetTargetZ()/(double(ket.oq->n)*(ket.oq->n));
+			    /* if ( td + Dnd * Dnd * (2*Nb+ ket.oq->l + 3./2) * 2 > elimd ) { // Conservation of Energy
+				cout << "Exceeded td; Nd=" << Nd << " td=" << td << " limit=" << elimd << endl;
+				cout << "modelspace.GetTargetZ()=" << modelspace.GetTargetZ() << endl;
+				cout << "ket.oq->n=" << ket.oq->n << endl;
+				continue;}; */
+			    td += Dnd * Dnd * (2*Nb + ket.oq->l + 3./2) * 2;
+
 			    //cout << "Getting Dnd at " << id << "=" << Dnd << " Dnc@" << ic << "=" << Dnc << " Dnb@" << ib << "=" << Dnb << " Dna@" << ia << "=" << Dna << endl;
 			    if ( abs(Dnd) < 1e-8 ) continue;
 			    //if ( nc == nd and ket.op->l == ket.oq->l and ket.op->j2 == ket.oq->j2 )
@@ -1431,9 +1458,12 @@ Operator Energy_Op(ModelSpace& modelspace)
 			    } else {
 				//cout << "Not in list, calculating." << endl;
 				Orbit od = Orbit(Nd, ket.oq->l, ket.oq->j2, ket.oq->tz2, ket.oq->occ, ket.oq->cvq, ket.oq->index);
+				if ( oc.n == od.n and oc.l == od.l and oc.j2 == od.j2 ) continue; // Pauli!
+				if ( 2*Nc + ket.op->l + 3./2 + 2*Nd + ket.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/4 ) continue; // Crazy energy.
 			        Ket ketp = Ket(oc, od);
-				result = Corr_Invr_Hydrogen(modelspace, brap, ketp, tbc.J);//Need to cache these.
-				if ( std::isnan( result) ) continue;
+				result = Corr_Invr_Hydrogen(modelspace, brap, ketp, tbc.J); //Need to cache these.
+				if ( std::isnan( result ) ) continue; // Should find a better way of dealing/avoiding with NaN results.
+				if ( abs(result) < 1e-8 ) continue;
 				Mat_El_List[index] = result;
 			    }
 			    
@@ -1441,10 +1471,12 @@ Operator Energy_Op(ModelSpace& modelspace)
 			    //cout << "Result=" << result << endl;
 			    mat_el += Dna*Dnb*Dnc*Dnd*result;
 			    //cout << "Mat_el=" << mat_el << endl;
-            		} // nd
-		    } // nc
-		} // nb
-	    } // na
+            		} // Nd
+		    } // Nc
+		} // Nb
+		#pragma omp critical
+		Mat_El_List.insert( local_List.begin(), local_List.end() );
+	    } // Na
 	    //if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
             E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
@@ -1469,15 +1501,21 @@ double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
    int nc = ket.op->n;
    int nd = ket.oq->n;
 
+   cout << "na=" << na << " nb=" << nb << " nc=" << nc << " nd=" << nd << endl;
+
    int la = bra.op->l;
    int lb = bra.oq->l;
    int lc = ket.op->l;
    int ld = ket.oq->l;
 
+   cout << "la=" << la << " lb=" << lb << " lc=" << lc << " ld=" << ld << endl;
+
    double ja = bra.op->j2/2.0;
    double jb = bra.oq->j2/2.0;
    double jc = ket.op->j2/2.0;
    double jd = ket.oq->j2/2.0;
+
+   cout << "ja=" << ja << " jb=" << jb << " jc=" << jc << " jd=" << jd << endl;
 
    int fab = 2*na + 2*nb + la + lb;
    int fcd = 2*nc + 2*nd + lc + ld;
@@ -1538,6 +1576,8 @@ double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
                 if (abs(mosh_cd)<1e-8) continue;
 
                 //double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace); // Not valid for atomic systems.
+		if ( 2*n_ab + lam_ab + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega() ) continue; // Crazy energy.
+		if ( 2*n_cd + lam_cd + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega() ) continue; // Crazy energy.
 		double rad = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
 		if (rad < 0) cout << "Rad=" << rad << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
 		if (abs(rad) < 1e-8) continue;

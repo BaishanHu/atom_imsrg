@@ -237,7 +237,7 @@ void HartreeFock::Diagonalize()
 //*********************************************************************
 void HartreeFock::BuildMonopoleV()
 {
-   cout << "Entering BuildMonopoleV()." << endl;
+   //cout << "Entering BuildMonopoleV()." << endl;
    for (int Tz=-1; Tz<=1; ++Tz)
    {
      //cout << "Iterating over Tz=" << Tz << endl;

@@ -1275,13 +1275,13 @@ void ModelSpace::PreCalculateMoshinsky()
 
           double mosh = AngMom::Moshinsky(N,Lam,n,lam,n1,l1,n2,l2,L);
           local_MoshList[key] = mosh;
-         }
-        }
-       }
-      }
-     }
-    }
-   }
+         } // l1
+        } // n2
+       } // n1
+      } // L
+     } // lam
+    } // Lam
+   } // n
    #pragma omp critical
    MoshList.insert( local_MoshList.begin(), local_MoshList.end() );
   }
