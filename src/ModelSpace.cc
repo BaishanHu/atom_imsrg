@@ -1345,8 +1345,8 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
    auto it = MoshList.find(key);
    if ( it != MoshList.end() )  return it->second * phase_mosh;
    cout << "Didn't find Moshinsky key, making a new one" << endl;
-   #pragma omp critical
-   cout << "N=" << N << " Lam=" << Lam << " n=" << n << " lam=" << lam << " n1=" << n1 << " l1=" << l1 << " n2=" << n2 << " n2=" << n2 << " l2=" << l2 << endl;
+   //#pragma omp critical
+   //cout << "N=" << N << " Lam=" << Lam << " n=" << n << " lam=" << lam << " n1=" << n1 << " l1=" << l1 << " n2=" << n2 << " n2=" << n2 << " l2=" << l2 << endl;
    // if we didn't find it, we need to calculate it.
    double mosh = AngMom::Moshinsky(N,Lam,n,lam,n1,l1,n2,l2,L);
 //   cout << "Shouldn't be here..." << N << " " << Lam << " " <<  n << " " << lam << " " << n1 << " " << l1 << " " << n2 << " " << l2 << " " << L << endl;
@@ -1426,9 +1426,9 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
 	        //if ( isnan(result) == 1 ) continue;
 		
 		if ( std::isnan( result) ) continue;
-		int index = 100*np + 10*n + l;
-		//cout << "Index =" << index << endl;
-		//cout << "Result=" << result << endl;
+		int index = 1000*np + 10*n + l;
+		cout << "Index =" << index << endl;
+		cout << "Result=" << result << endl;
 		//cout << "Hcoeff=" << hydrogenCoeff << endl;
 		//cout << "Ocoeff=" << OscilCoeff << endl;
 		//cout << "Coeff =" << OscilCoeff * hydrogenCoeff * result << endl;
