@@ -5,6 +5,7 @@
 #include <boost/implicit_cast.hpp>
 #include <gsl/gsl_integration.h>
 #include <list>
+#include <cmath>
 
 using namespace AngMom;
 
@@ -244,34 +245,46 @@ double HO_Radial_psi(int n, int l, double hw, double r)
    return rho;
  }
 
-void GenerateRadialIntegrals(ModelSpace& modelspace)
+void GenerateRadialIntegrals(ModelSpace& modelspace, int ind)
 {
-    cout << "Entering GenerateRadialIntegrals." << endl;
-    int size = 1100*modelspace.Emax+11*modelspace.Lmax;
-    cout << "Resizing radList; size=" << size << endl;
-    modelspace.radList.resize(size);
+    cout << "Entering GenerateRadialIntegrals for ind=" << ind << endl;
+    //cout << "Resizing radList; size=" << ind << endl;
+    //modelspace.radList.resize(ind);
+    int l2max = ind % 10;
+    ind = (ind-l2max) / 10;
+    int l1max = ind % 100;
+    ind = (ind-l1max) / 100;
+    int n2max = ind % 100;
+    ind = (ind-n2max) / 100;
+    int n1max = ind % 100;
+    cout << "n1max=" << n1max << " l1max=" << l1max << " n2max=" << n2max << " l2max=" << l2max << endl;
     int norb = modelspace.norbits;
-    #pragma omp parallel for
-    for (int n1=0; n1<modelspace.Emax; n1++)
+    //#pragma omp parallel for
+    for (int n1=0; n1<=n1max; n1++) // not thread safe?
     {
 	//Orbit& o1 = modelspace.GetOrbit(i);
-	for (int l1=0; l1<2*modelspace.Lmax; l1++)
+	for (int l1=0; l1<=l1max; l1++)
 	{
 	    for (int n2=0; n2<=n1; n2++)
 	    {
 		//Orbit& o1 = modelspace.GetOrbit(i);
 		for (int l2=0; l2<=l1; l2++)
 		{
-		    int ind1 = 1000*n1+100*n2+10*l1+l2;
+		    int ind1 = 1e6*n1+1e4*n2+1e2*l1+l2;
 		    //int ind2 = 1000*n2+100*n1+10*l2+l1;
 		    //if (modelspace.radList.size() < max(ind1,ind2)) modelspace.radList.resize(max(ind1,ind2));
-		    if (modelspace.radList.size() < ind1) modelspace.radList.resize(ind1);
+		    //if (modelspace.radList.size() < ind1) modelspace.radList.resize(ind1);
 		    //if (modelspace.radList[1000*n1+100*n2+10*l1+l2] != 0 or modelspace.radList[1000*n2+100*n1+10*l2+l1] != 0)
 		    //{
 			
+			
+			if ( modelspace.radList[ind1] != 0 ) continue;
 			//cout << "Generating radial integral for ind1=" << ind1 << endl;
 			long double rad = RadialIntegral(n1, l1, n2, l2, -1, modelspace);
-			modelspace.radList[ind1] = rad;
+			//#pragma omp critical
+			//{
+			    modelspace.radList[ind1] = rad;
+			//}
 			//modelspace.radList[ind2] = rad;
 			//cout << "Generated, moving on." << endl;
 		    //}
@@ -291,24 +304,24 @@ void GenerateRadialIntegrals(ModelSpace& modelspace)
 
 double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace)
 {
-    int ind = 0;
-    if (n2 > n1) ind = 1000*n2 + 10*l2 + 100*n1 + l1;
-    else ind = 1000*n1 + 10*l1 + 100*n2 + l2;
+    unsigned long long int ind = 0;
+    if (n2 > n1) ind = 1e6*n2 + 1e2*l2 + 1e4*n1 + l1;
+    else ind = 1e6*n1 + 1e2*l1 + 1e4*n2 + l2;
     // Should be good for lmax < 10; could use some ordering to reduce the number of possiblities further
     double rad;
-    #pragma omp critical
-    {
-    if (ind > modelspace.radList.size())
-    {
-	cout << ind << "! not in radList, generating." << endl;
-	GenerateRadialIntegrals(modelspace);
-    }
-    }
-    return modelspace.radList[ind];
+    auto it = modelspace.radList.find(ind);
+    if ( it != modelspace.radList.end() )  return modelspace.radList[ind];
+    cout << "Didn't find " << ind << " in rad list, making a new one" << endl;
+    //#pragma omp critical
+    //{
+	rad = RadialIntegral(n1, l1, n2, l2, -1, modelspace);
+	modelspace.radList[ind] = rad;
+    //}
+    return rad;
 } 
 
 // Creates an operator that performs <k/r>
-// In oscillator basis: RadialIntegral() with L=-1; currently implemented correctly
+// In oscillator basis: RadialIntegral() with L=-1;
 // In H basis: For orbital n, in an atom with Z protons, expectation of Z/r = (Z/a)*SUM(1/(n^2))
 Operator InverseR_Op(ModelSpace& modelspace)
 {
@@ -593,16 +606,26 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
 // This was a test, can't imagine it is actually useful
 Operator Energy_Op(ModelSpace& modelspace)
 {
+   double t_start = omp_get_wtime();
    // Naive energy operator
    Operator E(modelspace);
+   E.SetHermitian();
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
    int Z = modelspace.GetTargetZ();
-
+   #pragma omp parallel for
    for (int a=0;a<norbits;++a)
    {
       Orbit & oa = modelspace.GetOrbit(a);
       E.OneBody(a,a) = -hw/2 * Z * Z / (oa.n * oa.n); 
+      //for (int b=0; b<=a; b++)
+      //{
+	// Orbit & ob = modelspace.GetOrbit(b);
+	//if (ob.n == oa.n) E.OneBody(a,b) = -hw/2 * Z * Z / (oa.n * oa.n); 
+	// if (ob.n < oa.n) E.OneBody(a,b) = -hw/2 * Z * Z / (ob.n * ob.n);
+	// if (oa.n < ob.n) E.OneBody(a,b) = -hw/2 * Z * Z / (oa.n * oa.n);
+	// E.OneBody(b,a) = E.OneBody(a,b);
+      //}
       //cout << "E.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
       //for ( int b : E.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
       //{
@@ -615,6 +638,7 @@ Operator Energy_Op(ModelSpace& modelspace)
       //   E.OneBody(b,a) = E.OneBody(a,b);
       //}
    }
+   E.profiler.timer["Energy_Op"] += omp_get_wtime() - t_start;
    return E;
 }
 
@@ -1292,28 +1316,168 @@ Operator Energy_Op(ModelSpace& modelspace)
    return invr ;
 }
 
+ /* Copied from other operator */
+ Operator CorrE2b_Hydrogen(ModelSpace& modelspace)
+ {
+   cout << "Entering Hydrogen two body." << endl;
+   double t_start = omp_get_wtime();
+   Operator E = Operator(modelspace);
+   E.SetHermitian();
 
+   int nmax = min(4*modelspace.Emax,46);
+   float ta;
+   float tb;
+   float tc;
+   float td;
+
+   int nchan = modelspace.GetNumberTwoBodyChannels();
+   modelspace.PreCalculateMoshinsky();
+   static unordered_map<unsigned long int,double> Mat_El_List;
+   //#pragma omp parallel for schedule(dynamic,1) //not thread safe if using Mat_El_List
+   for (int ch=0; ch<nchan; ++ch)
+   {
+      //cout << "In channel " << ch << endl;
+      TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+      int nkets = tbc.GetNumberKets();
+      for (int ibra=0;ibra<nkets;++ibra)
+      {
+	 //cout << "In bra " << ibra << endl;
+         Ket & bra = tbc.GetKet(ibra);
+         for (int iket=ibra;iket<nkets;++iket)
+         {
+	    //cout << "In ket " << iket << endl;
+            Ket & ket = tbc.GetKet(iket);
+	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
+	    double mat_el = 0;
+	    double result = 0;
+	    ta=tb=tc=td=0;
+	    //cout << "About to start big loop." << endl;
+	    //#pragma omp parallel for
+	    for (int Na = 0; Na < nmax; Na++) // 46 because integral returns NaN for n > 46
+	    {
+		int ia = 100*Na + 10*bra.op->n + bra.op->l;
+		double Dna = modelspace.OsToHydroCoeffList[ia];
+		tb=tc=td=0;
+		ta += Dna * (2*Na*+ bra.op->l + 3./2) * 2;
+		if ( ta > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(bra.op->n*bra.op->n) ) {
+		    cout << "Exceeded ta; Na=" << Na << endl;
+		    continue;}
+		//cout << "Getting Dna at " << ia << "=" << Dna << endl;
+		Orbit oa = Orbit(Na, bra.op->l, bra.op->j2, bra.op->tz2, bra.op->occ, bra.op->cvq, bra.op->index);
+		if ( abs(Dna) < 1e-8 ) continue;
+		for (int Nb = Na; Nb < nmax; Nb++) // 46 because integral returns NaN for n > 46
+		{
+		    int ib = 100*Nb + 10*bra.oq->n + bra.oq->l;
+		    double Dnb = modelspace.OsToHydroCoeffList[ib];
+		    tc=td=0;
+		    tb += Dnb * (2*Nb*+ bra.op->l + 3./2) * 2;
+		    if ( tb > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(bra.oq->n*bra.oq->n) ) {
+			cout << "Exceeded tb; Nb=" << Nb << endl;
+			continue;}
+		    //cout << "Getting Dnb at " << ib << "=" << Dnb << endl;
+		    //if ( na == nb and bra.op->l == bra.oq->l and bra.op->j2 == bra.oq->j2 )
+		    //{
+			//mat_el=0;
+			//continue;
+		    //} 
+		    Orbit ob = Orbit(Nb, bra.oq->l, bra.oq->j2, bra.oq->tz2, bra.oq->occ, bra.oq->cvq, bra.oq->index);
+		    Ket brap = Ket(oa, ob);
+		    if ( abs(Dnb) < 1e-8 ) continue;
+		    for (int Nc = 0; Nc < nmax; Nc++) // 46 because integral returns NaN for n > 46
+		    {
+			int ic = 100*Nc + 10*ket.op->n + ket.op->l;
+			double Dnc = modelspace.OsToHydroCoeffList[ic];
+			td=0;
+			tc += Dnc * (2*Nc*+ ket.op->l + 3./2) * 2;
+			if ( tc > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(ket.op->n*ket.op->n) ) {
+			    cout << "Exceeded tc; Nc=" << Nc << endl;
+			    continue;}
+			//cout << "Getting Dnc at " << ic << "=" << Dnc << endl;
+			Orbit oc = Orbit(Nc, ket.op->l, ket.op->j2, ket.op->tz2, ket.op->occ, ket.op->cvq, ket.op->index);
+			if ( abs(Dnc) < 1e-8 ) continue;
+			for (int Nd = Nc; Nd < nmax; Nd++) // 46 because integral returns NaN for n > 46
+			{
+			    int id = 100*Nd + 10*ket.oq->n + ket.oq->l;
+			    double Dnd = modelspace.OsToHydroCoeffList[id];
+			    td += Dnd * (2*Nb*+ ket.oq->l + 3./2) * 2;
+			    if ( td > modelspace.GetTargetZ()*modelspace.GetTargetZ()/(ket.oq->n*ket.oq->n) ) {
+				cout << "Exceeded td; Nd=" << Nd << endl;
+				continue;};
+			    //cout << "Getting Dnd at " << id << "=" << Dnd << " Dnc@" << ic << "=" << Dnc << " Dnb@" << ib << "=" << Dnb << " Dna@" << ia << "=" << Dna << endl;
+			    if ( abs(Dnd) < 1e-8 ) continue;
+			    //if ( nc == nd and ket.op->l == ket.oq->l and ket.op->j2 == ket.oq->j2 )
+			    //{
+				//mat_el=0;
+				//continue;
+			    //}
+			    //int ca = 0;
+			    //int cb = 0;
+			    //if ( na < nb ) {
+				//ca = 10*(10*na + bra.op.l) + 1*(10*nb + bra.oq.l);
+			    //} else {
+				//ca = 1*(10*na + bra.op.l) + 10*(10*nb + bra.oq.l);
+			    
+			    long long unsigned int index = Na*1 +
+							   Nb*100 +
+							   Nc*10000 +
+							   Nd*1000000 +
+						    bra.op->l*100000000 +
+						    bra.oq->l*1000000000 +
+						    ket.op->l*10000000000 +
+						    ket.oq->l*100000000000; // Could probably figure out a better indexing function.
+			    if ( Mat_El_List[index] != 0 ) {
+				//cout << "Already found element, getting from list" << endl;
+				result = Mat_El_List[index];
+			    } else {
+				//cout << "Not in list, calculating." << endl;
+				Orbit od = Orbit(Nd, ket.oq->l, ket.oq->j2, ket.oq->tz2, ket.oq->occ, ket.oq->cvq, ket.oq->index);
+			        Ket ketp = Ket(oc, od);
+				result = Corr_Invr_Hydrogen(modelspace, brap, ketp, tbc.J);//Need to cache these.
+				if ( std::isnan( result) ) continue;
+				Mat_El_List[index] = result;
+			    }
+			    
+			    //result = Corr_Invr_Hydrogen(modelspace, brap, ketp, tbc.J);//Need to cache these.
+			    //cout << "Result=" << result << endl;
+			    mat_el += Dna*Dnb*Dnc*Dnd*result;
+			    //cout << "Mat_el=" << mat_el << endl;
+            		} // nd
+		    } // nc
+		} // nb
+	    } // na
+	    //if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
+            E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
+            E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
+         }
+      }
+   }
+   E.profiler.timer["CorrE2b_Hydrogen"] += omp_get_wtime() - t_start;
+   cout << "Exiting Hydrogen two body." << endl;
+   return E;
+ }
+
+// This might not even be necessary!
 double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
 {
-   Orbit & oa = modelspace.GetOrbit(bra.p);
-   Orbit & ob = modelspace.GetOrbit(bra.q);
-   Orbit & oc = modelspace.GetOrbit(ket.p);
-   Orbit & od = modelspace.GetOrbit(ket.q);
+   //Orbit & oa = bra.p;
+   //Orbit & ob = bra.q;
+   //Orbit & oc = ket.p;
+   //Orbit & od = ket.q;
 
-   int na = oa.n;
-   int nb = ob.n;
-   int nc = oc.n;
-   int nd = od.n;
+   int na = bra.op->n;
+   int nb = bra.oq->n;
+   int nc = ket.op->n;
+   int nd = ket.oq->n;
 
-   int la = oa.l;
-   int lb = ob.l;
-   int lc = oc.l;
-   int ld = od.l;
+   int la = bra.op->l;
+   int lb = bra.oq->l;
+   int lc = ket.op->l;
+   int ld = ket.oq->l;
 
-   double ja = oa.j2/2.0;
-   double jb = ob.j2/2.0;
-   double jc = oc.j2/2.0;
-   double jd = od.j2/2.0;
+   double ja = bra.op->j2/2.0;
+   double jb = bra.oq->j2/2.0;
+   double jc = ket.op->j2/2.0;
+   double jd = ket.oq->j2/2.0;
 
    int fab = 2*na + 2*nb + la + lb;
    int fcd = 2*nc + 2*nd + lc + ld;
@@ -1373,7 +1537,8 @@ double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
 		//if (mosh_cd < 0) cout << "Mosh_cd=" << mosh_cd << " N_cd=" << N_cd << " Lam_cd=" << Lam_cd << " n_cd=" << n_cd << " lam_cd=" << lam_cd << " nc=" << nc << " lc=" << lc << " nd=" << nd << " ld=" << ld << " Lcd=" << Lcd;
                 if (abs(mosh_cd)<1e-8) continue;
 
-                double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace); // Not valid for atomic systems.
+                //double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace); // Not valid for atomic systems.
+		double rad = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
 		if (rad < 0) cout << "Rad=" << rad << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
 		if (abs(rad) < 1e-8) continue;
 

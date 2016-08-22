@@ -17,3 +17,5 @@ exe: Atomic writeAtomicTBME
 %:	%.cc
 	$(CC) $(INCLUDE) $^ -o $@ $(FLAGS) $(LIBS)
 
+clean:
+	rm -f *.o *.so boost_src/*.o

@@ -49,10 +49,11 @@ namespace imsrg_util
  Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<index_t> index_list);
 
  Operator CorrE2b(ModelSpace& modelspace);
+ Operator CorrE2b_Hydrogen(ModelSpace& modelspace);
  double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis);
  double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
 
- void GenerateRadialIntegrals(ModelSpace& modelspace);
+ void GenerateRadialIntegrals(ModelSpace& modelspace, int ind);
  double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace);
 
 

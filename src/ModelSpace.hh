@@ -255,7 +255,7 @@ class ModelSpace
    void PreCalculateMoshinsky();
    void ClearVectors();
    void GenerateFactorialList( double m );
-   double OsToHydroCoeff( double x, void * p ); 
+   //double OsToHydroCoeff( double x, void * p ); 
    void GenerateOsToHydroCoeff( int nmax );
 
    
@@ -322,10 +322,11 @@ class ModelSpace
    vector<TwoBodyChannel_CC> TwoBodyChannels_CC;
    vector<long double> factorialList;
 //   map<long int,double> SixJList;
-   vector<long double> radList;
+   static unordered_map<long long unsigned int, long double> radList;
+    
+   vector <long double> OsToHydroCoeffList;
+   //static unordered_map<long long unsigned int,double> OsToHydroCoeffList; // convert to map?
 
-   struct my_f_params {int n; int l; int np;}; 
-   vector<long double> OsToHydroCoeffList;
 
    static unordered_map<unsigned long int,double> SixJList;
    static unordered_map<long long unsigned int,double> NineJList;

@@ -111,8 +111,8 @@ void HartreeFock::Solve()
      }
    }
    PrintEHF();
-   //cout << "Rho=" << endl;
-   //cout << rho << endl;
+   cout << "Rho=" << endl;
+   cout << rho << endl;
 }
 
 
@@ -143,8 +143,9 @@ void HartreeFock::CalcEHF()
       for (int j : Hbare.OneBodyChannels.at({oi.l,oi.j2,oi.tz2}))
       {
          e1hf += rho(i,j) * jfactor * KE(i,j);
-	 //cout << "e1fh=" << e1hf << " rho(" << i << "," << j << ")=" << rho(i,j) << " jfactor=" << jfactor << " KE(" << i << "," << j << ")=" << KE(i,j) << endl;
+	 //cout << "e1fh=" << e1hf << " rho(" << i << "," << j << ")=" << rho(i,j) << " jfactor=" << jfactor << " KE(f" << i << "," << j << ")=" << KE(i,j) << endl;
          e2hf += rho(i,j) * jfactor * 0.5 * Vij(i,j);
+	 //cout << "e2fh=" << e2hf << " rho(" << i << "," << j << ")=" << rho(i,j) << " jfactor=" << jfactor << " Vij(" << i << "," << j << ")=" << Vij(i,j) << endl;
          e3hf += rho(i,j) * jfactor * (1./6*V3ij(i,j));
       }
    }
@@ -236,7 +237,7 @@ void HartreeFock::Diagonalize()
 //*********************************************************************
 void HartreeFock::BuildMonopoleV()
 {
-   //cout << "Entering BuildMonopoleV()." << endl;
+   cout << "Entering BuildMonopoleV()." << endl;
    for (int Tz=-1; Tz<=1; ++Tz)
    {
      //cout << "Iterating over Tz=" << Tz << endl;
@@ -270,6 +271,8 @@ void HartreeFock::BuildMonopoleV()
               int c = ket.p;
               int d = ket.q;
 	      //cout << "c=" << c << " d=" << d << endl;
+	      //cout << "monopole at (" << a << "," << b << "," << c << "," << d << ")=" << Hbare.TwoBody.GetTBMEmonopole(a,b,c,d) << "*" << norm << endl;
+	      //cout << "at Tz+1=" << Tz+1 << " parity=" << parity << " itbra.second=" << itbra.second << " itket.second=" << itket.second << endl;
               Vmon[Tz+1][parity](itbra.second,itket.second)       = Hbare.TwoBody.GetTBMEmonopole(a,b,c,d)*norm;
 	      //cout << "Set Vmon." << endl;
               Vmon_exch[Tz+1][parity](itbra.second,itket.second)  = Hbare.TwoBody.GetTBMEmonopole(a,b,d,c)*norm;
@@ -454,7 +457,10 @@ void HartreeFock::UpdateF()
                   Vij(i,j) += rho(a,b)*Vmon_exch[Tz+1][parity](local_bra,local_ket); // <a|rho|b> * <ai|Vmon|jb>
                else
                   Vij(i,j) += rho(a,b)*Vmon[Tz+1][parity](local_bra,local_ket); // <a|rho|b> * <ai|Vmon|bj>
+	       //cout << "Vij(" << i << "," << j << ")=" << Vij(i,j) << endl;;
+	       //cout << "at Tz+1=" << Tz+1 << " parity=" << parity << " local_bra=" << local_bra << " local_ket=" << local_ket << endl;
            }
+	 //cout << "Final Vij(" << i << "," << j << ")=" << Vij(i,j) << endl;;
          }
       }
       Vij.col(i) /= (oi.j2+1);
@@ -483,7 +489,8 @@ void HartreeFock::UpdateF()
    V3ij = arma::symmatu(V3ij);
    //cout << "V are symmetric, adding energies." << endl;
    F = KE + Vij + 0.5*V3ij;
-
+   //cout << "Vij=" << endl;
+   //cout << Vij << endl;
    //cout << "F=" << endl;
    //cout << F << endl;
    //cout << "Leaving UpdateF" << endl;
