@@ -54,6 +54,7 @@ namespace imsrg_util
  double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
 
  void GenerateRadialIntegrals(ModelSpace& modelspace, int ind);
+ void PrecalculateRad_fromList( vector<unsigned long long int> rad_list, ModelSpace& modelspace);
  double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace);
 
 

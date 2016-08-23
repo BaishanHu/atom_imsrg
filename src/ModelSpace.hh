@@ -253,10 +253,15 @@ class ModelSpace
    inline int Index2(int p, int q) const {return q*(q+1)/2 + p;};
 
    void PreCalculateMoshinsky();
+   void PreCalculateMoshinsky( string basis );
+   void PreCalculateMoshinsky_FromList( vector<unsigned long long int> mosh_list );
+   //void PreCalculateMoshinsky_FromList( vector<unsigned long long int> req_list );
    void ClearVectors();
    void GenerateFactorialList( double m );
    //double OsToHydroCoeff( double x, void * p ); 
    void GenerateOsToHydroCoeff( int nmax );
+   void GenerateOsToHydroCoeff_fromlist( vector<unsigned long long int>& hy_list );
+   void PrecalculateNineJ( vector<unsigned long long int> ninejList );
 
    
 
@@ -324,7 +329,7 @@ class ModelSpace
 //   map<long int,double> SixJList;
    static unordered_map<long long unsigned int, long double> radList;
     
-   vector <long double> OsToHydroCoeffList;
+   static unordered_map<long long unsigned int, long double> OsToHydroCoeffList;
    //static unordered_map<long long unsigned int,double> OsToHydroCoeffList; // convert to map?
 
 
