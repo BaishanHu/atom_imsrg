@@ -240,6 +240,7 @@ bool TwoBodyChannel_CC::CheckChannel_ket(Orbit* op, Orbit* oq) const
 
 // Static members
 unordered_map<long long unsigned int, long double> ModelSpace::radList;
+unordered_map<long long unsigned int, long double> ModelSpace::OsToHydroCoeffList;
 unordered_map<unsigned long int,double> ModelSpace::SixJList;
 unordered_map<unsigned long long int,double> ModelSpace::NineJList;
 unordered_map<unsigned long long int,double> ModelSpace::MoshList;
@@ -1287,14 +1288,15 @@ void ModelSpace::PreCalculateMoshinsky( string basis )
   }
 }
 
-void ModelSpace::PreCalculateMoshinsky_FromList( vector<unsigned long long int> mosh_list )
+void ModelSpace::PreCalculateMoshinsky_FromList( vector<unsigned long long int>& mosh_list )
 {
 //  if ( not MoshList.empty() ) return; // Already done calculated it...
     bool gotZero=false;
     //#pragma omp parallel for
     for ( unsigned long long int it=0; it<mosh_list.size(); it++ )
     {
-	unsigned long long int N, Lam, n, lam, n1, l1, n2, l2, L, temp;
+	unsigned long long int temp;
+	int N, Lam, n, lam, n1, l1, n2, l2, L;
 	temp = mosh_list[it];
 	if ( temp == 0 and gotZero == true ) continue;
 	if ( temp == 0 and gotZero == false ) gotZero = true;
@@ -1324,7 +1326,36 @@ void ModelSpace::PreCalculateMoshinsky_FromList( vector<unsigned long long int> 
 	temp /=100;
 	N = temp%100;
 	temp -= N;
+	int phase_mosh = 1;
+	int switches = 10;
 
+	while (switches > 0)
+	{
+	    switches = 0;
+	    if (n2>n1 or (n2==n1 and l2>l1))
+   	    {
+		swap(n1,n2);
+		swap(l1,l2);
+		phase_mosh *= phase(Lam+L);
+		++switches;
+	    }
+	    if (n>N or (n==N and lam>Lam))
+	    {
+		swap(n,N);
+		swap(lam,Lam);
+		phase_mosh *= phase(l1 +L);
+		++switches;
+	    }
+	    if (n1>N or (n1==N and l1>Lam) or (n1==N and l1==Lam and n2>n) or (n1==N and l1==Lam and n2==n and l2>lam) )
+	    {
+		swap(n1,N);
+		swap(l1,Lam);
+		swap(n2,n);
+		swap(l2,lam);
+		++switches;
+//      phase_mosh *= phase(l2+lam); // This phase is given in Moshinsky and Brody, but with the current algorithm, it appears not to be required.
+	    }
+	}
         unsigned long long int key =   ((unsigned long long int) N   << 40)
                                      + ((unsigned long long int) Lam << 34)
                                      + ((unsigned long long int) n   << 30)
@@ -1334,10 +1365,13 @@ void ModelSpace::PreCalculateMoshinsky_FromList( vector<unsigned long long int> 
                                      + ((unsigned long long int) n2  << 12)
                                      + ((unsigned long long int) l2  << 6 )
                                      +  L;
-
-        double mosh = AngMom::Moshinsky(N,Lam,n,lam,n1,l1,n2,l2,L);
-	#pragma omp critical
-        MoshList[key] = mosh;
+	auto iter = MoshList.find(key);
+   	if ( iter == MoshList.end() )
+	{
+            double mosh = AngMom::Moshinsky(N,Lam,n,lam,n1,l1,n2,l2,L);
+	    #pragma omp critical
+            MoshList[key] = mosh;
+	}
     }
 } 
 
@@ -1449,6 +1483,7 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
     struct my_f_params alpha = {1,0,1};
     My_function.function = &OsToHydroCoeff;
     My_function.params = &alpha;
+    int npmax = min(32, 4*Emax);
 
     //#pragma omp parallel for schedule(dynamic,1)
     for (int n = 1.; n <= nmax; n++)
@@ -1457,15 +1492,15 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
 	{
 	    double hydrogenCoeff = sqrt( pow(2/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2/(n * BOHR_RADIUS),l);
 	    //double temp = 0;
-	    #pragma parallel for schedule(dynamic,1)
-	    for (int np = 0; np < 46; np++) // Should goto inf; throws NaN at np > 46; seems to throw at higher if you reduce errors
+	    //#pragma parallel for schedule(dynamic,1)
+	    for (int np = 0; np <= npmax; np++) // Should goto inf; throws NaN at np > 46; seems to throw at higher if you reduce errors
 	    {
 		alpha.n = n;
 		alpha.l = l;
 		alpha.np = np;
         	double OscilCoeff = sqrt( sqrt( 2* pow(13.605,3) / 3.14159 ) * pow(2, np+2*l+3) * GetFactorial(np) * pow(13.605,l) / gsl_sf_doublefact(2*np+2*l+1) ); // can split+cache
 		
-		//cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
+		cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
 
 		gsl_integration_qagiu (&My_function,
 					lower_limit,
@@ -1477,7 +1512,10 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
 					&error);
 	        //if ( isnan(result) == 1 ) continue;
 		
-		if ( std::isnan( result) ) continue;
+		if ( std::isnan( result ) ) {
+		    cout << "Hit NaN in Generating os Coeff." << endl;
+		    continue;
+		}
 		int index = 1000*np + 10*n + l;
 		cout << "Index =" << index << endl;
 		cout << "Result=" << result << endl;
@@ -1504,7 +1542,7 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
     cout << "Exiting GenerateOsToHydroCoeff." << endl;
 }
 
-void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<unsigned long long int>& hy_list ) {
+void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<int>& hy_list ) {
     cout << "Entering GenerateOsToHydroCoeff_fromList." << endl;
     //OsToHydroCoeffList.resize(1000*46 + 10*Emax + 1*Lmax); //Arbitrarily large size.
 
@@ -1526,9 +1564,11 @@ void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<unsigned long long int>
     My_function.function = &OsToHydroCoeff;
     My_function.params = &alpha;
 
-    //#pragma omp parallel for schedule(dynamic,1)
+    //#pragma omp parallel for
     for ( unsigned long long int it=0; it<hy_list.size(); it++ )
     {
+	auto iter = OsToHydroCoeffList.find(hy_list[it]);
+	if (iter != OsToHydroCoeffList.end() ) continue;
 	int temp = hy_list[it];
 	if ( temp == 0 ) continue;
 	alpha.l = temp%10;
@@ -1544,7 +1584,7 @@ void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<unsigned long long int>
 	double hydrogenCoeff = sqrt( pow(2/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2/(n * BOHR_RADIUS),l);
         double OscilCoeff = sqrt( sqrt( 2* pow(13.605,3) / 3.14159 ) * pow(2, np+2*l+3) * GetFactorial(np) * pow(13.605,l) / gsl_sf_doublefact(2*np+2*l+1) ); // can split+cache
 		
-	//cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
+	cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
 	gsl_integration_qagiu (&My_function,
 				lower_limit,
 				abs_error,
@@ -1555,14 +1595,17 @@ void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<unsigned long long int>
 				&error);
         //if ( isnan(result) == 1 ) continue;
 	
-	if ( std::isnan( result ) ) continue;
-	int index = 1000*np + 10*n + l;
+	if ( std::isnan( result ) ) {
+	    cout << "Hit NaN in Generating os Coeff." << endl;
+	    continue;
+	}
+	//int index = 1000*np + 10*n + l;
 	//cout << "Index =" << index << endl;
 	//cout << "Result=" << result << endl;
 
-	if ( OsToHydroCoeffList[index] != 0 ) continue;
+
 	#pragma omp critical
-	OsToHydroCoeffList[index] = ( OscilCoeff * hydrogenCoeff * result ); // indexing should be good up to n = 99
+	OsToHydroCoeffList[hy_list[it]] = ( OscilCoeff * hydrogenCoeff * result ); // indexing should be good up to n = 99
     } // np
     //cout << "About to add for n=" << n << " l=" << l << endl;
     cout << "Exiting GenerateOsToHydroCoeff_fromList." << endl;
@@ -1594,8 +1637,9 @@ double ModelSpace::GetFactorial(double m){
     return factorialList[m];
 }
 
-void ModelSpace::PrecalculateNineJ( vector<unsigned long long int> ninejList )
+void ModelSpace::PrecalculateNineJ( vector<unsigned long long int>& ninejList )
 {
+    //#pragma omp parallel
     for ( unsigned long long int it=0; it < ninejList.size(); it++ )
     {
 	unsigned long long int temp;

@@ -54,7 +54,9 @@ namespace imsrg_util
  double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J);
 
  void GenerateRadialIntegrals(ModelSpace& modelspace, int ind);
- void PrecalculateRad_fromList( vector<unsigned long long int> rad_list, ModelSpace& modelspace);
+ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l2, int L );
+double getNineJkey(double j1, double j2, double J12, double j3, double j4, double J34, double J13, double J24, double J);
+ void PrecalculateRad_fromList( vector<unsigned int>& rad_list, ModelSpace& modelspace);
  double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace);
 
 

@@ -254,14 +254,14 @@ class ModelSpace
 
    void PreCalculateMoshinsky();
    void PreCalculateMoshinsky( string basis );
-   void PreCalculateMoshinsky_FromList( vector<unsigned long long int> mosh_list );
+   void PreCalculateMoshinsky_FromList( vector<unsigned long long int>& mosh_list );
    //void PreCalculateMoshinsky_FromList( vector<unsigned long long int> req_list );
    void ClearVectors();
    void GenerateFactorialList( double m );
    //double OsToHydroCoeff( double x, void * p ); 
    void GenerateOsToHydroCoeff( int nmax );
-   void GenerateOsToHydroCoeff_fromlist( vector<unsigned long long int>& hy_list );
-   void PrecalculateNineJ( vector<unsigned long long int> ninejList );
+   void GenerateOsToHydroCoeff_fromlist( vector<int>& hy_list );
+   void PrecalculateNineJ( vector<unsigned long long int>& ninejList );
 
    
 
