@@ -1295,6 +1295,7 @@ void ModelSpace::PreCalculateMoshinsky_FromList( vector<unsigned long long int>&
     //#pragma omp parallel for
     for ( unsigned long long int it=0; it<mosh_list.size(); it++ )
     {
+	//cout << "Calculating mosh for " << mosh_list[it] << endl;
 	unsigned long long int temp;
 	int N, Lam, n, lam, n1, l1, n2, l2, L;
 	temp = mosh_list[it];
@@ -1328,7 +1329,7 @@ void ModelSpace::PreCalculateMoshinsky_FromList( vector<unsigned long long int>&
 	temp -= N;
 	int phase_mosh = 1;
 	int switches = 10;
-
+	//cout << "N=" << N << " Lam=" << Lam << " n=" << n << " lam=" << lam << " n1=" << n1 << " l1=" << l1 << " n2=" << n2 << " L=" << L << endl;
 	while (switches > 0)
 	{
 	    switches = 0;
@@ -1356,28 +1357,39 @@ void ModelSpace::PreCalculateMoshinsky_FromList( vector<unsigned long long int>&
 //      phase_mosh *= phase(l2+lam); // This phase is given in Moshinsky and Brody, but with the current algorithm, it appears not to be required.
 	    }
 	}
-        unsigned long long int key =   ((unsigned long long int) N   << 40)
-                                     + ((unsigned long long int) Lam << 34)
-                                     + ((unsigned long long int) n   << 30)
-                                     + ((unsigned long long int) lam << 26)
-                                     + ((unsigned long long int) n1  << 22)
-                                     + ((unsigned long long int) l1  << 16)
-                                     + ((unsigned long long int) n2  << 12)
-                                     + ((unsigned long long int) l2  << 6 )
-                                     +  L;
+          unsigned long long int key =   ((unsigned long long int) N   << 40)
+                                       + ((unsigned long long int) Lam << 34)
+                                       + ((unsigned long long int) n   << 30)
+                                       + ((unsigned long long int) lam << 26)
+                                       + ((unsigned long long int) n1  << 22)
+                                       + ((unsigned long long int) l1  << 16)
+                                       + ((unsigned long long int) n2  << 12)
+                                       + ((unsigned long long int) l2  << 6 )
+                                       +  L;
 	auto iter = MoshList.find(key);
+	/* unsigned long long int tkey = 0;
+		tkey += pow(100,8)*N;
+		tkey += pow(100,7)*Lam;
+		tkey += pow(100,6)*n;
+		tkey += pow(100,5)*lam;
+		tkey += pow(100,4)*n1;
+		tkey += pow(100,3)*l1;
+		tkey += pow(100,2)*n2;
+		tkey += 100*l2;
+		tkey += L; */
    	if ( iter == MoshList.end() )
 	{
+	    //cout << "Making new moshinsky with tkey =" << tkey << endl;
             double mosh = AngMom::Moshinsky(N,Lam,n,lam,n1,l1,n2,l2,L);
 	    #pragma omp critical
-            MoshList[key] = mosh;
+            MoshList[ key ] = mosh;
 	}
     }
 } 
 
 double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l2, int L)
 {
-   int phase_mosh = 1;
+  int phase_mosh = 1;
   int switches = 10;
 
   while (switches > 0)
@@ -1430,8 +1442,19 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
 //                                +                 L;
    auto it = MoshList.find(key);
    if ( it != MoshList.end() )  return it->second * phase_mosh;
-   cout << "Didn't find Moshinsky key, making a new one" << endl;
+	/* unsigned long long int tkey = 0;
+			tkey += pow(100,8)*N;
+			tkey += pow(100,7)*Lam;
+			tkey += pow(100,6)*n;
+			tkey += pow(100,5)*lam;
+			tkey += pow(100,4)*n1;
+			tkey += pow(100,3)*l1;
+	 		tkey += pow(100,2)*n2;
+			tkey += 100*l2;
+			tkey += L; */
+   //cout << "Didn't find Moshinsky key, making a new one; tkey=" << tkey << endl;
    //#pragma omp critical
+
    //cout << "N=" << N << " Lam=" << Lam << " n=" << n << " lam=" << lam << " n1=" << n1 << " l1=" << l1 << " n2=" << n2 << " n2=" << n2 << " l2=" << l2 << endl;
    // if we didn't find it, we need to calculate it.
    double mosh = AngMom::Moshinsky(N,Lam,n,lam,n1,l1,n2,l2,L);
@@ -1500,7 +1523,7 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
 		alpha.np = np;
         	double OscilCoeff = sqrt( sqrt( 2* pow(13.605,3) / 3.14159 ) * pow(2, np+2*l+3) * GetFactorial(np) * pow(13.605,l) / gsl_sf_doublefact(2*np+2*l+1) ); // can split+cache
 		
-		cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
+		//cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
 
 		gsl_integration_qagiu (&My_function,
 					lower_limit,
@@ -1584,7 +1607,7 @@ void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<int>& hy_list ) {
 	double hydrogenCoeff = sqrt( pow(2/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2/(n * BOHR_RADIUS),l);
         double OscilCoeff = sqrt( sqrt( 2* pow(13.605,3) / 3.14159 ) * pow(2, np+2*l+3) * GetFactorial(np) * pow(13.605,l) / gsl_sf_doublefact(2*np+2*l+1) ); // can split+cache
 		
-	cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
+	//cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
 	gsl_integration_qagiu (&My_function,
 				lower_limit,
 				abs_error,
@@ -1645,24 +1668,34 @@ void ModelSpace::PrecalculateNineJ( vector<unsigned long long int>& ninejList )
 	unsigned long long int temp;
 	double j1, j2, J12, j3, j4, J34, J13, J24, J;
 	temp = ninejList[it];
-	j1 = temp%100;
-	temp -= j1;
-	j2 = temp%100;
-	temp -= j2;
-	J12 = temp%100;
-	temp -= J12;
-	j3 = temp%100;
-	temp -= j3;
-	j4 = temp%100;
-	temp -= j4;
-	J34 = temp%100;
-	temp -= J34;
-	J13 = temp%100;
-	temp -= J13;
+	J = temp%100;
+	temp -= J;
+	J /= 2;
 	J24 = temp%100;
 	temp -= J24;
-	J = temp%100;
-	int k1 = 2*j1;
+	J24 /= 2;
+	J13 = temp%100;
+	temp -= J13;
+	J13 /= 2;
+	J34 = temp%100;
+	temp -= J34;
+	J34 /= 2;
+	j4 = temp%100;
+	temp -= j4;
+	j4 /= 2;
+	j3 = temp%100;
+	temp -= j3;
+	j3 /= 2;
+	J12 = temp%100;
+	temp -= J12;
+	J12 /= 2;
+	j2 = temp%100;
+	temp -= j2;
+	j2 /= 2;
+	j1 = temp%100;
+	j1 /= 2;
+
+/*	int k1 = 2*j1;
 	int k2 = 2*j2;
 	int K12 = 2*J12;
 	int k3 = 2*j3;
@@ -1718,14 +1751,15 @@ void ModelSpace::PrecalculateNineJ( vector<unsigned long long int>& ninejList )
 	{
 	    key += klist[i]*factor;
 	    factor *=100;
-	}
-	auto iter = NineJList.find(key);
-	if (iter == NineJList.end() )
-	{
-	    double ninej = AngMom::NineJ(jlist[0],jlist[1],jlist[2],jlist[3],jlist[4],jlist[5],jlist[6],jlist[7],jlist[8]);
+	} */
+	//auto iter = NineJList.find(key);
+	//if (iter == NineJList.end() )
+	//{
+	    //cout << "Calculating ninej with key=" << ninejList[it] << endl;
+	    double ninej = AngMom::NineJ(j1,j2,J12,j3,j4,J34,J13,J24,J);
 	    #pragma omp critical
-	    NineJList[key] = ninej;
-	}
+	    NineJList[ninejList[it]] = ninej;
+	//}
     }
 }
 
@@ -1796,6 +1830,7 @@ double ModelSpace::GetNineJ(double j1, double j2, double J12, double j3, double 
    {
      return it->second;
    }
+   cout << "Missing NineJ, making a new one; key=" << key << endl;
    double ninej = AngMom::NineJ(jlist[0],jlist[1],jlist[2],jlist[3],jlist[4],jlist[5],jlist[6],jlist[7],jlist[8]);
    #pragma omp critical
    NineJList[key] = ninej;

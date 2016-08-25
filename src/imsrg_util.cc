@@ -1319,13 +1319,13 @@ Operator Energy_Op(ModelSpace& modelspace)
 
 void PrecalculateRad_fromList( vector<unsigned int>& rad_list, ModelSpace& modelspace)
 {
-    #pragma omp parallel for
+    //#pragma omp parallel for // Program stalls when running in parallel, but doesn't throw an error or eat more comp time.
     for ( unsigned int it=0; it < rad_list.size(); it++ )
     {
 	auto iter = modelspace.radList.find(rad_list[it]);
 	if (iter != modelspace.radList.end() ) continue;
 	int temp = rad_list[it];
-	cout << "temp=" << temp << endl;
+	//cout << "temp=" << temp << endl;
 	int lb = temp%100;
 	temp -= lb;
 	temp /= 100;
@@ -1336,16 +1336,28 @@ void PrecalculateRad_fromList( vector<unsigned int>& rad_list, ModelSpace& model
 	temp -= nb;
 	temp /= 100;
 	int na = temp%100; 
-	cout << "About to calculate rad with na=" << na << " la=" << la << " nb=" << nb << " lb=" << lb << endl;
-	cout << "temp=" << temp << endl;
-	cout << "it=" << it << endl;
-	#pragma omp critical
+	//cout << "About to calculate rad with na=" << na << " la=" << la << " nb=" << nb << " lb=" << lb << endl;
+	//cout << "temp=" << temp << endl;
+	//cout << "it=" << it << endl;
+	//#pragma omp critical
 	modelspace.radList[rad_list[it]] = RadialIntegral(na, la, nb, lb, -1, modelspace);
     } // it
 }
 
-double getNineJkey(double j1, double j2, double J12, double j3, double j4, double J34, double J13, double J24, double J)
+unsigned long long int getNineJkey(double j1, double j2, double J12, double j3, double j4, double J34, double J13, double J24, double J)
 {
+/*
+	unsigned long long int key = 0;
+	key += pow(100,8)*J;
+	key += pow(100,7)*J24;
+	key += pow(100,6)*J13;
+	key += pow(100,5)*J34;
+	key += pow(100,4)*j4;
+	key += pow(100,3)*j3;
+	key += pow(100,2)*J12;
+	key += pow(100,1)*j2;
+	key += pow(100,0)*j1; 
+*/
    int k1 = 2*j1;
    int k2 = 2*j2;
    int K12 = 2*J12;
@@ -1403,12 +1415,12 @@ double getNineJkey(double j1, double j2, double J12, double j3, double j4, doubl
    {
       key += klist[i]*factor;
       factor *=100;
-   }
+   } 
    return key;
 }
 
 
-double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l2, int L )
+unsigned long long int getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l2, int L )
 {
     	int phase_mosh = 1;
 	int switches = 10;
@@ -1440,15 +1452,19 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 //      phase_mosh *= phase(l2+lam); // This phase is given in Moshinsky and Brody, but with the current algorithm, it appears not to be required.
 	    }
 	}
-	return pow(100,8)*N
-	     + pow(100,7)*Lam
-	     + pow(100,6)*n
-	     + pow(100,5)*lam
-	     + pow(100,4)*n1
-	     + pow(100,3)*l1
-	     + pow(100,2)*n2
-	     + pow(100,1)*l2
-	     + pow(100,0)*L;
+	//cout << "N=" << N << " Lam=" << Lam << " n=" << n << " lam=" << lam << " n1=" << n1 << " l1=" << l1 << " n2=" << n2 << " l2=" << l2 << " L=" << L << endl;
+	unsigned long long int key = 0;
+			key += pow(100,8)*N;
+			key += pow(100,7)*Lam;
+			key += pow(100,6)*n;
+			key += pow(100,5)*lam;
+			key += pow(100,4)*n1;
+			key += pow(100,3)*l1;
+	 		key += pow(100,2)*n2;
+			key += 100*l2;
+			key += L;
+	//cout << "moshkey=" << key << endl;
+	return key;
 }
 
  /* Copied from other operator */
@@ -1459,8 +1475,8 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
    Operator E = Operator(modelspace);
    E.SetHermitian();
 
-   int nmax = min(4*modelspace.Emax,32); //min(4*modelspace.Emax,46); // 46 because integral returns NaN for n > 46, 32 because gamma overflows for nmax > 32
-		  // Est. Error at nmax=46 ~ 0.28%
+   int nmax = 8; //min(4*modelspace.Emax,32); // 46 because integral returns NaN for n > 46, 32 because gamma overflows for nmax > 32
+		  // Est. Error at nmax=46 ~ 0.28% Est. Error at nmax=32 ~ 1%
    int maxFact = 0;
    int nchan = modelspace.GetNumberTwoBodyChannels();
    //modelspace.PreCalculateMoshinsky();
@@ -1500,7 +1516,7 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 	    //cout << "About to start big loop." << endl;
 	    
 	    //#pragma omp parallel for // should check out generateMoshinsky to see how it is done.
-	    for (int Na = 0; Na < nmax; Na++) // 46 because integral returns NaN for n > 46
+	    for (int Na = 0; Na <= nmax; Na++) // 46 because integral returns NaN for n > 46
 	    {
 		int ia = 1000*Na + 10*bra.op->n + bra.op->l;
 		if ( std::find(local_D_list.begin(), local_D_list.end(), ia) == local_D_list.end() ) {
@@ -1511,9 +1527,9 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 
 		//cout << "Getting Dna at " << ia << "=" << Dna << endl;
 		Orbit oa = Orbit(Na, bra.op->l, bra.op->j2, bra.op->tz2, bra.op->occ, bra.op->cvq, bra.op->index);
-		if ( 2*Na + bra.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy. / from 2*(2N + l+...)=27.211 eV Z^2
+		//if ( 2*Na + bra.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy. / from 2*(2N + l+...)=27.211 eV Z^2
 
-		for (int Nb = 0; Nb < nmax; Nb++) // 46 because integral returns NaN for n > 46
+		for (int Nb = 0; Nb <= nmax; Nb++) // 46 because integral returns NaN for n > 46
 		{
 		    int ib = 1000*Nb + 10*bra.oq->n + bra.oq->l;
 		    if ( std::find(local_D_list.begin(), local_D_list.end(), ib) == local_D_list.end() ) {
@@ -1524,11 +1540,11 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 
 		    Orbit ob = Orbit(Nb, bra.oq->l, bra.oq->j2, bra.oq->tz2, bra.oq->occ, bra.oq->cvq, bra.oq->index);
 		    if ( ob.n == oa.n and ob.l == oa.l and ob.j2 == oa.j2 ) continue; // Pauli!
-		    if ( 2*Na + bra.op->l + 3./2 + 2*Nb + bra.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy.
+		    //if ( 2*Na + bra.op->l + 3./2 + 2*Nb + bra.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy.
 		    Ket brap = Ket(oa, ob);
 		    
 
-		    for (int Nc = 0; Nc < nmax; Nc++) // 46 because integral returns NaN for n > 46
+		    for (int Nc = 0; Nc <= nmax; Nc++) // 46 because integral returns NaN for n > 46
 		    {
 			int ic = 1000*Nc + 10*ket.op->n + ket.op->l;
 			if ( std::find(local_D_list.begin(), local_D_list.end(), ic) == local_D_list.end() ) {
@@ -1539,9 +1555,9 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 
 			Orbit oc = Orbit(Nc, ket.op->l, ket.op->j2, ket.op->tz2, ket.op->occ, ket.op->cvq, ket.op->index);
 
-			if ( 2*Nc + ket.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(ket.oq->n,ket.op->n)^2)/2 ) continue; // Crazy energy.
+			//if ( 2*Nc + ket.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(ket.oq->n,ket.op->n)^2)/2 ) continue; // Crazy energy.
 
-			for (int Nd = 0; Nd < nmax; Nd++) // 46 because integral returns NaN for n > 46
+			for (int Nd = 0; Nd <= nmax; Nd++) // 46 because integral returns NaN for n > 46
 			{
 			    Orbit od = Orbit(Nd, ket.oq->l, ket.oq->j2, ket.oq->tz2, ket.oq->occ, ket.oq->cvq, ket.oq->index);
 			    int id = 1000*Nd + 10*ket.oq->n + ket.oq->l;
@@ -1550,28 +1566,37 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 				#pragma omp critical
 				local_D_list.emplace_back (id);
 			    }
-			    int n1, n2, n3, n4, l1, l2, l3, l4;
+			    
+			    int n1, n2, n3, n4, l1, l2, l3, l4, j1, j2, j3, j4;
 			    if ( Na <= Nb ) {
 				n1 = Na;
 				n2 = Nb;
 				l1 = bra.op->l;
 				l2 = bra.oq->l;
+				j1 = bra.op->j2;
+				j2 = bra.oq->j2;
 			    } else {
 				n2 = Na;
 				n1 = Nb;
 				l2 = bra.op->l;
 				l1 = bra.oq->l;
+				j2 = bra.op->j2;
+				j1 = bra.oq->j2;
 			    }
 			    if ( Nc <= Nd ) {
-				n3 = Na;
-				n4 = Nb;
+				n3 = Nc;
+				n4 = Nd;
 				l3 = ket.op->l;
 				l4 = ket.oq->l;
+				j3 = ket.op->j2;
+				j4 = ket.oq->j2;
 			    } else {
-				n4 = Na;
-				n3 = Nb;
+				n4 = Nc;
+				n3 = Nd;
 				l4 = ket.op->l;
 				l3 = ket.oq->l;
+				j4 = ket.op->j2;
+				j3 = ket.oq->j2;
 			    }
 			    long long unsigned int index = n1*1 +
 							   n2*100 +
@@ -1580,7 +1605,26 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 							   l1*100000000 +
 							   l2*1000000000 +
 							   l3*10000000000 +
-							   l4*100000000000; // Could probably figure out a better indexing function.
+							   l4*100000000000 + 
+							   j1*1000000000000 +
+							   j2*10000000000000 +
+							   j3*100000000000000 +
+							   j4*1000000000000000; // Could probably figure out a better indexing function.
+							tbc.J*10000000000000000; 
+
+			  /*  long long unsigned int index = Na*1 +
+							   Nb*100 +
+							   Nc*10000 +
+							   Nd*1000000 +
+						    bra.op->l*100000000 +
+						   bra.op->j2*1000000000 +
+						    bra.oq->l*10000000000 +
+						   bra.oq->j2*100000000000 +
+						    ket.op->l*1000000000000 +
+						   ket.op->j2*10000000000000 +
+						    ket.oq->l*100000000000000 +
+						   ket.oq->j2*1000000000000000 +// Could probably figure out a better indexing function.
+							tbc.J*10000000000000000; */
 
 			    //if ( index > local_mat_list.size() ) local_mat_list.resize(index);
 			    //if ( local_mat_list[index] != 0 ) continue;
@@ -1627,13 +1671,14 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 								      + pow(100,2)*ja
 								      + pow(100,1)*sa
 								      + pow(100,0)*la; */
-				    double ninejkeyab = getNineJkey( la,sa,ja, lb,sb,jb, Lab,Sab,J );
+				    /* unsigned long long int ninejkeyab = getNineJkey( la,sa,ja, lb,sb,jb, Lab,Sab,J );
 				    if ( std::find(local_nineJ_list.begin(), local_nineJ_list.end(), ninejkeyab) == local_nineJ_list.end() ) {
 					//cout << "Setting 9-J with key=" << ninejkeyab << " total elements=" << local_nineJ_list.size() << endl;
 					#pragma omp critical
 					local_nineJ_list.emplace_back( ninejkeyab );
-				    }
-				    //double nin1 = modelspace.GetNineJ(la, sa, ja, lb, sb, jb, Lab, Sab, J);
+				    } */
+				    double nin1 = modelspace.GetNineJ(la, sa, ja, lb, sb, jb, Lab, Sab, J);
+				    if ( nin1 == 0 ) continue;
        				    int Scd = Sab;
 				    int Lcd = Lab;
 				    /* unsigned long long int ninejkeycd = pow(100,8)*J
@@ -1645,13 +1690,14 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 								      + pow(100,2)*jc
 								      + pow(100,1)*sc
 								      + pow(100,0)*lc; */
-				    double ninejkeycd = getNineJkey( lc,sc,jc, ld,sd,jd, Lcd,Scd,J );
+				    /* unsigned long long int ninejkeycd = getNineJkey( lc,sc,jc, ld,sd,jd, Lcd,Scd,J );
 				    if ( std::find(local_nineJ_list.begin(), local_nineJ_list.end(), ninejkeycd) == local_nineJ_list.end() ) {
 					//cout << "Setting 9-J with key=" << ninejkeycd << " total elements=" << local_nineJ_list.size() << endl;
 					#pragma omp critical
 					local_nineJ_list.emplace_back( ninejkeycd );
-				    }
-				    //double nin2 = modelspace.GetNineJ(lc, sc, jc, ld, sd, jd, Lcd, Scd, J);
+				    } */
+				    double nin2 = modelspace.GetNineJ(lc, sc, jc, ld, sd, jd, Lcd, Scd, J);
+				    if ( nin2 == 0 ) continue;
 				    for (int N_ab=1; N_ab<=fab/2; ++N_ab)  // N_ab = CoM n for a,b
 				    {
 					for (int Lam_ab=0; Lam_ab<= fab-2*N_ab; ++Lam_ab) // Lam_ab = CoM l for a,b
@@ -1662,7 +1708,7 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 						if (Lab<abs(Lam_ab-lam_ab) or Lab>(Lam_ab+lam_ab) ) continue;
 						int lam_cd = lam_ab; // tcm and trel conserve lam and Lam
 						int n_ab = (fab - 2*N_ab-Lam_ab-lam_ab)/2; // n_ab is determined by energy conservation
-						if (n_ab < 1 or lam_ab >= n_ab or N_ab < 1) continue;
+						if (n_ab < 0 or N_ab < 0) continue; // or lam_ab >= n_ab 
 						/* unsigned long long int moshkey1 = pow(100,8)*N_ab
 										+ pow(100,7)*Lam_ab
 										+ pow(100,6)*n_ab
@@ -1672,17 +1718,18 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 										+ pow(100,2)*Nb
 										+ pow(100,1)*lb
 										+ pow(100,0)*Lab; */
-						double moshkey1 = getMoshkey( N_ab,Lam_ab, n_ab,lam_ab, Na,la, Nb,lb, Lab );
+						//cout << "N=" << N_ab << " Lam=" << Lam_ab << " n=" << n_ab << " lam=" << lam_ab << " n1=" << Na << " l1=" << la << " n2=" << Nb << " l2=" << lb << " L=" << Lab << endl;
+						unsigned long long int moshkey1 = getMoshkey( N_ab,Lam_ab, n_ab,lam_ab, Na,la, Nb,lb, Lab );
 						if ( std::find(local_mosh_list.begin(), local_mosh_list.end(), moshkey1 ) == local_mosh_list.end() ) {
 						    //cout << "Setting mosh with key=" << moshkey1 << " total elements=" << local_mosh_list.size() << endl;
 						    #pragma omp critical
 						    local_mosh_list.emplace_back( moshkey1 );
 						}
 						//double mosh1 = modelspace.GetMoshinsky( N_ab, Lam_ab, n_ab, lam_ab, Na, la, Nb, lb, Lab );
-						for (int N_cd=max(1,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
+						for (int N_cd=max(0,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
 						{
 						    int n_cd = (fcd - 2*N_cd-Lam_cd-lam_cd)/2; // n_cd is determined by energy conservation
-						    if (n_cd < 1 or lam_cd >= n_cd or N_cd < 1) continue;
+						    if (n_cd < 0 or N_cd < 0) continue; // or lam_cd >= n_cd or 
 						    /* unsigned long long int moshkey2 = pow(100,8)*N_cd
 										    + pow(100,7)*Lam_cd
 										    + pow(100,6)*n_cd
@@ -1692,31 +1739,40 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 										    + pow(100,2)*Nd
 										    + pow(100,1)*ld
 										    + pow(100,0)*Lcd; */
-						    double moshkey2 = getMoshkey( N_cd,Lam_cd, n_cd,lam_cd, Nc,lc, Nd,ld, Lcd );
+						    //cout << "N=" << N_cd << " Lam=" << Lam_cd << " n=" << n_cd << " lam=" << lam_cd << " n1=" << Nc << " l1=" << lc << " n2=" << Nd << " l2=" << ld << " L=" << Lcd << endl;
+						    unsigned long long int moshkey2 = getMoshkey( N_cd,Lam_cd, n_cd,lam_cd, Nc,lc, Nd,ld, Lcd );
 						    if ( std::find(local_mosh_list.begin(), local_mosh_list.end(), moshkey2 ) == local_mosh_list.end() ) {
 							//cout << "Setting mosh with key=" << moshkey2 << " total elements=" << local_mosh_list.size() << endl;
 							#pragma omp critical
 							local_mosh_list.emplace_back( moshkey2 );
 						    }
 						    //double mosh2 = modelspace.GetMoshinsky( N_cd, Lam_cd, n_cd, lam_cd, Nc, lc, Nd, ld, Lcd );
-						    if ( 2*n_ab + lam_ab + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
-						    if ( 2*n_cd + lam_cd + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
+						    //if ( 2*n_ab + lam_ab + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
+						    //if ( 2*n_cd + lam_cd + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
+
 						    unsigned long long int radkey = 0;
-						    if ( n_ab < n_cd) {
-							radkey = pow(100,3)*n_ab
-								+ pow(100,1)*lam_ab
-								+ pow(100,2)*n_cd
-								+ pow(100,0)*lam_cd;
+							radkey = 1e6*n_ab
+								+ 1e2*lam_ab
+								+ 1e4*n_cd
+								+ lam_cd;
+						    /* if ( n_ab < n_cd) {
+							radkey = 1e6*n_ab
+								+ 1e2*lam_ab
+								+ 1e4*n_cd
+								+ lam_cd;
 						    } else {
-							radkey = pow(100,3)*n_cd
-								+ pow(100,1)*lam_cd
-								+ pow(100,2)*n_ab
-								+ pow(100,0)*lam_ab;
-						    }
+							radkey = 1e6*n_cd
+								+ 1e2*lam_cd
+								+ 1e4*n_ab
+								+ lam_ab;
+						    } */
 						    #pragma omp critical
 						    {
 							int pmax = (lam_ab + lam_cd)/2 + n_ab + n_cd;
+							int q = (lam_ab + lam_cd)/2;
+							int kmax = min(max(n_ab,n_cd),pmax-q); 
 							maxFact = max( maxFact, max( 2*pmax+1, max( n_ab, max( n_cd, max( n_cd, max( 2*n_ab + 2*lam_ab + 1, max( n_ab + lam_ab, n_cd + lam_cd ) ) ) ) ) ) );
+							maxFact = max( maxFact, max( kmax, max( 2*lam_ab+2*kmax+1, max( n_ab-kmax, max( n_cd, max( 2*pmax - lam_ab + lam_cd - 2*kmax + 1, pmax-q-kmax ) ) ) ) ) );
 						    }
 						    if ( std::find(local_rad_list.begin(), local_rad_list.end(), radkey) == local_rad_list.end() ) {
 							//cout << "About to place radkey=" << radkey << " total elements=" << local_rad_list.size() << endl;
@@ -1744,11 +1800,11 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
    cout << "Factorials calculated about to calculate mosh, D_coeff, 9-J, and Radial integrals." << endl;
    cout << "Number of Moshinsky = " << local_mosh_list.size() << endl;
    cout << "Number of D_coeff = " << local_D_list.size() << endl;
-   cout << "Number of 9-J = " << local_nineJ_list.size() << endl;
+   //cout << "Number of 9-J = " << local_nineJ_list.size() << endl;
    cout << "Number of Radial Integrals = " << local_rad_list.size() << endl;
 
    // Could set factorial list to have 9 threads, and rest to have 1, to ensure thread safety.
-   //#pragma omp parallel sections num_threads(12)
+  // #pragma omp parallel sections num_threads(4)
    {
 	//#pragma omp section
 	modelspace.PreCalculateMoshinsky_FromList( local_mosh_list );
@@ -1759,12 +1815,66 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 	// Should now destroy local_D_list to save memory
 
 	//#pragma omp section
-	modelspace.PrecalculateNineJ( local_nineJ_list );
+	//modelspace.PrecalculateNineJ( local_nineJ_list );
 	// Should now destroy local_ninej_list to save memory
 
 	//#pragma omp section
 	PrecalculateRad_fromList( local_rad_list, modelspace );
 	// Should now destroy local_rad_list to save memory
+	
+	//#pragma omp section
+	for ( unsigned long long int i=0; i < local_mat_list.size(); i++ )
+	{
+	    unsigned long long int temp = local_mat_list[i];
+	    int na = temp%100;
+	    temp -= na;
+	    temp /= 100;
+	    int nb = temp%100;
+	    temp -= nb;
+	    temp /= 100;
+	    int nc = temp%100;
+	    temp -= nc;
+	    temp /= 100;
+	    int nd = temp%100;
+	    temp -= nd;
+	    temp /= 100;
+	    int la = temp%10;
+	    temp -= la;
+	    temp /= 10;
+	    int ja = temp%10;
+	    temp -= ja;
+	    temp /= 10;
+	    int lb = temp%10;
+	    temp -= lb;
+	    temp /= 10;
+	    int jb = temp%10;
+	    temp -= jb;
+	    temp /= 10;
+	    int lc = temp%10;
+	    temp -= lc;
+	    temp /= 10;
+	    int jc = temp%10;
+	    temp -= jc;
+	    temp /= 10;
+	    int ld = temp%10;
+	    temp -= ld;
+	    temp /= 10;
+	    int jd = temp%10;
+	    temp -= jd;
+	    temp /= 10;
+	    int J = temp%10;
+
+	   Orbit oa = Orbit( na, la, ja, -1, 0, 0, 0);
+	   Orbit ob = Orbit( nb, lb, jb, -1, 0, 0, 0);
+	   Orbit oc = Orbit( nc, lc, jc, -1, 0, 0, 0);
+	   Orbit od = Orbit( nd, ld, jd, -1, 0, 0, 0);
+
+	   Ket bra_ab = Ket( oa, ob );
+	   Ket ket_cd = Ket( oc, od );
+
+	   #pragma omp critical
+	   Mat_El_List[ local_mat_list[i] ] = Corr_Invr_Hydrogen(modelspace, bra_ab, ket_cd, J);
+	} 
    }
 
    cout << "Lists generated, moving to calculation." << endl;
@@ -1773,84 +1883,104 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
    //#pragma omp parallel for  //not thread safe if using Mat_El_List
    for (int ch=0; ch<nchan; ++ch)
    {
-      cout << "In channel " << ch << endl;
+      //cout << "In channel " << ch << endl;
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
       int nkets = tbc.GetNumberKets();
       for (int ibra=0;ibra<nkets;++ibra)
       {
-	 cout << "In bra " << ibra << endl;
+	 //cout << "In bra " << ibra << endl;
          Ket & bra = tbc.GetKet(ibra);
          for (int iket=ibra;iket<nkets;++iket)
          {
-	    cout << "In ket " << iket << endl;
+	    //cout << "In ket " << iket << endl;
             Ket & ket = tbc.GetKet(iket);
 	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
 	    double mat_el = 0;
 	    double result = 0;
-	    cout << "About to start big loop." << endl;
+	    //cout << "About to start big loop." << endl;
 	    
-	    #pragma omp parallel for schedule(dynamic,1) // should check out generateMoshinsky to see how it is done.
-	    for (int Na = 0; Na < nmax; Na++) // 46 because integral returns NaN for n > 46
+	    #pragma omp parallel for  // should check out generateMoshinsky to see how it is done. Not thread safe yet
+	    for (int Na = 0; Na <= nmax; Na++) // 46 because integral returns NaN for n > 46
 	    {
 		static unordered_map<unsigned long int,double> local_List;
 		int ia = 1000*Na + 10*bra.op->n + bra.op->l;
-		cout << "Getting Dna@" << ia << endl;
+		//cout << "Getting Dna@" << ia << endl;
 		double Dna = modelspace.OsToHydroCoeffList[ia];
 
 		Orbit oa = Orbit(Na, bra.op->l, bra.op->j2, bra.op->tz2, bra.op->occ, bra.op->cvq, bra.op->index);
-		if ( 2*Na + bra.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy. /4 from 2*(2N + l+...)=27.211 eV Z^2/2
-		if ( abs(Dna) < 1e-8 ) continue;
-		for (int Nb = 0; Nb < nmax; Nb++) // 46 because integral returns NaN for n > 46
+		//if ( 2*Na + bra.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy. /4 from 2*(2N + l+...)=27.211 eV Z^2/2
+		if ( abs(Dna) < 1e-9 ) {
+		    cout << "Dna too small; Dna=" << Dna << " at ia=" << ia << endl;
+		    continue;
+		}
+		for (int Nb = 0; Nb <= nmax; Nb++) // 46 because integral returns NaN for n > 46
 		{
 		    int ib = 1000*Nb + 10*bra.oq->n + bra.oq->l;
-		    cout << "Getting Dnb@" << ib << endl;
+		    //cout << "Getting Dnb@" << ib << endl;
 		    double Dnb = modelspace.OsToHydroCoeffList[ib];
 
 		    Orbit ob = Orbit(Nb, bra.oq->l, bra.oq->j2, bra.oq->tz2, bra.oq->occ, bra.oq->cvq, bra.oq->index);
 		    if ( ob.n == oa.n and ob.l == oa.l and ob.j2 == oa.j2 ) continue; // Pauli!
-		    if ( 2*Na + bra.op->l + 3./2 + 2*Nb + bra.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy.
+		    //if ( 2*Na + bra.op->l + 3./2 + 2*Nb + bra.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(bra.oq->n,bra.op->n)^2)/2 ) continue; // Crazy energy.
 		    Ket brap = Ket(oa, ob);
-		    if ( abs(Dnb) < 1e-8 ) continue;
-		    for (int Nc = 0; Nc < nmax; Nc++) // 46 because integral returns NaN for n > 46
+		    if ( abs(Dnb) < 1e-9 ) {
+			cout << "Dnb too small; Dnb=" << Dnb << " at ib=" << ib << endl;
+			continue;
+		    }
+		    for (int Nc = 0; Nc <= nmax; Nc++) // 46 because integral returns NaN for n > 46
 		    {
 			int ic = 1000*Nc + 10*ket.op->n + ket.op->l;
-			cout << "Getting Dnc@" << ic << endl;
+			//cout << "Getting Dnc@" << ic << endl;
 			double Dnc = modelspace.OsToHydroCoeffList[ic];
 
 			Orbit oc = Orbit(Nc, ket.op->l, ket.op->j2, ket.op->tz2, ket.op->occ, ket.op->cvq, ket.op->index);
 
-			if ( 2*Nc + ket.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(ket.oq->n,ket.op->n)^2)/2 ) continue; // Crazy energy.
-			if ( abs(Dnc) < 1e-8 ) continue;
-			for (int Nd = 0; Nd < nmax; Nd++) // 46 because integral returns NaN for n > 46
+			//if ( 2*Nc + ket.op->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(ket.oq->n,ket.op->n)^2)/2 ) continue; // Crazy energy.
+			if ( abs(Dnc) < 1e-9 ) {
+			    cout << "Dnc too small; Dnc=" << Dnc << " at ic=" << ic << endl;
+			    continue;
+			}
+			for (int Nd = 0; Nd <= nmax; Nd++) // 46 because integral returns NaN for n > 46
 			{
 			    int id = 1000*Nd + 10*ket.oq->n + ket.oq->l;
-			    cout << "Getting Dnd@" << id << endl;
+			    //cout << "Getting Dnd@" << id << endl;
 			    double Dnd = modelspace.OsToHydroCoeffList[id];
 			    //cout << "Getting Dnd at " << id << "=" << Dnd << " Dnc@" << ic << "=" << Dnc << " Dnb@" << ib << "=" << Dnb << " Dna@" << ia << "=" << Dna << endl;
-			    if ( abs(Dnd) < 1e-8 ) continue;
+			    if ( abs(Dnd) < 1e-9 ) {
+				cout << "Dnd too small; Dnd=" << Dnd << " at id=" << id << endl;
+				continue;
+			    }
 			    
-			    int n1, n2, n3, n4, l1, l2, l3, l4;
+			    int n1, n2, n3, n4, l1, l2, l3, l4, j1, j2, j3, j4;
 			    if ( Na <= Nb ) {
 				n1 = Na;
 				n2 = Nb;
 				l1 = bra.op->l;
 				l2 = bra.oq->l;
+				j1 = bra.op->j2;
+				j2 = bra.oq->j2;
 			    } else {
 				n2 = Na;
 				n1 = Nb;
 				l2 = bra.op->l;
 				l1 = bra.oq->l;
+				j2 = bra.op->j2;
+				j1 = bra.oq->j2;
 			    }
 			    if ( Nc <= Nd ) {
 				n3 = Nc;
 				n4 = Nd;
 				l3 = ket.op->l;
 				l4 = ket.oq->l;
+				j3 = ket.op->j2;
+				j4 = ket.oq->j2;
 			    } else {
 				n4 = Nc;
 				n3 = Nd;
 				l4 = ket.op->l;
 				l3 = ket.oq->l;
+				j4 = ket.op->j2;
+				j3 = ket.oq->j2;
 			    }
 			    long long unsigned int index = n1*1 +
 							   n2*100 +
@@ -1859,7 +1989,26 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 							   l1*100000000 +
 							   l2*1000000000 +
 							   l3*10000000000 +
-							   l4*100000000000; // Could probably figure out a better indexing function.
+							   l4*100000000000 + 
+							   j1*1000000000000 +
+							   j2*10000000000000 +
+							   j3*100000000000000 +
+							   j4*1000000000000000; // Could probably figure out a better indexing function.
+							tbc.J*10000000000000000; 
+
+			  /*  long long unsigned int index = Na*1 +
+							   Nb*100 +
+							   Nc*10000 +
+							   Nd*1000000 +
+						    bra.op->l*100000000 +
+						   bra.op->j2*1000000000 +
+						    bra.oq->l*10000000000 +
+						   bra.oq->j2*100000000000 +
+						    ket.op->l*1000000000000 +
+						   ket.op->j2*10000000000000 +
+						    ket.oq->l*100000000000000 +
+						   ket.oq->j2*1000000000000000 +// Could probably figure out a better indexing function.
+							tbc.J*10000000000000000; */
 
 			    if ( Mat_El_List.find(index) != Mat_El_List.end() ) {
 				//cout << "Already found element, getting from list" << endl;
@@ -1868,20 +2017,31 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 				//cout << "Not in list, calculating." << endl;
 				Orbit od = Orbit(Nd, ket.oq->l, ket.oq->j2, ket.oq->tz2, ket.oq->occ, ket.oq->cvq, ket.oq->index);
 				if ( oc.n == od.n and oc.l == od.l and oc.j2 == od.j2 ) continue; // Pauli!
-				int osLmax = oc.l + od.l;
-				int osLmin = abs(oc.l-od.l);
-				if ( oa.l + ob.l > osLmax or abs(oa.l - ob.l) < osLmin ) continue; // Cons of Ang Mom. Should be taken care of in Kets, I think
-				if ( 2*Nc + ket.op->l + 3./2 + 2*Nd + ket.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(ket.oq->n,ket.op->n)^2) ) continue; // Crazy energy.
+				//int osLmax = oc.l + od.l;
+				//int osLmin = abs(oc.l-od.l);
+				//if ( oa.l + ob.l > osLmax or abs(oa.l - ob.l) < osLmin ) continue; // Cons of Ang Mom. Should be taken care of in Kets, I think
+				//if ( 2*Nc + ket.op->l + 3./2 + 2*Nd + ket.oq->l + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/(min(ket.oq->n,ket.op->n)^2) ) continue; // Crazy energy.
 			        Ket ketp = Ket(oc, od);
-				result = Corr_Invr_Hydrogen(modelspace, brap, ketp, tbc.J); //Need to cache these.
+				result = Corr_Invr_Hydrogen(modelspace, brap, ketp, tbc.J); //*4 to account for symmetries in Na, Nb, Nc, Nd
 				if ( std::isnan( result ) ) continue; // Should find a better way of dealing/avoiding with NaN results.
-				if ( abs(result) < 1e-8 ) continue;
-				Mat_El_List[index] = result;
+				if ( abs(result) < 1e-9 ) {
+				    //cout << "Result too small, result = " << result << endl;
+				    continue;
+				}
+				#pragma omp critical
+				local_List[index] = result;
 			    }
 			    
 			    //result = Corr_Invr_Hydrogen(modelspace, brap, ketp, tbc.J);//Need to cache these.
 			    //cout << "Result=" << result << endl;
-			    mat_el += Dna*Dnb*Dnc*Dnd*result*4; // *4 to account for symmetries in Na, Nb, Nc, Nd
+			    /* if ( Dna*Dnb*Dnc*Dnd*result < 0 ) {
+				cout << "Negative result for:" << endl;
+				cout << "Na=" << Na << " bra.op->n=" << bra.op->n << " bra.op->l=" << bra.op->l << endl;
+				cout << "Nb=" << Nb << " bra.oq->n=" << bra.oq->n << " bra.oq->l=" << bra.oq->l << endl;
+				cout << "Nc=" << Nc << " ket.op->n=" << ket.op->n << " ket.op->l=" << ket.op->l << endl;
+				cout << "Nd=" << Nd << " ket.oq->n=" << ket.oq->n << " ket.oq->l=" << ket.oq->l << endl;
+			    } */
+			    mat_el += Dna*Dnb*Dnc*Dnd*result;
 			    //cout << "Mat_el=" << mat_el << endl;
             		} // Nd
 		    } // Nc
@@ -1890,6 +2050,14 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 		Mat_El_List.insert( local_List.begin(), local_List.end() );
 	    } // Na
 	    //if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
+	    if ( mat_el < 0 ) {
+		cout << "Negative Mat_el for ibra=" << ibra << " iket=" << iket << endl;
+		cout << "bra.op->n=" << bra.op->n << " bra.op->l=" << bra.op->l << endl;
+		cout << "bra.oq->n=" << bra.oq->n << " bra.oq->l=" << bra.oq->l << endl;
+		cout << "ket.op->n=" << ket.op->n << " ket.op->l=" << ket.op->l << endl;
+		cout << "ket.oq->n=" << ket.oq->n << " ket.oq->l=" << ket.oq->l << endl;
+	    }
+	    cout << "Mat_el=" << mat_el << endl;
             E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
          }
@@ -1902,7 +2070,7 @@ double getMoshkey( int N, int Lam, int n, int lam, int n1, int l1, int n2, int l
 
 
 
-// This might not even be necessary!
+
 double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
 {
    //Orbit & oa = bra.p;
@@ -1950,15 +2118,20 @@ double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
 
        double njab = modelspace.GetNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
        //if (njab < 0) cout << "njab=" << njab << " la=" << la << " sa=" << sa << " ja=" << ja << " lb=" << lb << " sb=" << sb << " jb=" << jb << " Lab=" << Lab << " Sab=" << Sab << " J=" << J << endl;
-       if (njab == 0) continue;
+       if (njab == 0) {
+	   //cout << "njab is zero." << endl;
+	   continue;
+       }
        int Scd = Sab;
        int Lcd = Lab;
        double njcd = modelspace.GetNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
        //if (njcd < 0) cout << "njcd=" << njcd << " lc=" << lc << " sa=" << sc << " jc=" << jc << " ld=" << ld << " sd=" << sd << " jd=" << jd << " Lcd=" << Lcd << " Scd=" << Scd << " J=" << J << endl;
-       if (njcd == 0) continue;
-
+       if (njcd == 0) {
+	   //cout << "njcd is zero." << endl;
+	   continue;
+       }
        // Next, transform to rel / com coordinates with Moshinsky tranformation
-       for (int N_ab=1; N_ab<=fab/2; ++N_ab)  // N_ab = CoM n for a,b
+       for (int N_ab=0; N_ab<=fab/2; ++N_ab)  // N_ab = CoM n for a,b
        {
          for (int Lam_ab=0; Lam_ab<= fab-2*N_ab; ++Lam_ab) // Lam_ab = CoM l for a,b
          {
@@ -1973,41 +2146,48 @@ double Corr_Invr_Hydrogen(ModelSpace& modelspace, Ket & bra, Ket & ket, int J)
 
               int lam_cd = lam_ab; // tcm and trel conserve lam and Lam
               int n_ab = (fab - 2*N_ab-Lam_ab-lam_ab)/2; // n_ab is determined by energy conservation
-	      if (n_ab < 1 or lam_ab >= n_ab or N_ab < 1) continue;
+	      if (n_ab < 0 or N_ab < 0) continue; // lam_ab >= n_ab or 
 
               double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
 	      //if (mosh_ab < 0) cout << "Mosh_ab=" << mosh_ab << " N_ab=" << N_ab << " Lam_ab=" << Lam_ab << " n_ab=" << n_ab << " lam_ab=" << lam_ab << " na=" << na << " la=" << la << " nb=" << nb << " lb=" << lb << " Lab=" << Lab;
-              if (abs(mosh_ab)<1e-8) continue;
-
-              for (int N_cd=max(1,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
+              if (abs(mosh_ab)<1e-8) {
+		   //cout << "Mosh_ab too small, mosh_ab=" << mosh_ab << endl;
+		   continue;
+	      }
+              for (int N_cd=max(0,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
               {
                 int n_cd = (fcd - 2*N_cd-Lam_cd-lam_cd)/2; // n_cd is determined by energy conservation
-                if (n_cd < 1 or lam_cd >= n_cd or N_cd < 1) continue;
+                if (n_cd < 0 or N_cd < 0) continue; // or lam_cd >= n_cd or 
                 //if  (n_ab != n_cd and N_ab != N_cd) continue;
 
                 double mosh_cd = modelspace.GetMoshinsky(N_cd,Lam_cd,n_cd,lam_cd,nc,lc,nd,ld,Lcd);
 		//if (mosh_cd < 0) cout << "Mosh_cd=" << mosh_cd << " N_cd=" << N_cd << " Lam_cd=" << Lam_cd << " n_cd=" << n_cd << " lam_cd=" << lam_cd << " nc=" << nc << " lc=" << lc << " nd=" << nd << " ld=" << ld << " Lcd=" << Lcd;
-                if (abs(mosh_cd)<1e-8) continue;
-
-                //double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace); // Not valid for atomic systems.
-		if ( 2*n_ab + lam_ab + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
-		if ( 2*n_cd + lam_cd + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
-		unsigned long long int radkey = 0;
-		if ( n_ab < n_cd) {
-			radkey = pow(100,3)*n_ab
-				+ pow(100,1)*lam_ab
-				+ pow(100,2)*n_cd
-				+ pow(100,0)*lam_cd;
-		} else {
-			radkey = pow(100,3)*n_cd
-				+ pow(100,1)*lam_cd
-				+ pow(100,2)*n_ab
-				+ pow(100,0)*lam_ab;
+                if (abs(mosh_cd)<1e-8) {
+		    //cout << "Mosh_cd too small, mosh_cd=" << mosh_cd << endl;
+		    continue;
 		}
-		double rad = modelspace.radList[radkey];
-		//double rad = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
+                //double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace); // Not valid for atomic systems.
+		//if ( 2*n_ab + lam_ab + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
+		//if ( 2*n_cd + lam_cd + 3./2 >= modelspace.GetTargetZ() * modelspace.GetTargetZ() * modelspace.GetHbarOmega()/2 ) continue; // Crazy energy.
+		/* unsigned long long int radkey = 0;
+		if ( n_ab < n_cd) {
+		    radkey = 1e6*n_ab
+			+ 1e2*lam_ab
+			+ 1e4*n_cd
+			+ lam_cd;
+		} else {
+		    radkey = 1e6*n_cd
+			+ 1e2*lam_cd
+			+ 1e4*n_ab
+			+ lam_ab;
+		} */
+		//double rad = modelspace.radList[radkey];
+		double rad = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
 		//if (rad < 0) cout << "Rad=" << rad << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
-		if (abs(rad) < 1e-8) continue;
+		if (abs(rad) < 1e-9) { 
+		    //cout << "Rad is too small Rad=" << rad << endl;
+		    continue;
+		}
 
 
 		invr += njab * njcd * mosh_ab * mosh_cd * rad / sqrt(2) * HBARC / 137. / BOHR_RADIUS;
