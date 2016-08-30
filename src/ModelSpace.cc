@@ -1467,7 +1467,7 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
 
 }
 
-struct my_f_params {int n; double l; int np;};
+struct my_f_params {int n; double l; int np; int Z;};
 
 double
 OsToHydroCoeff( double x, void * p )
@@ -1476,7 +1476,8 @@ OsToHydroCoeff( double x, void * p )
         int n = (params->n);
         double l = (params->l);
 	int np = (params->np);
-	double c = 1 / (n * BOHR_RADIUS); // 
+	int Z = (params->Z);//2;//GetTargetZ(); //Fix later
+	double c = Z / (n * BOHR_RADIUS); // 
 	double m = 1; 			// Electron mass, in atomic units
 	double h = 1; 			// Reduced plancks' constant, in atomic units
 	double w = 13.605 * 2 / h; 	// wavelength of oscillator 13.605 *2 ? 
@@ -1503,9 +1504,10 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
     double error;		/* the estimated error from the integration */
 
     gsl_function My_function;
-    struct my_f_params alpha = {1,0,1};
+    struct my_f_params alpha = {1,0,1,1};
     My_function.function = &OsToHydroCoeff;
     My_function.params = &alpha;
+    int Z = GetTargetZ();
     int npmax = min(32, 4*Emax);
 
     //#pragma omp parallel for schedule(dynamic,1)
@@ -1513,7 +1515,7 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
     {
 	for (int l = 0.; l < n and l <= Lmax; l++)
 	{
-	    double hydrogenCoeff = sqrt( pow(2/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2/(n * BOHR_RADIUS),l);
+	    double hydrogenCoeff = sqrt( pow(2*Z/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2*Z/(n * BOHR_RADIUS),l);
 	    //double temp = 0;
 	    //#pragma parallel for schedule(dynamic,1)
 	    for (int np = 0; np <= npmax; np++) // Should goto inf; throws NaN at np > 46; seems to throw at higher if you reduce errors
@@ -1521,6 +1523,7 @@ void ModelSpace::GenerateOsToHydroCoeff(int nmax) {
 		alpha.n = n;
 		alpha.l = l;
 		alpha.np = np;
+		alpha.Z = Z;
         	double OscilCoeff = sqrt( sqrt( 2* pow(13.605,3) / 3.14159 ) * pow(2, np+2*l+3) * GetFactorial(np) * pow(13.605,l) / gsl_sf_doublefact(2*np+2*l+1) ); // can split+cache
 		
 		//cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
@@ -1583,9 +1586,10 @@ void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<int>& hy_list ) {
     double error;		/* the estimated error from the integration */
 
     gsl_function My_function;
-    struct my_f_params alpha = {1,0,1};
+    struct my_f_params alpha = {1,0,1,1};
     My_function.function = &OsToHydroCoeff;
     My_function.params = &alpha;
+    int Z = GetTargetZ();
 
     //#pragma omp parallel for
     for ( unsigned long long int it=0; it<hy_list.size(); it++ )
@@ -1604,7 +1608,8 @@ void ModelSpace::GenerateOsToHydroCoeff_fromlist( vector<int>& hy_list ) {
 	temp /= 100;
 	alpha.np = temp;
 	int np = alpha.np;
-	double hydrogenCoeff = sqrt( pow(2/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2/(n * BOHR_RADIUS),l);
+	alpha.Z = Z;
+	double hydrogenCoeff = sqrt( pow(2*Z/(n * BOHR_RADIUS),3) * GetFactorial(n-l-1)/((2*n*GetFactorial(n+l)) ) ) * pow(2*Z/(n * BOHR_RADIUS),l);
         double OscilCoeff = sqrt( sqrt( 2* pow(13.605,3) / 3.14159 ) * pow(2, np+2*l+3) * GetFactorial(np) * pow(13.605,l) / gsl_sf_doublefact(2*np+2*l+1) ); // can split+cache
 		
 	//cout << "About to integrate; n=" << n << " l=" << l << " np=" << np << " hydrogenCoeff=" << hydrogenCoeff << " OscilCoeff=" << OscilCoeff << endl;
@@ -1830,10 +1835,12 @@ double ModelSpace::GetNineJ(double j1, double j2, double J12, double j3, double 
    {
      return it->second;
    }
-   cout << "Missing NineJ, making a new one; key=" << key << endl;
+   //cout << "Missing NineJ, making a new one; key=" << key << endl;
    double ninej = AngMom::NineJ(jlist[0],jlist[1],jlist[2],jlist[3],jlist[4],jlist[5],jlist[6],jlist[7],jlist[8]);
-   #pragma omp critical
+   //cout << "NineJ calculated." << endl;
+   //#pragma omp critical
    NineJList[key] = ninej;
+   //cout << "Nine J added to list, returning." << endl;
    return ninej;
 
 }
