@@ -9,6 +9,17 @@
 #include <list>
 #include <cmath>
 #include <algorithm>
+#include <stdlib.h>
+#include <math.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_monte.h>
+#include <gsl/gsl_monte_vegas.h>
+#include <gsl/gsl_sf_laguerre.h>
+#include <gsl/gsl_sf_legendre.h>
+#include <gsl/gsl_sf_gamma.h>
+#include "cubature.h"
+#include "cubature.c"
+#include "hcubature.c"
 
 using namespace AngMom;
 
@@ -622,9 +633,9 @@ Operator Energy_Op(ModelSpace& modelspace)
    for (int a=0;a<norbits;++a)
    {
       Orbit & oa = modelspace.GetOrbit(a);
-      //E.OneBody(a,a) = -hw/2 * Z * Z / (oa.n * oa.n); 
-	double zarg = Z/137 / ( oa.n - oa.j2/2 - 0.5 + sqrt( pow(oa.j2/2+0.5,2) - pow(Z/137,2) ) );
-	E.OneBody(a,a) = -1/sqrt( 1 + pow(zarg,2) );
+      E.OneBody(a,a) = -hw/2 * Z * Z / (oa.n * oa.n); 
+	//double zarg = Z/137 / ( oa.n - oa.j2/2 - 0.5 + sqrt( pow(oa.j2/2+0.5,2) - pow(Z/137,2) ) );
+	//E.OneBody(a,a) = -1/sqrt( 1 + pow(zarg,2) );
 	//E.OneBody(a,a) = -(1-1/sqrt(1+pow((1/137)/(oa.n - oa.j2/2 - 1/2 + sqrt( pow(oa.j2/2+1/2,2) - pow(1/137,2) ) ),2) ) );
       //for (int b=0; b<=a; b++)
       //{
@@ -649,6 +660,8 @@ Operator Energy_Op(ModelSpace& modelspace)
    E.profiler.timer["Energy_Op"] += omp_get_wtime() - t_start;
    return E;
 }
+
+
 
 /// Relative kinetic energy, includingthe hw/A factor
 /// \f[
@@ -1475,6 +1488,227 @@ unsigned long long int getMoshkey( int N, int Lam, int n, int lam, int n1, int l
 			key += L;
 	//cout << "moshkey=" << key << endl;
 	return key;
+}
+
+struct e2b_params { int n1; int l1; int n2; int l2; int n3; int l3; int n4; int l4; int Z;};
+
+/*
+Integral of <12,J|1/abs(r3-r4)|34,J>
+*/
+double
+e2b (double *k, size_t dim, void * p)
+{
+  (void)(dim); /* avoid unused parameter warnings */
+  struct e2b_params * params = (struct e2b_params *)p;
+
+  double x3 = k[0]/(1-k[0]);
+  double x4 = k[1]/(1-k[1]);
+
+  int Z = (params->Z);
+  double a = BOHR_RADIUS; // Bohr Radius 0.53 A, 0.0529 nm
+
+  int n1 = (params->n1);
+  int l1 = (params->l1);
+  double c1 = Z / (n1 * a);
+  double h1 = pow(2*c1,3) * gsl_sf_fact(n1-l1-1) / ( 2*n1*gsl_sf_fact(n1+l1) );
+  double hy1 = sqrt( h1 ) * pow(2*c1*x3,l1) * exp( -c1*x3 ) * gsl_sf_laguerre_n(n1-l1-1, 2*l1+1, 2*x3*c1);
+
+  int n2 = (params->n2);
+  int l2 = (params->l2);
+  double c2 = Z / (n2 * a);
+  double h2 = pow(2*c2,3) * gsl_sf_fact(n2-l2-1) / ( 2*n2*gsl_sf_fact(n2+l2) );
+  double hy2 = sqrt( h2 ) * pow(2*c2*x4,l2) * exp( -c2*x4 ) * gsl_sf_laguerre_n(n2-l2-1, 2*l2+1, 2*x4*c2);
+
+  int n3 = (params->n3);
+  int l3 = (params->l3);
+  double c3 = Z / (n3 * a);
+  double h3 = pow(2*c3,3) * gsl_sf_fact(n3-l3-1) / ( 2*n3*gsl_sf_fact(n3+l3) );
+  double hy3 = sqrt( h3 ) * pow(2*c3*x3,l3) * exp( -c3*x3 ) * gsl_sf_laguerre_n(n3-l3-1, 2*l3+1, 2*x3*c3);
+
+  int n4 = (params->n4);
+  int l4 = (params->l4);
+  double c4 = Z / (n4 * a);
+  double h4 = pow(2*c4,3) * gsl_sf_fact(n4-l4-1) / ( 2*n4*gsl_sf_fact(n4+l4) );
+  double hy4 = sqrt( h4 ) * pow(2*c4*x4,l4) * exp( -c4*x4 ) * gsl_sf_laguerre_n(n4-l4-1, 2*l4+1, 2*x4*c4);
+
+  double A = hy1 * hy2 * 1/fabs(x3-x4) * hy3 * hy4 * 1/pow(1-k[0],2) * 1/pow(1-k[1],2) * x3*x3 * x4*x4 * HBARC/137; // hbarc*alpha
+  return A;
+}
+
+struct my_f_params { int n1; int l1; int m1; int n2; int l2; int m2; int n3; int l3; int m3; int n4; int l4; int m4; int Z;};
+
+double
+Yml ( double t, int l, int m)
+{
+  return gsl_sf_legendre_sphPlm( l, m, cos(t) );
+}
+
+int
+f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) {
+
+  (void)(ndim); /* avoid unused parameter warnings */
+  struct my_f_params * params = (struct my_f_params *)fdata;
+  //(void)(fdata);
+  (void)(fval);
+  int lim = 1;
+  float a = 0.0529;
+  //float HBARC = 197.3;
+  double x3 = x[0]/(lim-x[0] + 1e-9);
+  double x4 = x[3]/(lim-x[3]);
+  double t3 = x[1];
+  double t4 = x[4];
+  //double p3 = x[2];
+  //double p4 = x[5];
+  int Z = (params->Z);
+  double del = 1e-9;
+  double PI = 3.141592;
+  //int Z = (params->Z);
+  //printf ("x3=%.18f\n",x3);
+  //printf ("x4=%.18f\n",x4);
+  int n1 = (params->n1);
+  int l1 = (params->l1);
+  int m1 = (params->m1);
+  double c1 = Z / (n1 * a);
+  double h1 = pow(2*c1,3) * gsl_sf_fact(n1-l1-1) / ( 2*n1*gsl_sf_fact(n1+l1) );
+  //printf ("h1=%.18f\n",h1);
+  double hy1 = sqrt( h1 ) * pow(2*c1*x3,l1) * exp( -c1*x3 ) * gsl_sf_laguerre_n(n1-l1-1, 2*l1+1, 2*x3*c1) * Yml (t3, l1, m1);
+  //printf ("hy1=%.18f\n",hy1);
+
+  int n2 = (params->n2);
+  int l2 = (params->l2);
+  int m2 = (params->m2);
+  double c2 = Z / (n2 * a);
+  double h2 = pow(2*c2,3) * gsl_sf_fact(n2-l2-1) / ( 2*n2*gsl_sf_fact(n2+l2) );
+  //printf ("h2=%.18f\n",h2);
+  double hy2 = sqrt( h2 ) * pow(2*c2*x4,l2) * exp( -c2*x4 ) * gsl_sf_laguerre_n(n2-l2-1, 2*l2+1, 2*x4*c2) * Yml (t4, l2, m2);
+  //printf ("hy2=%.18f\n",hy2);
+
+  int n3 = (params->n3);
+  int l3 = (params->l3);
+  int m3 = (params->m3);
+  double c3 = Z / (n3 * a);
+  double h3 = pow(2*c3,3) * gsl_sf_fact(n3-l3-1) / ( 2*n3*gsl_sf_fact(n3+l3) );
+  //printf ("h3=%.18f\n",h3);
+  double hy3 = sqrt( h3 ) * pow(2*c3*x3,l3) * exp( -c3*x3 ) * gsl_sf_laguerre_n(n3-l3-1, 2*l3+1, 2*x3*c3) * Yml (t3, l3, m3);
+  //printf ("hy3=%.18f\n",hy3);
+
+  int n4 = (params->n4);
+  int l4 = (params->l4);
+  int m4 = (params->m4);
+  double c4 = Z / (n4 * a);
+  double h4 = pow(2*c4,3) * gsl_sf_fact(n4-l4-1) / ( 2*n4*gsl_sf_fact(n4+l4) );
+  //printf ("h4=%.18f\n",h4);
+  double hy4 = sqrt( h4 ) * pow(2*c4*x4,l4) * exp( -c4*x4 ) * gsl_sf_laguerre_n(n4-l4-1, 2*l4+1, 2*x4*c4) * Yml (t4, l4, m4);
+  //printf ("hy4=%.18f\n",hy4);
+  double den = sqrt( x4*x4 + x3*x3 - 2*x3*x4*cos( t3 ) );
+  //fval[0] = hy1 * hy2 * 1/fabs(x4-x3) * hy3 * hy4 * 1/pow(lim-x[0],2) * 1/pow(lim-x[1],2) * x3*x3 * x4*x4;// * HBARC/137; // hbarc*alpha
+  fval[0] = hy1 * hy2 * hy3 * hy4 * x3*x3 * x4*x4 * 1/fabs ( den ) * 1/pow(lim-x[0],2) * 1/pow(lim-x[3],2) * sin(t3) * sin(t4) * HBARC/137 * 4*PI*PI;
+  //printf ("fabs=%.18f\n", 1/fabs(x4 - x3 + del) );
+  return 0;
+}
+
+double
+numerical_tb_md ( int n1, int l1, int m1, int n2, int l2, int m2, int n3, int l3, int m3, int n4, int l4, int m4, int Z )
+{
+  double xmin[4] = {0,0,0,0};
+  double pi = 3.141592;
+  double xmax[4] = {1, pi, 1, pi};
+  double val=0;
+  double err=0;
+  struct my_f_params alpha = { n1,l1,m1, n2,l2,m2, n3,l3,m3, n4,l4,m4, Z };
+  hcubature(1, &f, &alpha, 4, xmin, xmax, 1e5, 0, 1e-4, ERROR_INDIVIDUAL, &val, &err);
+  return val;
+}
+  
+
+double
+numerical_tb ( int n1, int l1, int n2, int l2, int n3, int l3, int n4, int l4, int Z )
+{
+  double res, err;
+  cout << "n1=" << n1 << " l1=" << l1 << " n2=" << n2 << " l2=" << l2 << " n3=" << n3 << " l3=" << l3 << " n4=" << n4 << endl;
+
+  double xl[2] = { 0, 0 }; // Lower limit 0; [0,1)
+  double xu[2] = { 1, 1 } ; // Upper limit 1;
+
+  const gsl_rng_type *T;
+  gsl_rng *r;
+  struct e2b_params alpha = { n1,l1, n2,l2, n3,l3, n4,l4, Z };
+  gsl_monte_function G = { &e2b, 2, &alpha };
+
+  size_t calls = 1000000;
+
+  gsl_rng_env_setup ();
+
+  T = gsl_rng_default;
+  r = gsl_rng_alloc (T);
+
+  {
+    gsl_monte_vegas_state *s = gsl_monte_vegas_alloc (2);
+
+    gsl_monte_vegas_integrate (&G, xl, xu, 2, 10000, r, s,
+                               &res, &err);
+    cout << "Vegas converging..." << endl;
+
+    do
+      {
+        gsl_monte_vegas_integrate (&G, xl, xu, 2, calls/5, r, s,
+                                   &res, &err);
+        printf ("result = % .6f sigma = % .6f "
+                "chisq/dof = %.1f\n", res, err, gsl_monte_vegas_chisq (s));
+      }
+    while (fabs (gsl_monte_vegas_chisq (s) - 1.0) > 0.5);
+
+    gsl_monte_vegas_free (s);
+  }
+
+  gsl_rng_free (r);
+
+  return res;
+}
+
+Operator NumericalE2b(ModelSpace& modelspace)
+{
+    double t_start = omp_get_wtime();
+    Operator E(modelspace);
+    E.SetHermitian();
+
+    int nchan = modelspace.GetNumberTwoBodyChannels();
+    for (int ch=0; ch<nchan; ++ch)
+    {
+	TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+	int nkets = tbc.GetNumberKets();
+	//#pragma omp parallel for
+	for (int ibra=0;ibra<nkets;++ibra)
+	{
+	    Ket & bra = tbc.GetKet(ibra);
+	    for (int iket=ibra;iket<nkets;++iket)
+	    {
+		Ket& ket = tbc.GetKet(iket);
+		if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
+		//double mat_el = numerical_tb( bra.op->n,bra.op->l, bra.oq->n,bra.oq->l, ket.op->n,ket.op->l, ket.oq->n,ket.oq->l, modelspace.GetTargetZ() );
+		int ml1 = min(bra.op->l,ket.op->l);
+		double temp = 0;
+		for (int m1=-ml1; m1 <= ml1; m1++)
+		{
+		    int ml2 = min(bra.oq->l,ket.oq->l);
+		    for(int m2 = -ml2; m2 <= ml2; m2++)
+		    {
+			temp += numerical_tb_md( bra.op->n, bra.op->l, m1,
+						 bra.oq->n, bra.oq->l, m2,
+						 ket.op->n, bra.op->l, m1,
+						 ket.oq->n, bra.oq->l, m2, modelspace.GetTargetZ() );
+		    }
+		    temp /= 2*ml2 + 1;
+		}
+		temp /= 2*ml1 + 1;
+		
+		E.TwoBody.SetTBME(ch,ch,ibra,iket,temp);
+		E.TwoBody.SetTBME(ch,ch,iket,ibra,temp);
+	    }
+	}
+    }
+    E.profiler.timer["NumericalE2b"] += omp_get_wtime() - t_start;
+    return E;
 }
 
  /* Copied from other operator */

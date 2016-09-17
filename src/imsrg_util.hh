@@ -48,6 +48,7 @@ namespace imsrg_util
  Operator RpSpinOrbitCorrection(ModelSpace& modelspace);
  Operator FourierBesselCoeff(ModelSpace& modelspace, int nu, double R, vector<index_t> index_list);
 
+ Operator NumericalE2b(ModelSpace& modelspace);
  Operator CorrE2b(ModelSpace& modelspace);
  Operator CorrE2b_Hydrogen(ModelSpace& modelspace);
  double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis);
