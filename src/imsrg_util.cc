@@ -18,7 +18,7 @@
 #include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_sf_gamma.h>
 #include "cubature.h"
-#include "cubature.c"
+//#include "cubature.c"
 #include "hcubature.c"
 
 using namespace AngMom;
@@ -1498,7 +1498,7 @@ Integral of <12,J|1/abs(r3-r4)|34,J>
 double
 e2b (double *k, size_t dim, void * p)
 {
-  (void)(dim); /* avoid unused parameter warnings */
+  (void)(dim); // avoid unused parameter warnings 
   struct e2b_params * params = (struct e2b_params *)p;
 
   double x3 = k[0]/(1-k[0]);
@@ -1540,23 +1540,25 @@ struct my_f_params { int n1; int l1; int m1; int n2; int l2; int m2; int n3; int
 double
 Yml ( double t, int l, int m)
 {
-  return gsl_sf_legendre_sphPlm( l, m, cos(t) );
+  double temp=pow(-1,m) * sqrt( (2*l+1) * gsl_sf_fact(l-m) / (4*3.141592 * gsl_sf_fact(l+m)));
+  return temp*gsl_sf_legendre_Plm( l, m, cos(t) );
+  //return gsl_sf_legendre_sphPlm( l, m, cos(t) );
 }
 
 int
 f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) {
 
-  (void)(ndim); /* avoid unused parameter warnings */
+  (void)(ndim); // avoid unused parameter warnings 
   struct my_f_params * params = (struct my_f_params *)fdata;
   //(void)(fdata);
   (void)(fval);
   int lim = 1;
   float a = 0.0529;
   //float HBARC = 197.3;
-  double x3 = x[0]/(lim-x[0] + 1e-9);
-  double x4 = x[3]/(lim-x[3]);
+  double x3 = x[0]/(1-x[0]);
+  double x4 = x[2]/(1-x[2]);
   double t3 = x[1];
-  double t4 = x[4];
+  double t4 = x[3];
   //double p3 = x[2];
   //double p4 = x[5];
   int Z = (params->Z);
@@ -1602,13 +1604,16 @@ f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) {
   //printf ("hy4=%.18f\n",hy4);
   double den = sqrt( x4*x4 + x3*x3 - 2*x3*x4*cos( t3 ) );
   //fval[0] = hy1 * hy2 * 1/fabs(x4-x3) * hy3 * hy4 * 1/pow(lim-x[0],2) * 1/pow(lim-x[1],2) * x3*x3 * x4*x4;// * HBARC/137; // hbarc*alpha
-  fval[0] = hy1 * hy2 * hy3 * hy4 * x3*x3 * x4*x4 * 1/fabs ( den ) * 1/pow(lim-x[0],2) * 1/pow(lim-x[3],2) * sin(t3) * sin(t4) * HBARC/137 * 4*PI*PI;
+  fval[0] = hy1 * hy3 * x3*x3 * 1/pow(1-x[0],2);// * sin(t3);
+  fval[0]*= hy2 * hy3 * x4*x4 * 1/pow(1-x[2],2);
+  fval[0]*= sin(t3) * sin(t4) * 4*PI*PI;
+  //fval[0] = hy1 * hy2 * hy3 * hy4 * x3*x3 * x4*x4 * 1/pow(lim-x[0],2) * 1/pow(lim-x[2],2) * sin(t3) * sin(t4);// * 1/fabs(den) * HBARC/137 * 4*PI*PI;
   //printf ("fabs=%.18f\n", 1/fabs(x4 - x3 + del) );
   return 0;
 }
 
 double
-numerical_tb_md ( int n1, int l1, int m1, int n2, int l2, int m2, int n3, int l3, int m3, int n4, int l4, int m4, int Z )
+numerical_tb_md2 ( int n1, int l1, int m1, int n2, int l2, int m2, int n3, int l3, int m3, int n4, int l4, int m4, int Z )
 {
   double xmin[4] = {0,0,0,0};
   double pi = 3.141592;
@@ -1619,7 +1624,12 @@ numerical_tb_md ( int n1, int l1, int m1, int n2, int l2, int m2, int n3, int l3
   hcubature(1, &f, &alpha, 4, xmin, xmax, 1e5, 0, 1e-4, ERROR_INDIVIDUAL, &val, &err);
   return val;
 }
+
+//extern "C" {
+//    double cube_test( int n1,int l1,int j1, int n2,int l2,int j2, int n3,int l3,int j3, int n4,int l4,int j4, int Z);
+//}
   
+
 
 double
 numerical_tb ( int n1, int l1, int n2, int l2, int n3, int l3, int n4, int l4, int Z )
@@ -1666,6 +1676,7 @@ numerical_tb ( int n1, int l1, int n2, int l2, int n3, int l3, int n4, int l4, i
   return res;
 }
 
+// Numerica eval of 1/|r1-r2|
 Operator NumericalE2b(ModelSpace& modelspace)
 {
     double t_start = omp_get_wtime();
@@ -1687,21 +1698,35 @@ Operator NumericalE2b(ModelSpace& modelspace)
 		if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
 		//double mat_el = numerical_tb( bra.op->n,bra.op->l, bra.oq->n,bra.oq->l, ket.op->n,ket.op->l, ket.oq->n,ket.oq->l, modelspace.GetTargetZ() );
 		int ml1 = min(bra.op->l,ket.op->l);
-		double temp = 0;
-		for (int m1=-ml1; m1 <= ml1; m1++)
+		double temp=0;
+		double dtemp=0;
+		//cout << " 
+		//int res = fcube( bra.op->n, bra.op->l, bra.op->j2,
+		//			bra.oq->n, bra.oq->l, bra.oq->j2,
+		//			ket.op->n, ket.op->l, ket.op->j2,
+		//			ket.op->n, ket.op->l, ket.op->j2, modelspace.GetTargetZ());
+
+		for (int m1=0; m1 <= ml1; m1++)
 		{
 		    int ml2 = min(bra.oq->l,ket.oq->l);
-		    for(int m2 = -ml2; m2 <= ml2; m2++)
+		    for(int m2 = 0; m2 <= ml2; m2++)
 		    {
-			temp += numerical_tb_md( bra.op->n, bra.op->l, m1,
+			cout << "tbc.J=" << tbc.J << endl;
+			cout << "n1=" << bra.op->n << " l1=" << bra.op->l << " m1=" << m1 << " j1=" << bra.op->j2 << endl;
+			cout << "n2=" << bra.oq->n << " l2=" << bra.oq->l << " m2=" << m2 << " j2=" << bra.oq->j2 << endl;
+			cout << "n3=" << ket.op->n << " l3=" << ket.op->l << " m3=" << m1 << " j3=" << ket.op->j2 << endl;
+			cout << "n4=" << ket.oq->n << " l3=" << ket.oq->l << " m4=" << m2 << " j4=" << ket.oq->j2 << endl;
+			double that = fcube( bra.op->n, bra.op->l, m1,
 						 bra.oq->n, bra.oq->l, m2,
 						 ket.op->n, bra.op->l, m1,
 						 ket.oq->n, bra.oq->l, m2, modelspace.GetTargetZ() );
+			cout << "this is " << that << endl;
+			temp += that;
 		    }
-		    temp /= 2*ml2 + 1;
+		    dtemp += 2*ml2;
 		}
-		temp /= 2*ml1 + 1;
-		
+		dtemp += 2*ml1;
+		if(dtemp != 0) temp /= dtemp;
 		E.TwoBody.SetTBME(ch,ch,ibra,iket,temp);
 		E.TwoBody.SetTBME(ch,ch,iket,ibra,temp);
 	    }
@@ -1709,7 +1734,7 @@ Operator NumericalE2b(ModelSpace& modelspace)
     }
     E.profiler.timer["NumericalE2b"] += omp_get_wtime() - t_start;
     return E;
-}
+} 
 
  /* Copied from other operator */
  Operator CorrE2b_Hydrogen(ModelSpace& modelspace)

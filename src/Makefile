@@ -25,7 +25,7 @@ PYTHONFLAGS = -I/usr/include/python2.7 -lboost_python #-lpython
 THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; else echo other; fi)
 
 ALL = libIMSRG.so imsrg++
-LIBS = -lopenblas -lgsl -lm -lz -lhdf5_cpp -lhdf5 -fext-numeric-literals -I ~/jsoncpp/dist
+LIBS = -lopenblas -lgsl -lm -lz -lhdf5_cpp -lhdf5 -fext-numeric-literals -I ~/jsoncpp/dist -fPIC
 
 ifeq ($(THEHOST),jureca) # specific options for jureca cluster
 # FLAGS += -DOPENBLAS_NOUSEOMP=1
@@ -84,10 +84,11 @@ install:
 	@echo '* Make sure libIMSRG.so is in your LIBRARY_PATH and LD_LIBRARY_PATH *'
 	@echo '*********************************************************************'
 	 
+#cube: gcc -c -o cube_test.c cube_test.c
 
 OBJ = ModelSpace.o TwoBodyME.o ThreeBodyME.o Operator.o  ReadWrite.o\
       HartreeFock.o imsrg_util.o Generator.o IMSRGSolver.o AngMom.o\
-      boost_src/gzip.o boost_src/zlib.o  IMSRGProfiler.o
+      boost_src/gzip.o boost_src/zlib.o  IMSRGProfiler.o cube_test.o
 
 mysrg: main.cc $(OBJ)
 	$(CC) $^ -o $@ $(INCLUDE) $(LIBS) $(FLAGS) 

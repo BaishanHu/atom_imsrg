@@ -96,6 +96,11 @@ namespace imsrg_util
  void CommutatorTest(Operator& X, Operator& Y);
  void Reduce(Operator&);
  void UnReduce(Operator&);
+ extern "C"
+ {
+    #include "cube_test.h"
+    //int fcube( int n1,int l1,int j1, int n2,int l2,int j2, int n3,int l3,int j3, int n4,int l4,int j4, int Z);
+ }
 
  //double Stirling(double n){return sqrt( 2 * 3.14159265359 * n ) * pow(n,n) / exp(n);}; // Stirling's Approximation
  vector<double> ser(double j); // returns a vector which is {1,2,...,j}
