@@ -1,0 +1,236 @@
+emax => 2
+e3max => 0
+method => magnus
+valence_space => He2
+hw => 27.2114
+smax => 200
+omega_norm_max => 0.25
+reference => He2
+Operators => 
+Lmax => 1
+systemtype => atomic
+use_brueckner_bch => false
+file2e1max => 6
+file2e2max => 12
+file2lmax => 6
+2bme => atomicME_Be4Aug10_emax18_lmax4_hw27.2114.json
+systemBasis => hydrogen
+About to construct modelspace eMax=2 Lmax=1 SystemType=atomic Valence_Space=He2 reference=He2 systemBasis=hydrogen
+SystemBasis=hydrogen
+core list: 0 
+valence list: 
+hole list: 0 ( 1 ) 
+Hydrogen Orbit with n=1 l=0 j2=1 tz=-1 occ=1 cvq=0 at indx=0
+Hydrogen Orbit with n=2 l=0 j2=1 tz=-1 occ=0 cvq=2 at indx=1
+Hydrogen Orbit with n=2 l=1 j2=1 tz=-1 occ=0 cvq=2 at indx=2
+Hydrogen Orbit with n=2 l=1 j2=3 tz=-1 occ=0 cvq=2 at indx=3
+Reset norbits=4
+Resized Orbits; Orbits.size()=4
+Setting up kets.
+Entering SetupKets()
+Set up kets.
+Default modelspace constructed, setting SystemType.
+modelspace initialized.
+Emax is 2
+Setting target mass.
+Setting E3Max.
+Setting lmax3.
+Setting particle_rank.
+particle_rank=2 Constructing Hbare, norbits=4
+New profiler...
+Initiliation complete! N_threads=12
+Constructed Hbare, setting hermitian.
+Set Hermitian, destroying any relic 0, 1, or 2 body elements.
+Erased relic 0, 1, and 2 body elements about to ReadBareTBME_Darmstadt
+Adding two-body correction.
+Entering Hydrogen two body.
+Setting nmax=10
+About to estimate which constants are needed.
+Constants estimated, calculating needed factorials.
+Entering GenerateFactorialList for m=83
+Factorials calculated about to calculate mosh, D_coeff, 9-J, and Radial integrals.
+Number of D_coeff = 33
+n1max=20 n2max=21 l1max=20 l2max=20
+Entering GenerateOsToHydroCoeff_fromList.
+Exiting GenerateOsToHydroCoeff_fromList.
+About to Calculate Radial Intergrals.
+Entering GenerateRadialIntegrals for ind=22222222
+n1max=22 l1max=22 n2max=22 l2max=22
+Exiting GenerateRadialIntegrals.
+Radial integrals calculated, calculating matrix elements.
+Lists generated, moving to calculation.
+Exiting Hydrogen two body.
+Adding Hydrogen Energies.
+OneBody=
+  -54.4228         0         0         0
+         0  -13.6057         0         0
+         0         0  -13.6057         0
+         0         0         0  -13.6057
+
+TwoBody=
+----- Channel 0 with J=0-----
+   25.9719    3.2159    2.5042    0.6943         0
+    3.2159    2.8903    0.6431   -0.2370         0
+    2.5042    0.6431   -1.1852    0.6532         0
+    0.6943   -0.2370    0.6532    1.8312         0
+         0         0         0         0    0.7724
+
+----- Channel 1 with J=1-----
+   1.6129        0
+        0   0.5153
+
+----- Channel 2 with J=2-----
+   0.3744        0
+        0   0.1951
+
+----- Channel 3 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 4 with J=0-----
+   1.3825   0.2361
+   0.2361   0.4298
+
+----- Channel 5 with J=1-----
+   2.3042   0.3935        0        0
+   0.3935   0.7163        0        0
+        0        0   1.6129   0.2755
+        0        0   0.2755   0.5014
+
+----- Channel 6 with J=2-----
+   0.6913   0.1181
+   0.1181   0.2149
+
+----- Channel 7 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 8 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 9 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 10 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 11 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 12 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 13 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 14 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 15 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 16 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 17 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 18 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 19 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 20 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 21 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 22 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 23 with J=3-----
+[matrix size: 0x0]
+
+About to create hf(Hbare)
+done Converting Hbare to HF basis
+HF converged after 10 iterations. 
+e1hf = -107.9185568
+e2hf = 24.5513402
+e3hf = 0.0000000
+EHF = -83.3672166
+Rho=
+   0.9886  -0.1060        0        0
+  -0.1060   0.0114        0        0
+        0        0        0        0
+        0        0        0        0
+
+EHF = -83.3672166
+Perturbative estimates of gs energy:
+EMP2 = -0.0827244
+done with pp and hh. E(3) = 0.0256767
+EMP3 = 0.0256767
+To 3rd order, E = -0.0570477
+About to calculate all of the operators.
+In Atomic, about to normal order Hbare.
+Getting normal-ordered H in HF basis
+Hbare should be normal ordered.
+About to set IMSRGSolver for Hbare.
+About to Set valence_generator.
+About to set smax.
+About to Solve imsrg.
+    i         s              E0         ||H_1||         ||H_2||       ||Omega||       ||Eta_1||       ||Eta_2||  Ncomm          E(MP2)  N_Ops    Walltime (s)        Memory (MB)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    0     0.000   -83.367216574    34.444049337    27.187720266     0.000000000     0.000000000     0.102935258      0    -0.247282873      5     283.519      42.094 / 42.461
+    1     0.500   -83.522133119    34.533747084    26.822090192     0.051467629     0.009074502     0.037707906      6    -0.033398711      5     283.621      42.332 / 42.461
+    2     1.000   -83.544282356    34.575453880    26.787733841     0.070457493     0.007348435     0.014314836     14    -0.005436550      5     283.740      42.344 / 42.461
+    3     1.500   -83.548094335    34.601434459    26.788494367     0.077883716     0.004609375     0.005753669     22    -0.001071373      5     283.856      42.348 / 42.461
+    4     2.000   -83.548880548    34.617035766    26.790909398     0.080993459     0.002617630     0.002454897     30    -0.000241390      5     283.974      42.355 / 42.461
+    5     2.500   -83.549060829    34.625828384    26.792302430     0.082374508     0.001414578     0.001103911     38    -0.000058397      5     284.057      42.367 / 42.461
+    6     3.000   -83.549104473    34.630587051    26.792863668     0.083018250     0.000725823     0.000519530     45    -0.000014237      5     284.071      42.371 / 42.461
+    7     3.500   -83.549114434    34.633029212    26.793135529     0.083326605     0.000367990     0.000249904     52    -0.000003505      5     284.085      42.375 / 42.461
+    8     4.000   -83.549116507    34.634267662    26.793267370     0.083476500     0.000185261     0.000121899     59    -0.000000867      5     284.098      42.422 / 42.461
+    9     4.500   -83.549116824    34.634891239    26.793331747     0.083550054     0.000092880     0.000059976     66    -0.000000215      5     284.112      42.426 / 42.461
+   10     5.000   -83.549116805    34.635203895    26.793363386     0.083586362     0.000046450     0.000029663     73    -0.000000053      5     284.126      42.430 / 42.461
+   11     5.500   -83.549116751    34.635360265    26.793379012     0.083604350     0.000023197     0.000014717     80    -0.000000013      5     284.139      42.477 / 42.477
+   12     6.000   -83.549116713    34.635438356    26.793386754     0.083613282     0.000011574     0.000007315     87    -0.000000003      5     284.153      42.480 / 42.480
+   13     6.500   -83.549116691    34.635477320    26.793390599     0.083617723     0.000005772     0.000003640     94    -0.000000001      5     284.167      42.484 / 42.484
+   14     7.000   -83.549116680    34.635496751    26.793392511     0.083619934     0.000002878     0.000001812    101    -0.000000000      5     284.181      42.488 / 42.488
+   15     7.500   -83.549116674    34.635506439    26.793393462     0.083621035     0.000001434     0.000000903    108    -0.000000000      5     284.195      42.492 / 42.492
+   16     8.000   -83.549116671    34.635511268    26.793393936     0.083621583     0.000000715     0.000000450    115    -0.000000000      5     284.208      42.496 / 42.496
+
+Core Energy = -83.549117
+===================== COUNTERS =====================
+N_Commutators:                                   115
+N_Operators:                                       5
+N_Threads:                                        12
+====================== TIMES (s) ====================
+BCH_Product:                                 0.13019 ( 0.0%) |                    |
+BCH_Transform:                               0.40102 ( 0.1%) |                    |
+Build Z_bar:                                 0.05701 ( 0.0%) |                    |
+Commutator:                                  0.51627 ( 0.2%) |                    |
+CommutatorScalarScalar:                      0.51607 ( 0.2%) |                    |
+CorrE2b_Hydrogen:                          283.49136 (99.7%) |******************* |
+DoPandyaTransformation:                      0.12733 ( 0.0%) |                    |
+Energy_Op:                                   0.00160 ( 0.0%) |                    |
+GetMP2_Energy:                               0.00934 ( 0.0%) |                    |
+GetMP3_Energy:                               0.00247 ( 0.0%) |                    |
+HF_GetNormalOrderedH:                        0.01011 ( 0.0%) |                    |
+HF_UpdateF:                                  0.00049 ( 0.0%) |                    |
+InversePandyaTransformation:                 0.06571 ( 0.0%) |                    |
+UpdateEta:                                   0.00202 ( 0.0%) |                    |
+comm111ss:                                   0.00030 ( 0.0%) |                    |
+comm121ss:                                   0.06245 ( 0.0%) |                    |
+comm122ss:                                   0.06158 ( 0.0%) |                    |
+comm222_phss:                                0.26132 ( 0.1%) |                    |
+comm222_pp_hh_221ss:                         0.12295 ( 0.0%) |                    |
+pphh One Body bit:                           0.05830 ( 0.0%) |                    |
+pphh TwoBody bit:                            0.06333 ( 0.0%) |                    |
+real:                                      284.21829
+system:                                      0.10498
+user:                                      289.41199
+===================== MEMORY (MB) ==================
+DIRTY:                                        35.023
+Kbytes:                                      779.188
+RSS:                                          42.586
+Max Used:                                     42.590
+That's all, folks!

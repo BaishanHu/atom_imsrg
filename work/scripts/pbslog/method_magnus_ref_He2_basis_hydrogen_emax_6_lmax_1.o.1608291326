@@ -1,0 +1,73 @@
+emax => 6
+e3max => 0
+method => magnus
+valence_space => He2
+hw => 27.2114
+smax => 200
+omega_norm_max => 0.25
+reference => He2
+Operators => 
+Lmax => 1
+systemtype => atomic
+use_brueckner_bch => false
+file2e1max => 6
+file2e2max => 12
+file2lmax => 6
+2bme => atomicME_Be4Aug10_emax18_lmax4_hw27.2114.json
+systemBasis => hydrogen
+About to construct modelspace eMax=6 Lmax=1 SystemType=atomic Valence_Space=He2 reference=He2 systemBasis=hydrogen
+SystemBasis=hydrogen
+core list: 0 
+valence list: 
+hole list: 0 ( 1 ) 
+Hydrogen Orbit with n=1 l=0 j2=1 tz=-1 occ=1 cvq=0 at indx=0
+Hydrogen Orbit with n=2 l=0 j2=1 tz=-1 occ=0 cvq=2 at indx=1
+Hydrogen Orbit with n=2 l=1 j2=1 tz=-1 occ=0 cvq=2 at indx=2
+Hydrogen Orbit with n=2 l=1 j2=3 tz=-1 occ=0 cvq=2 at indx=3
+Hydrogen Orbit with n=3 l=0 j2=1 tz=-1 occ=0 cvq=2 at indx=4
+Hydrogen Orbit with n=3 l=1 j2=1 tz=-1 occ=0 cvq=2 at indx=5
+Hydrogen Orbit with n=3 l=1 j2=3 tz=-1 occ=0 cvq=2 at indx=6
+Hydrogen Orbit with n=4 l=0 j2=1 tz=-1 occ=0 cvq=2 at indx=7
+Hydrogen Orbit with n=4 l=1 j2=1 tz=-1 occ=0 cvq=2 at indx=8
+Hydrogen Orbit with n=4 l=1 j2=3 tz=-1 occ=0 cvq=2 at indx=9
+Hydrogen Orbit with n=5 l=0 j2=1 tz=-1 occ=0 cvq=2 at indx=10
+Hydrogen Orbit with n=5 l=1 j2=1 tz=-1 occ=0 cvq=2 at indx=11
+Hydrogen Orbit with n=5 l=1 j2=3 tz=-1 occ=0 cvq=2 at indx=12
+Hydrogen Orbit with n=6 l=0 j2=1 tz=-1 occ=0 cvq=2 at indx=13
+Hydrogen Orbit with n=6 l=1 j2=1 tz=-1 occ=0 cvq=2 at indx=14
+Hydrogen Orbit with n=6 l=1 j2=3 tz=-1 occ=0 cvq=2 at indx=15
+Reset norbits=16
+Resized Orbits; Orbits.size()=16
+Setting up kets.
+Entering SetupKets()
+Set up kets.
+Default modelspace constructed, setting SystemType.
+modelspace initialized.
+Emax is 6
+Setting target mass.
+Setting E3Max.
+Setting lmax3.
+Setting particle_rank.
+particle_rank=2 Constructing Hbare, norbits=16
+New profiler...
+Initiliation complete! N_threads=12
+Constructed Hbare, setting hermitian.
+Set Hermitian, destroying any relic 0, 1, or 2 body elements.
+Erased relic 0, 1, and 2 body elements about to ReadBareTBME_Darmstadt
+Adding two-body correction.
+Entering Hydrogen two body.
+Setting nmax=10
+About to estimate which constants are needed.
+Constants estimated, calculating needed factorials.
+Entering GenerateFactorialList for m=83
+Factorials calculated about to calculate mosh, D_coeff, 9-J, and Radial integrals.
+Number of D_coeff = 121
+n1max=20 n2max=21 l1max=20 l2max=20
+Entering GenerateOsToHydroCoeff_fromList.
+Exiting GenerateOsToHydroCoeff_fromList.
+About to Calculate Radial Intergrals.
+Entering GenerateRadialIntegrals for ind=22222222
+n1max=22 l1max=22 n2max=22 l2max=22
+Exiting GenerateRadialIntegrals.
+Radial integrals calculated, calculating matrix elements.
+Lists generated, moving to calculation.

@@ -1,0 +1,164 @@
+  IMSRGSolver imsrgsolver(Hbare);
+  imsrgsolver.SetReadWrite(rw);
+  
+  if (method == "NSmagnus") // "No split" magnus
+  {
+    omega_norm_max=500;
+    method = "magnus";
+  }
+
+  imsrgsolver.SetMethod(method);
+  imsrgsolver.SetHin(Hbare);
+  imsrgsolver.SetSmax(smax);
+  imsrgsolver.SetFlowFile(flowfile);
+  imsrgsolver.SetDs(ds_0);
+  imsrgsolver.SetDenominatorDelta(denominator_delta);
+  imsrgsolver.SetdOmega(domega);
+  imsrgsolver.SetOmegaNormMax(omega_norm_max);
+  imsrgsolver.SetODETolerance(ode_tolerance);
+  if (denominator_delta_orbit != "none")
+    imsrgsolver.SetDenominatorDeltaOrbit(denominator_delta_orbit);
+
+  if (nsteps > 1) // two-step decoupling, do core first
+  {
+    imsrgsolver.SetGenerator(core_generator);
+    imsrgsolver.Solve();
+    if (method == "magnus") smax *= 2;
+  }
+
+  imsrgsolver.SetGenerator(valence_generator);
+  imsrgsolver.SetSmax(smax);
+  imsrgsolver.Solve();
+
+
+  // Transform all the operators
+  if (method == "magnus")
+  {
+    if (ops.size()>0) cout << "transforming operators" << endl;
+    for (size_t i=0;i<ops.size();++i)
+    {
+      cout << opnames[i] << " " << flush;
+      ops[i] = imsrgsolver.Transform(ops[i]);
+      cout << " (" << ops[i].ZeroBody << " ) " << endl; 
+    }
+    cout << endl;
+    // increase smax in case we need to do additional steps
+    smax *= 1.5;
+    imsrgsolver.SetSmax(smax);
+  }
+
+
+  // If we're doing targeted normal ordering 
+  // we now re-normal order wrt to the core
+  // and do any remaining flow.
+//  if (reference != "default"  and reference != valence_space)
+  ModelSpace ms2(modelspace);
+  bool renormal_order = false;
+  cout << "The size of the Valence space is: " << modelspace.valence.size() << endl;
+  if (modelspace.valence.size() > 0 )
+  {
+    renormal_order = modelspace.holes.size() != modelspace.core.size();
+    if (not renormal_order)
+    {
+      for (auto c : modelspace.core)
+      {
+         if ( (modelspace.holes.find(c) == modelspace.holes.end()) or (abs(1-modelspace.holes[c])>1e-6))
+         {
+           renormal_order = true;
+           break;
+         }
+      }
+    }
+  }
+//  if ( modelspace.core != modelspace.holes )
+  if ( renormal_order )
+  {
+
+    Hbare = imsrgsolver.GetH_s();
+
+    int nOmega = imsrgsolver.GetOmegaSize() + imsrgsolver.GetNOmegaWritten();
+    cout << "Undoing NO wrt A=" << modelspace.GetAref() << " Z=" << modelspace.GetZref() << endl;
+    Hbare = Hbare.UndoNormalOrdering();
+
+    ms2.SetReference(ms2.core); // change the reference determinant
+    Hbare.SetModelSpace(ms2);
+
+    cout << "Doing NO wrt A=" << ms2.GetAref() << " Z=" << ms2.GetZref() << "  norbits = " << ms2.GetNumberOrbits() << endl;
+    Hbare = Hbare.DoNormalOrdering();
+
+    imsrgsolver.SetHin(Hbare);
+    imsrgsolver.SetEtaCriterion(1e-4);
+    imsrgsolver.Solve();
+    // Change operators to the new basis, then apply the rest of the transformation
+    cout << "Final transformation on the operators..." << endl;
+    for (auto& op : ops)
+    {
+      double ZeroBody_before = op.ZeroBody;
+      op = op.UndoNormalOrdering();
+      double ZeroBody_undo = op.ZeroBody;
+      op.SetModelSpace(ms2);
+      op = op.DoNormalOrdering();
+      double ZeroBody_mid = op.ZeroBody;
+      // transform using the remaining omegas
+      op = imsrgsolver.Transform_Partial(op,nOmega);
+      cout << ZeroBody_before << "   =>   " << ZeroBody_undo << "   =>   " << ZeroBody_mid<< "   =>   " << op.ZeroBody << endl;
+    }
+  }
+
+
+  // Write the output
+
+  // If we're doing a shell model interaction, write the
+  // interaction files to disk.
+  if (modelspace.valence.size() > 0)
+  {
+    if (valence_file_format == "antoine")
+    {
+      rw.WriteAntoine_int(imsrgsolver.GetH_s(),intfile+".ant");
+      rw.WriteAntoine_input(imsrgsolver.GetH_s(),intfile+".inp",modelspace.GetAref(),modelspace.GetZref());
+    }
+//    else
+//    {
+      rw.WriteNuShellX_int(imsrgsolver.GetH_s(),intfile+".int");
+      rw.WriteNuShellX_sps(imsrgsolver.GetH_s(),intfile+".sp");
+//    }
+
+    if (method == "magnus")
+    {
+       for (int i=0;i<ops.size();++i)
+       {
+//          ops[i] = imsrgsolver.Transform(ops[i]);
+          if ((ops[i].GetJRank()+ops[i].GetTRank()+ops[i].GetParity())<1)
+          {
+            rw.WriteNuShellX_op(ops[i],intfile+opnames[i]+".int");
+          }
+          else
+          {
+            rw.WriteTensorOneBody(intfile+opnames[i]+"_1b.op",ops[i],opnames[i]);
+            rw.WriteTensorTwoBody(intfile+opnames[i]+"_2b.op",ops[i],opnames[i]);
+          }
+       }
+    }
+  }
+  else // single ref. just print the zero body pieces out. (maybe check if its magnus?)
+  {
+    cout << "Core Energy = " << setprecision(6) << imsrgsolver.GetH_s().ZeroBody << endl;
+    for (int i=0;i<ops.size();++i)
+    {
+      Operator& op = ops[i];
+      cout << opnames[i] << " = " << ops[i].ZeroBody << endl;
+      if ( opnames[i] == "Rp2" )
+      {
+         int Z = modelspace.GetTargetZ();
+         int A = modelspace.GetTargetMass();
+         cout << " IMSRG point proton radius = " << sqrt( op.ZeroBody ) << endl; 
+         cout << " IMSRG charge radius = " << sqrt( op.ZeroBody + r2p + r2n*(A-Z)/Z + DF) << endl; 
+      }
+    }
+  }
+
+  Hbare.PrintTimes();
+ 
+  return 0;
+}
+

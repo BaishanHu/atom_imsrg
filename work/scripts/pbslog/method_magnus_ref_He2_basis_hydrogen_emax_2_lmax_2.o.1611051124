@@ -1,0 +1,537 @@
+emax => 2
+e3max => 0
+method => magnus
+valence_space => He2
+hw => 27.2114
+smax => 200
+omega_norm_max => 0.25
+reference => He2
+Operators => 
+Lmax => 2
+systemtype => atomic
+use_brueckner_bch => false
+file2e1max => 6
+file2e2max => 12
+file2lmax => 6
+2bme => atomicME_Be4Aug10_emax18_lmax4_hw27.2114.json
+systemBasis => hydrogen
+About to construct modelspace eMax=2 Lmax=2 SystemType=atomic Valence_Space=He2 reference=He2 systemBasis=hydrogen
+SystemBasis=hydrogen
+core list: 0 
+valence list: 
+hole list: 0 ( 1 ) 
+Hydrogen Orbit with n=1 l=0 j2=1 tz=-1 occ=1 cvq=0 at indx=0
+Hydrogen Orbit with n=2 l=0 j2=1 tz=-1 occ=0 cvq=2 at indx=1
+Hydrogen Orbit with n=2 l=1 j2=1 tz=-1 occ=0 cvq=2 at indx=2
+Hydrogen Orbit with n=2 l=1 j2=3 tz=-1 occ=0 cvq=2 at indx=3
+Reset norbits=4
+Resized Orbits; Orbits.size()=4
+Setting up kets.
+Entering SetupKets()
+Set up kets.
+Default modelspace constructed, setting SystemType.
+modelspace initialized.
+Emax is 2
+Setting target mass.
+Setting E3Max.
+Setting lmax3.
+Setting particle_rank.
+particle_rank=2 Constructing Hbare, norbits=4
+New profiler...
+Initiliation complete! N_threads=12
+Constructed Hbare, setting hermitian.
+Set Hermitian, destroying any relic 0, 1, or 2 body elements.
+Erased relic 0, 1, and 2 body elements about to ReadBareTBME_Darmstadt
+Adding two-body correction.
+n1=1 l1=0 m1=0
+n2=1 l2=0 m2=0
+n3=1 l3=0 m3=0
+n4=1 l3=0 m4=0
+this is 34.0292
+n1=1 l1=0 m1=0
+n2=1 l2=0 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=0 m4=0
+this is 4.86478
+n1=1 l1=0 m1=0
+n2=1 l2=0 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=0 m4=0
+this is 1.19483
+n1=1 l1=0 m1=0
+n2=1 l2=0 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 1.19483
+n1=1 l1=0 m1=0
+n2=1 l2=0 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 1.19483
+n1=1 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=0 m4=0
+this is 11.4272
+n1=1 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=0 m4=0
+this is 0.467259
+n1=1 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 0.467259
+n1=1 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 0.467259
+n1=2 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=0 m4=0
+this is 8.18811
+n1=2 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 8.18811
+n1=2 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 8.18811
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 11.8012
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=1
+this is 11.8026
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=0
+this is 8.93358
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=1
+this is 8.93293
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 11.8012
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=1
+this is 11.8026
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=0
+this is 8.93358
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=1
+this is 8.93293
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 11.8012
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=1
+this is 11.8026
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=0
+this is 8.93358
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=1
+this is 8.93293
+n1=1 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=0 m4=0
+this is 11.4272
+n1=1 l1=0 m1=0
+n2=2 l2=0 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 0.467259
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 11.8012
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=1
+this is 11.8026
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=0
+this is 8.93358
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=1
+this is 8.93293
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 11.8012
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=1
+this is 11.8026
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=0
+this is 8.93358
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=1
+this is 8.93293
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 11.8012
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=1
+this is 11.8026
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=0
+this is 8.93358
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=1
+this is 8.93293
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=0
+this is 11.8012
+n1=2 l1=1 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=0
+n4=2 l3=1 m4=1
+this is 11.8026
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=0
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=0
+this is 8.93358
+n1=2 l1=1 m1=1
+n2=2 l2=1 m2=1
+n3=2 l3=1 m3=1
+n4=2 l3=1 m4=1
+this is 8.93293
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 13.2208
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 13.2199
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 0.467277
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 0.467105
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 8.82578
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 8.82622
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 13.2208
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 13.2199
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 0.467277
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 0.467105
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 13.2208
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 13.2199
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 0.467277
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 0.467105
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 8.82578
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 8.82622
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 0.467277
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 0.467105
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 8.82578
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 8.82622
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 13.2208
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 13.2199
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 0.467277
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 0.467105
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 8.82578
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 8.82622
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 13.2208
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=1 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 13.2199
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 0.467277
+n1=1 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 0.467105
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=0
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=0
+this is 8.82578
+n1=2 l1=0 m1=0
+n2=2 l2=1 m2=1
+n3=2 l3=0 m3=0
+n4=2 l3=1 m4=1
+this is 8.82622
+Adding Hydrogen Energies.
+OneBody=
+  -54.4228         0         0         0
+         0  -13.6057         0         0
+         0         0  -13.6057         0
+         0         0         0  -13.6057
+
+TwoBody=
+----- Channel 0 with J=0-----
+   17.0146   10.9397    6.0673    3.6310    2.4129
+   10.9397    6.9201    3.6937    2.0805    1.2739
+    6.0673    3.6937    4.7310    6.4595    7.3238
+    3.6310    2.0805    6.4595    5.4216    5.2102
+    2.4129    1.2739    7.3238    5.2102    5.1867
+
+----- Channel 1 with J=1-----
+   8.3070   4.3871
+   4.3871   5.0953
+
+----- Channel 2 with J=2-----
+   5.1740   5.1827
+   5.1827   5.1837
+
+----- Channel 3 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 4 with J=0-----
+   7.9061   2.2101
+   2.2101   4.9655
+
+----- Channel 5 with J=1-----
+   7.8516   2.1965   7.1593   2.0234
+   2.1965   4.9189   1.4633   4.7788
+   7.1593   1.4633   7.8049   2.1848
+   2.0234   4.7788   2.1848   4.9592
+
+----- Channel 6 with J=2-----
+   7.8500   2.1961
+   2.1961   4.9620
+
+----- Channel 7 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 8 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 9 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 10 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 11 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 12 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 13 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 14 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 15 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 16 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 17 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 18 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 19 with J=3-----
+[matrix size: 0x0]
+
+----- Channel 20 with J=0-----
+[matrix size: 0x0]
+
+----- Channel 21 with J=1-----
+[matrix size: 0x0]
+
+----- Channel 22 with J=2-----
+[matrix size: 0x0]
+
+----- Channel 23 with J=3-----
+[matrix size: 0x0]
+
+About to create hf(Hbare)
+done Converting Hbare to HF basis
+HF converged after 5 iterations. 
+e1hf = -106.0238037
+e2hf = 11.2081523
+e3hf = 0.0000000
+EHF = -94.8156514
+Rho=
+   0.9654  -0.1827        0        0
+  -0.1827   0.0346        0        0
+        0        0        0        0
+        0        0        0        0
+
+EHF = -94.8156514
+Perturbative estimates of gs energy:
+EMP2 = -0.6837636
+done with pp and hh. E(3) = 0.2724912
+EMP3 = 0.2724912
+To 3rd order, E = -0.4112724
+About to calculate all of the operators.
+In Atomic, about to normal order Hbare.
+Getting normal-ordered H in HF basis
+Hbare should be normal ordered.
+About to set IMSRGSolver for Hbare.
+About to Set valence_generator.
+About to set smax.
+About to Solve imsrg.
+    i         s              E0         ||H_1||         ||H_2||       ||Omega||       ||Eta_1||       ||Eta_2||  Ncomm          E(MP2)  N_Ops    Walltime (s)        Memory (MB)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    0     0.000   -94.815651355    41.880744203    42.849852116     0.000000000     0.000000000     0.189246514      0    -0.844895821      5      18.297       8.660 / 8.652
+/var/spool/torque/mom_priv/jobs/869260.cougar.triumf.ca.SC: line 3: 56154 Segmentation fault      ../compiled/Atomic emax=2 e3max=0 method=magnus valence_space=He2 hw=27.21138505 smax=200 omega_norm_max=0.25 reference=He2 Operators= Lmax=2 systemtype=atomic use_brueckner_bch=false file2e1max=6 file2e2max=12 file2lmax=6 2bme=atomicME_Be4Aug10_emax18_lmax4_hw27.2114.json systemBasis=hydrogen
