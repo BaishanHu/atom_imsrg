@@ -84,11 +84,9 @@ install:
 	@echo '* Make sure libIMSRG.so is in your LIBRARY_PATH and LD_LIBRARY_PATH *'
 	@echo '*********************************************************************'
 	 
-#cube: gcc -c -o cube_test.c cube_test.c
-
 OBJ = ModelSpace.o TwoBodyME.o ThreeBodyME.o Operator.o  ReadWrite.o\
       HartreeFock.o imsrg_util.o Generator.o IMSRGSolver.o AngMom.o\
-      boost_src/gzip.o boost_src/zlib.o  IMSRGProfiler.o cube_test.o
+      boost_src/gzip.o boost_src/zlib.o  IMSRGProfiler.o
 
 mysrg: main.cc $(OBJ)
 	$(CC) $^ -o $@ $(INCLUDE) $(LIBS) $(FLAGS) 

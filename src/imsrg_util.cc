@@ -18,7 +18,6 @@
 #include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_sf_gamma.h>
 #include "cubature.h"
-//#include "cubature.c"
 #include "hcubature.c"
 
 using namespace AngMom;
@@ -371,6 +370,79 @@ Operator InverseR_Op(ModelSpace& modelspace)
    return InvR  ;
 }
 
+struct my_f_params { int n1; int l1; int m1;
+		     int n2; int l2; int m2;
+		     int n3; int l3; int m3;
+		     int n4; int l4; int m4; int Z;};
+
+unsigned long CalcLesserIndex(int n1, int l1, int m1, int n2, int l2, int m2)
+{
+   unsigned long index = 0;
+   int min_n12 = 0; //min(n1, n2);
+   int max_n12 = 0;
+   int min_l12 = 0;
+   int max_l12 = 0;
+   int min_m12 = 0;
+   int max_m12 = 0;
+
+   if(n1 < n2) {
+      min_n12 = n1;
+      min_l12 = l1;
+      min_m12 = m1;	
+      max_n12 = n2;
+      max_l12 = l2;
+      max_m12 = m2;
+   } else if(n1 > n2) {
+      min_n12 = n2;
+      min_l12 = l2;
+      min_m12 = m2;
+      max_n12 = n1;
+      max_l12 = l1;
+      max_m12 = m1;
+   } else { // n1 == n2;
+      min_n12 = n1;
+      max_n12 = n2;
+      if (l1 < l2) {
+	 min_l12 = l1;
+	 min_m12 = m1;
+	 max_l12 = l2;
+	 max_m12 = m2;
+      } else if(l1 < l2) {
+	 min_l12 = l2;
+	 min_m12 = m2;
+         max_l12 = l1;
+	 max_m12 = m1;
+      } else { // n1 == n2 && l1 == l2
+	 min_l12 = l1;
+	 min_m12 = min(m1, m2);
+	 max_l12 = l2;
+	 max_m12 = max(m1, m2);
+      }
+   }
+   index = max_n12*10000000000
+	 + max_l12*100000000
+	 + max_m12*1000000
+	 + min_n12*10000
+	 + min_l12*100
+	 + min_m12*1;
+   return index;
+}
+
+unsigned long CalcCacheIndex(int J, int n1, int l1, int m1,
+				int n2, int l2, int m2,
+				int n3, int l3, int m3, 
+				int n4, int l4, int m4)
+{
+   unsigned long val = 0;
+   unsigned long val12 = CalcLesserIndex(n1, l1, m1, n2, l2, m2);
+   unsigned long val34 = CalcLesserIndex(n3, l3, m3, n4, l4, m4);
+   unsigned long max_12 = max(val12, val34);
+   unsigned long min_12 = min(val12, val34);
+   val = J*100000000000000 + max_12*1000000000000 + min_12;
+   // Basic idea is to get max(a, b) vs min(a,b), then max(ab, cd) and get a single int
+   return val;
+}
+
 Operator ElectronTwoBody(ModelSpace& modelspace)
 {
    double t_start = omp_get_wtime();
@@ -379,6 +451,9 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    Operator V12(modelspace);
    V12.SetHermitian();
    V12.Erase();
+   double PI = 3.141592;
+   vector<unsigned long> cache_list;
+   vector<unsigned long> cache;
    //V12.EraseZeroBody(); // Throwing an error in some mapping function, which I /think/ is in OneBodyChannel or OneBody
    //V12.EraseOneBody();
    //V12.EraseTwoBody();
@@ -422,15 +497,63 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //cout << "o3.index=" << o3.index << endl;
 	    //cout << "o4.index=" << o4.index << endl;
 	    //double t2_start = omp_get_wtime();
-            double cmInvR = CalculateCMInvR(o1.n, o1.l, 1./2, o1.j2/2.0,
-					    o2.n, o2.l, 1./2, o2.j2/2.0,
-					    o3.n, o3.l, 1./2, o3.j2/2.0,
-					    o4.n, o4.l, 1./2, o4.j2/2.0, modelspace, tbc.J);
+	    double result = 0;
+
+	    // All of this business with the mi's might not matter since the m is just a delta
+	    // Still need m for the legendre polynomials in theta
+	    //for (int m1=-o1.l; m1==o1.l; m1++)
+	    //{
+		//for (int m2=-o2.l; m2==o2.l; m2++)
+		//{
+		    for (int m3=-o3.l; m3==o3.l; m3++)
+		    {
+			for (int m4=o4.l; m4==o4.l; m4++)
+			{ 
+
+			    double xmin[4] = {0,0, 0,0};
+			    double xmax[4] = {1,PI, 1,PI};
+			    double val = 0;
+			    double err = 0;
+			    unsigned long cache_temp = CalcCacheIndex(tbc.J, o1.n,o1.l,m3,
+								o2.n,o2.l,m4,
+								o3.n,o3.l,m3,
+								o4.n,o4.l,m4);
+			    if(find(cache_list.begin(), cache_list.end(), cache_temp) != 
+cache_list.end()) 
+			    {
+				//V12.TwoBody.SetTBME(ch, jket, ibra, cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) - cache_list.begin())
+				result += cache.at(find(cache_list.begin(), cache_list.end(), 
+cache_temp) != cache_list.end()); 
+			    } else {
+				/* v does not contain x */
+				my_f_params params={o1.n,o1.l,m3,
+                                                o2.n,o2.l,m4,
+                                                o3.n,o3.l,m3,
+                                                o4.n,o4.l,m4,
+                                                modelspace.GetTargetZ() };
+                            hcubature(1, &f, &params, 4, xmin, xmax, 1e6, 0, 1e-5,
+ERROR_INDIVIDUAL, &val, &err);
+				val *= HBARC/137.035999139;
+				cache_list.push_back(cache_temp);
+				cache.push_back(val);
+			    }			    
+			    result += val;
+			
+			}
+		    }
+		//}
+	    //} 
+	    V12.TwoBody.SetTBME(ch, jket, ibra, result);
+	    //unsigned long cache_val = CalcCacheIndex(o1.n, o1.l, 
+            //double cmInvR = CalculateCMInvR(o1.n, o1.l, 1./2, o1.j2/2.0,
+		//			    o2.n, o2.l, 1./2, o2.j2/2.0,
+		//			    o3.n, o3.l, 1./2, o3.j2/2.0,
+		//			    o4.n, o4.l, 1./2, o4.j2/2.0, modelspace, tbc.J);
 	    //V12.profiler.timer["CalculateCMInvR"] += (omp_get_wtime() - t2_start);//12;
 	    //cout << "Got past CalcCMInvR." << endl;
 	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
-	    if (ch == 1 and ibra == 2 and jket == 1) cout << "About to set tbme." << endl;
-	    V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
+	    //if (ch == 1 and ibra == 2 and jket == 1) cout << "About to set tbme." << endl;
+	    //V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
 	    //trunc[ibra][jket] = true;
 	    //cout << "Set ibra,jket, setting jket,ibra." << endl; // TwoBodyKE only sets ibra,jket, should mimick this?
 	    //V12.TwoBody.SetTBME(ch,jket,ibra,cmInvR);
@@ -1535,7 +1658,12 @@ e2b (double *k, size_t dim, void * p)
   return A;
 }
 
-struct my_f_params { int n1; int l1; int m1; int n2; int l2; int m2; int n3; int l3; int m3; int n4; int l4; int m4; int Z;};
+/*
+struct my_f_params { int n1;int l1;int m1;
+		int n2;int l2;int m2;
+		int n3;int l3;int m3;
+		int n4;int l4;int m4; int Z;};
+*/
 
 double
 Yml ( double t, int l, int m)
@@ -1545,6 +1673,77 @@ Yml ( double t, int l, int m)
   //return gsl_sf_legendre_sphPlm( l, m, cos(t) );
 }
 
+double hydrogenWF(double x, double theta, int n, int l, int m, int Z)
+{
+        double a = BOHR_RADIUS;
+        double c = Z/(n * a);
+        double h = pow(2*c, 3) * gsl_sf_fact(n-l-1) / (2*n*gsl_sf_fact(n+l) );
+        double hy = sqrt(h) * pow(2*c*x, l) * exp(-c*x) * gsl_sf_laguerre_n(n-l-1, 2*l+1,
+2*x*c) * Yml(theta, l, m);
+
+        return hy;
+}
+
+int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) {
+        (void)(ndim); // Avoid unused parameter warnings;
+        (void)(fval);
+        struct my_f_params * params = (struct my_f_params *)fdata;
+        int lim = 1;
+        float a = 0.0529; // Bohr Radius
+        double x3 = x[0]/(1-x[0]);
+        double x4 = x[2]/(1-x[2]);
+        double theta3 = x[1];
+        double theta4 = x[3];
+        int Z = (params->Z);
+        double del = 1e-9;
+        double PI = 3.141592;
+
+        // First function
+        int n1 = (params->n1);
+        int l1 = (params->l1);
+	int m1 = (params->m1);
+
+        // Second Function
+        int n2 = (params->n2);
+        int l2 = (params->l2);
+	int m2 = (params->m2);
+
+        // Third function
+        int n3 = (params->n3);
+        int l3 = (params->l3);
+	int m3 = (params->m3);
+
+        // Fourth Function
+        int n4 = (params->n4);
+        int l4 = (params->l4);
+	int m4 = (params->m4);
+
+        // The phi components are orth
+        if (m1 != m3 || m2 != m4)
+                return 0;
+        // l < n
+        if (l1 >= n1 || l2 >= n2 || l3 >= n3 || l4 >= n4)
+                return 0;
+
+        // -l <= m <= l
+        //if (m1 > l1 || m2 > l2 || m3 > l3 || m4 > l4 )
+        //	return 0;
+
+        double h1 = hydrogenWF(x3, theta3, n1, l1, m1, Z);
+        double h2 = hydrogenWF(x4, theta4, n2, l2, m2, Z);
+        double h3 = hydrogenWF(x3, theta3, n3, l3, m3, Z);
+        double h4 = hydrogenWF(x4, theta3, n4, l4, m4, Z);
+
+        fval[0] = h1 * h3 * x3*x3 * 1/pow(1-x[0],2);
+        fval[0]*= h2 * h4 * x4*x4 * 1/pow(1-x[2],2);
+        fval[0]*= sin(theta3) * sin(theta4) * 4*PI*PI;
+        fval[0]*= 1/sqrt( x3*x3 + x4*x4 - 2*x3*x4*cos(theta3) );
+
+        return 0;
+}
+
+
+/*
 int
 f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) {
 
@@ -1610,7 +1809,7 @@ f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) {
   //fval[0] = hy1 * hy2 * hy3 * hy4 * x3*x3 * x4*x4 * 1/pow(lim-x[0],2) * 1/pow(lim-x[2],2) * sin(t3) * sin(t4);// * 1/fabs(den) * HBARC/137 * 4*PI*PI;
   //printf ("fabs=%.18f\n", 1/fabs(x4 - x3 + del) );
   return 0;
-}
+} */
 
 double
 numerical_tb_md2 ( int n1, int l1, int m1, int n2, int l2, int m2, int n3, int l3, int m3, int n4, int l4, int m4, int Z )
@@ -1716,10 +1915,11 @@ Operator NumericalE2b(ModelSpace& modelspace)
 			cout << "n2=" << bra.oq->n << " l2=" << bra.oq->l << " m2=" << m2 << " j2=" << bra.oq->j2 << endl;
 			cout << "n3=" << ket.op->n << " l3=" << ket.op->l << " m3=" << m1 << " j3=" << ket.op->j2 << endl;
 			cout << "n4=" << ket.oq->n << " l3=" << ket.oq->l << " m4=" << m2 << " j4=" << ket.oq->j2 << endl;
-			double that = fcube( bra.op->n, bra.op->l, m1,
-						 bra.oq->n, bra.oq->l, m2,
-						 ket.op->n, bra.op->l, m1,
-						 ket.oq->n, bra.oq->l, m2, modelspace.GetTargetZ() );
+			double that = 0; //fcube( bra.op->n, bra.op->l, m1,
+					//	 bra.oq->n, bra.oq->l, m2,
+					//	 ket.op->n, bra.op->l, m1,
+					//	 ket.oq->n, bra.oq->l, m2, 
+//modelspace.GetTargetZ() );
 			cout << "this is " << that << endl;
 			temp += that;
 		    }

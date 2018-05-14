@@ -68,6 +68,12 @@ namespace imsrg_util
  Operator Sigma_Op_pn(ModelSpace& modelspace, string pn);
  Operator RadialOverlap(ModelSpace& modelspace);
  Operator LdotS_Op(ModelSpace& modelspace);
+ unsigned long CalcCacheIndex(int J, int n1, int l1, int n2, int l2, int n3, int l3, int n4, int l4);
+ unsigned long CalcLesserIndex(int n1, int l1, int n2, int l2);
+ double Yml (double theta, int l, int m);
+ double hydrogenWF(double x, double theta, int n, int l, int Z);
+ int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval);
+
  Operator ElectronTwoBody(ModelSpace& modelspace);
  double CalculateCMInvR( double n1, double l1, double s1, double j1,
 			 double n2, double l2, double s2, double j2,
