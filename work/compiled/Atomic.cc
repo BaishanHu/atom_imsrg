@@ -58,13 +58,15 @@ int main(int argc, char** argv)
   vector<string> opnames = PAR.v("Operators");
 
   vector<Operator> ops;
+  
+  cout << "SystemBasis: " << systemBasis << endl;
 
   // test 2bme file
   ifstream test(inputtbme);
   if( not test.good() )
   {
     cout << "trouble reading " << inputtbme << " exiting. " << endl;
-    return 1;
+    //return 1;
   }
   test.close();
   // test 3bme file
@@ -171,7 +173,7 @@ int main(int argc, char** argv)
     cout << "About to precalculate radial integrals." << endl;
     GenerateRadialIntegrals(modelspace,1*eMax*101011);
     cout << "FactorialList calculated." << endl;
-    rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
+    //rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
     cout << "Read in interaction, moving to precalculating moshinsky." << endl;
     cout << "Adding T and V to Hbare; emax=" << modelspace.GetEmax() << endl;
     //Hbare += Trel_Op(modelspace) + InverseR_Op(modelspace);
@@ -199,12 +201,12 @@ int main(int argc, char** argv)
     //cout << "Precalculated Mosh, moving on." << endl;
     //rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
     //modelspace.GenerateOsToHydroCoeff(eMax);
-    cout << "Adding two-body correction." << endl;
-    Hbare += NumericalE2b(modelspace);
+    //Hbare += NumericalE2b(modelspace);
     //Hbare += CorrE2b_Hydrogen(modelspace);
     cout << "Adding Hydrogen Energies." << endl;
     Hbare += Energy_Op(modelspace);
-
+    cout << "Adding two-body correction." << endl;
+    Hbare += ElectronTwoBody(modelspace);
   }
   cout << "OneBody=" << endl << Hbare.OneBody << endl;
   cout << "TwoBody=" << endl;
@@ -263,7 +265,7 @@ int main(int argc, char** argv)
       else if (opname == "ElectronTwoBody") ops.emplace_back( ElectronTwoBody(modelspace) );
       else if (opname == "CorrE2b")	 ops.emplace_back( CorrE2b(modelspace) );
       else if (opname == "CorrE2b_Hydrogen")	 ops.emplace_back( CorrE2b_Hydrogen(modelspace) );
-      else if (opname == "NumericalE2b") ops.emplace_back( NumericalE2b(modelspace) );
+      //else if (opname == "NumericalE2b") ops.emplace_back( NumericalE2b(modelspace) );
       else if (opname == "Energy_Op")    ops.emplace_back( Energy_Op(modelspace) );
       else if (opname == "E2")           ops.emplace_back( ElectricMultipoleOp(modelspace,2) );
       else if (opname == "M1")           ops.emplace_back( MagneticMultipoleOp(modelspace,1) );

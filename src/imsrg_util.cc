@@ -446,7 +446,7 @@ unsigned long CalcCacheIndex(int J, int n1, int l1, int m1,
 Operator ElectronTwoBody(ModelSpace& modelspace)
 {
    double t_start = omp_get_wtime();
-   cout << "Entering ElectronTwoBody." << endl;
+   cout << "Entering _test." << endl;
    int nchan = modelspace.GetNumberTwoBodyChannels();
    Operator V12(modelspace);
    V12.SetHermitian();
@@ -467,29 +467,30 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
       if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
       //bool trunc[nkets][nkets] = { {false} };
       //cout << "created trunc, moving into ibra loop." << endl;
-      #pragma omp parallel for
+      //#pragma omp parallel for
       for (int ibra = 0; ibra < nkets; ++ibra)
       {
-	 //cout << "----- ibra is " << ibra << " -----" << endl;
+	 cout << "----- ibra is " << ibra << " -----" << endl;
          Ket & bra = tbc.GetKet(ibra);
 	 //cout << "Got bra, getting orbits." << endl;
          Orbit & o1 = modelspace.GetOrbit(bra.p);
 	 //cout << "Got o1, getting o2." << endl;
          Orbit & o2 = modelspace.GetOrbit(bra.q);
 	 //#pragma omp parallel for
-	 for (int jket = 0; jket <= ibra; jket++)
-	 //for (int jket = ibra; jket < nkets; jket++)
+	 //for (int jket = 0; jket <= ibra; jket++)
+	 for (int jket = ibra; jket < nkets; jket++)
 	 {
-	    //cout << "----- jket is " << jket << " -----" << endl;
+	    cout << "----- jket is " << jket << " -----" << endl;
+	    cout << "nkets= " << nkets << " for ch= " << ch << endl;
 	    //if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
 	    //cout << "Got past if(trunc[ch][ibra][jket]..." << endl;
-	    cout << "Just to recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
+	    cout << "Just to Recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
 	    Ket & ket = tbc.GetKet(jket);
-	    //cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
+	    cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
 	    Orbit & o3 = modelspace.GetOrbit(ket.p);
-	    //cout << "Got Past Orbit & o3..." << endl;
+	    cout << "Got Past Orbit & o3..." << endl;
 	    Orbit & o4 = modelspace.GetOrbit(ket.q);
-	    //cout << "Got Past Orbit & o4..." << endl;
+	    cout << "Got Past Orbit & o4..." << endl;
 	    
 	    //if ( o1.index > o2.index or o3.index > o4.index ) continue;
 	    //cout << "o1.index=" << o1.index << endl;
@@ -498,7 +499,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //cout << "o4.index=" << o4.index << endl;
 	    //double t2_start = omp_get_wtime();
 	    double result = 0;
-
+	    cout << "Entering m_i loop..." << endl;
 	    // All of this business with the mi's might not matter since the m is just a delta
 	    // Still need m for the legendre polynomials in theta
 	    //for (int m1=-o1.l; m1==o1.l; m1++)
@@ -507,7 +508,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 		//{
 		    for (int m3=-o3.l; m3==o3.l; m3++)
 		    {
-			for (int m4=o4.l; m4==o4.l; m4++)
+			for (int m4=-o4.l; m4==o4.l; m4++)
 			{ 
 
 			    double xmin[4] = {0,0, 0,0};
@@ -521,10 +522,12 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 			    if(find(cache_list.begin(), cache_list.end(), cache_temp) != 
 cache_list.end()) 
 			    {
+				cout << "Found cache_temp in cache_list" << endl;
 				//V12.TwoBody.SetTBME(ch, jket, ibra, cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) - cache_list.begin())
 				result += cache.at(find(cache_list.begin(), cache_list.end(), 
 cache_temp) != cache_list.end()); 
 			    } else {
+				cout << "Didn't find cache_temp in cache_list, calculating..." << endl;
 				/* v does not contain x */
 				my_f_params params={o1.n,o1.l,m3,
                                                 o2.n,o2.l,m4,

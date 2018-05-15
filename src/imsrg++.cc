@@ -74,7 +74,7 @@ int main(int argc, char** argv)
   if( not test.good() )
   {
     cout << "trouble reading " << inputtbme << " exiting. " << endl;
-    return 1;
+    // return 1;
   }
   test.close();
   // test 3bme file
@@ -84,11 +84,11 @@ int main(int argc, char** argv)
     if( not test.good() )
     {
       cout << "trouble reading " << input3bme << " exiting. " << endl;
-      return 1;
+      // return 1;
     }
     test.close();
   }
-
+  cout << "Finished with reading 3BME and 2BME." << endl;
 
 
   ReadWrite rw;
