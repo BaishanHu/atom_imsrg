@@ -461,16 +461,16 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    for ( int ch : modelspace.SortedTwoBodyChannels )
    {
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
-      if (ch == 1) cout << "+++++ Channel is " << ch << " +++++" << endl;
+      //if (ch == 1) cout << "+++++ Channel is " << ch << " +++++" << endl;
       int nkets = tbc.GetNumberKets();
       //cout << "nkets is " << nkets << endl;
       if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
       //bool trunc[nkets][nkets] = { {false} };
       //cout << "created trunc, moving into ibra loop." << endl;
-      //#pragma omp parallel for
+      #pragma omp parallel for
       for (int ibra = 0; ibra < nkets; ++ibra)
       {
-	 cout << "----- ibra is " << ibra << " -----" << endl;
+	 //cout << "----- ibra is " << ibra << " -----" << endl;
          Ket & bra = tbc.GetKet(ibra);
 	 //cout << "Got bra, getting orbits." << endl;
          Orbit & o1 = modelspace.GetOrbit(bra.p);
@@ -480,17 +480,17 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	 //for (int jket = 0; jket <= ibra; jket++)
 	 for (int jket = ibra; jket < nkets; jket++)
 	 {
-	    cout << "----- jket is " << jket << " -----" << endl;
-	    cout << "nkets= " << nkets << " for ch= " << ch << endl;
+	    //cout << "----- jket is " << jket << " -----" << endl;
+	    //cout << "nkets= " << nkets << " for ch= " << ch << endl;
 	    //if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
 	    //cout << "Got past if(trunc[ch][ibra][jket]..." << endl;
-	    cout << "Just to Recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
+	    //cout << "Just to Recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
 	    Ket & ket = tbc.GetKet(jket);
-	    cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
+	    //cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
 	    Orbit & o3 = modelspace.GetOrbit(ket.p);
-	    cout << "Got Past Orbit & o3..." << endl;
+	    //cout << "Got Past Orbit & o3..." << endl;
 	    Orbit & o4 = modelspace.GetOrbit(ket.q);
-	    cout << "Got Past Orbit & o4..." << endl;
+	    //cout << "Got Past Orbit & o4..." << endl;
 	    
 	    //if ( o1.index > o2.index or o3.index > o4.index ) continue;
 	    //cout << "o1.index=" << o1.index << endl;
@@ -499,7 +499,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //cout << "o4.index=" << o4.index << endl;
 	    //double t2_start = omp_get_wtime();
 	    double result = 0;
-	    cout << "Entering m_i loop..." << endl;
+	    //cout << "Entering m_i loop..." << endl;
 	    // All of this business with the mi's might not matter since the m is just a delta
 	    // Still need m for the legendre polynomials in theta
 	    //for (int m1=-o1.l; m1==o1.l; m1++)
@@ -519,25 +519,28 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 								o2.n,o2.l,m4,
 								o3.n,o3.l,m3,
 								o4.n,o4.l,m4);
+			    #pragma omp critical
 			    if(find(cache_list.begin(), cache_list.end(), cache_temp) != 
 cache_list.end()) 
 			    {
-				cout << "Found cache_temp in cache_list" << endl;
+				//cout << "Found cache_temp in cache_list" << endl;
 				//V12.TwoBody.SetTBME(ch, jket, ibra, cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) - cache_list.begin())
 				result += cache.at(find(cache_list.begin(), cache_list.end(), 
 cache_temp) != cache_list.end()); 
 			    } else {
-				cout << "Didn't find cache_temp in cache_list, calculating..." << endl;
+				//cout << "Didn't find cache_temp in cache_list, calculating..." << endl;
 				/* v does not contain x */
 				my_f_params params={o1.n,o1.l,m3,
                                                 o2.n,o2.l,m4,
                                                 o3.n,o3.l,m3,
                                                 o4.n,o4.l,m4,
                                                 modelspace.GetTargetZ() };
-                            hcubature(1, &f, &params, 4, xmin, xmax, 1e6, 0, 1e-5,
+                            	hcubature(1, &f, &params, 4, xmin, xmax, 1e6, 0, 1e-5,
 ERROR_INDIVIDUAL, &val, &err);
 				val *= HBARC/137.035999139;
+				//#pragma omp critical // Already contained within critical above find?
 				cache_list.push_back(cache_temp);
+				//#pragma omp critical
 				cache.push_back(val);
 			    }			    
 			    result += val;
