@@ -384,11 +384,13 @@ ModelSpace::ModelSpace(int emax, string valence, int Lmax, string SystemType, st
 void ModelSpace::Init(int emax, string reference, string valence, int Lmax, string SystemType, string systemBasis)
 {
 //  int Aref,Zref;
+  cout << "Building ModelSpace..." << endl;
   GetAZfromString(reference,Aref,Zref);
   if (SystemType == "nuclear"){
 	map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
 	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);}
   else if (SystemType == "atomic"){
+	cout << "Atomic basis selected, getting hole_list..." << endl;
 	map<index_t,double> hole_list = GetOrbitsE(Zref); // This was an attempt to redo the way modelspaces are built
 	//map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
 	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);} // Need to ensure all of these are init'd before passed.
@@ -421,6 +423,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, i
   
     //core_map = GetOrbitsAZ(Ac,Zc);
     //for (auto& it_core : core_map) core_list.push_back(it_core.first);
+    cout << "Getting core_list..." << endl;
     if (SystemType == "atomic") for (auto& it_core : GetOrbitsE(Zc) ) core_list.push_back(it_core.first);
     if (SystemType == "nuclear") for (auto& it_core : GetOrbitsAZ(Ac,Zc) ) core_list.push_back(it_core.first);
   }
@@ -586,7 +589,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
 		    int tz = -1;
 		    double occ = 0;
 		    int cvq = 2;
-		    int indx = Index1(n,l,j2,tz);
+		    int indx = Index_atomic(n,l,j2); //Index1(n,l,j2,tz);
 		    indexMap[indx] = count;
 		    indx = indexMap[indx];
 		    count++;
@@ -735,22 +738,24 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z)
 {
     int z=0;
     map<index_t,double> holesE;
-   for (int N=0; N<=Emax; ++N)
+    cout << "In GetOrbitsE for Z=" << Z << endl;
+   for (int N=1; N<=Emax; ++N)
    {
 	//cout << "Gettin' ready!" << endl;
 	for (int l=0; l <= N and l <= Lmax; l++)
 	{
 	    for (int j2=abs(2*l-1); j2 <= 2*l +1; j2+=2)
 	    {
-		int n = (N-l)/2;
-		//cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index1=" << Index1(n,l,j2,-1) << endl;
+		int n = N; //(N-l)/2;
+		int indx = Index_atomic(n,l,j2);
+		cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index1=" << indx << endl;
 		if (z < Z)
 		{
 		    int dz = min(Z-z, j2+1);
-		    //cout << "dz=" << dz << " z=" << z << endl;
-		    //indexMap[Index1(n,l,j2,-1)] = indexMap.size()-1;
+		    cout << "dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << endl;
+		    //indexMap[indx] = indexMap.size()-1;
 		    //holesE[indexMap[Index1(n,l,j2,-1)]] = dz/(j2+1.0);
-		    holesE[Index1(n,l,j2,-1)/2] = dz/(j2+1.0);
+		    holesE[indx] = dz/(j2+1.0); // indx/2 ?
 		    z += dz;
 		}
 	    }

@@ -205,9 +205,11 @@ int main(int argc, char** argv)
     //Hbare += CorrE2b_Hydrogen(modelspace);
     cout << "Adding Hydrogen Energies." << endl;
     Hbare += Energy_Op(modelspace);
+    cout << "Onebody:" << endl << Hbare.OneBody << endl;
     cout << "Adding two-body correction." << endl;
     Hbare += ElectronTwoBody(modelspace);
   }
+/*
   cout << "OneBody=" << endl << Hbare.OneBody << endl;
   cout << "TwoBody=" << endl;
   for (int ch = 0; ch < Hbare.nChannels; ch++) {
@@ -215,6 +217,7 @@ int main(int argc, char** argv)
     Hbare.PrintTwoBody(ch);
     cout << endl;
   }
+*/
 
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);

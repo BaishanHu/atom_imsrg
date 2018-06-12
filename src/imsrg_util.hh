@@ -71,7 +71,7 @@ namespace imsrg_util
  unsigned long CalcCacheIndex(int J, int n1, int l1, int n2, int l2, int n3, int l3, int n4, int l4);
  unsigned long CalcLesserIndex(int n1, int l1, int n2, int l2);
  double Yml (double theta, int l, int m);
- double hydrogenWF(double x, double theta, int n, int l, int Z);
+ double hydrogenWF(double x, double theta, int n, int l, int m, int Z, int A);
  int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval);
 
  Operator ElectronTwoBody(ModelSpace& modelspace);

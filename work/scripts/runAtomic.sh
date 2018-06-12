@@ -15,23 +15,23 @@ file2lmax=6
 v3n=none
 
 estart=2
-estop=4
-eiter=2
+estop=6
+eiter=1
 
 lstart=0
 lstop=2
-liter=2
+liter=1
 
 #for ((A=$start;A<=$stop;A++)); do
 for ((emax=$estart;emax<=$estop;emax=emax+eiter)); do
-for ((Lmax=$lstart;Lmax<=$lstop && Lmax<=$emax;Lmax=Lmax+liter)); do
+for ((Lmax=$lstart;Lmax<=$lstop && Lmax<$emax;Lmax=Lmax+liter)); do
 #A=4
 #state=10
 systemtype=atomic
 # 1.0 Hartree ~= 27.21138505(60) eV (according to Wikipedia)
 hw=27.21138505 
-valence_space=He2
-reference=He2
+valence_space=He4
+reference=He4
 systemBasis=hydrogen
 smax=200
 #emax=4

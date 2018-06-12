@@ -373,7 +373,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
 struct my_f_params { int n1; int l1; int m1;
 		     int n2; int l2; int m2;
 		     int n3; int l3; int m3;
-		     int n4; int l4; int m4; int Z;};
+		     int n4; int l4; int m4; int Z; int A;};
 
 unsigned long CalcLesserIndex(int n1, int l1, int m1, int n2, int l2, int m2)
 {
@@ -443,10 +443,58 @@ unsigned long CalcCacheIndex(int J, int n1, int l1, int m1,
    return val;
 }
 
+/*
+Operator FineStructure(Modelspace& modelspace)
+{
+	cout << "Entering FineStructure" << endl;
+	double t_start = omp_get_wtime();
+	Operator fs(modelspace);
+	fs.SetHermitian();
+	fs.Erase();
+	double alpha = 1/137.035999139;
+	double e_mass = 511
+	int norbits = modelspace.GetNumberOrbits();
+	
+	for (int a=0; a<norbits; a++)
+	{
+		Orbit& o1 = modelspace.GetOrbit(a);
+		double energy = 0;
+	}
+} */
+
+// Number 1
+Operator KineticEnergy_Op(ModelSpace& modelspace)
+{
+   Operator T(modelspace);
+   int norbits = modelspace.GetNumberOrbits();
+   double hw = modelspace.GetHbarOmega();
+   double t_start = omp_get_wtime();
+
+   for (int a=0;a<norbits;++a)
+   {
+      Orbit & oa = modelspace.GetOrbit(a);
+      T.OneBody(a,a) = 0.5 * hw * (2*oa.n + oa.l + 3./2);
+      for ( int b : T.OneBodyChannels.at({oa.l, oa.j2, oa.tz2}) )
+      {
+       	 if (b<=a) continue;
+         Orbit & ob = modelspace.GetOrbit(b);
+         if (oa.n == ob.n+1)
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
+         else if (oa.n == ob.n-1)
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2));
+         T.OneBody(b,a) = T.OneBody(a,b);
+      }
+   }
+   #pragma omp master
+   T.profiler.timer["KineticEnergy_Op"] += omp_get_wtime() - t_start;
+   return T;
+}
+
+
 Operator ElectronTwoBody(ModelSpace& modelspace)
 {
    double t_start = omp_get_wtime();
-   cout << "Entering _test." << endl;
+   cout << "Entering ElectronTwoBody." << endl;
    int nchan = modelspace.GetNumberTwoBodyChannels();
    Operator V12(modelspace);
    V12.SetHermitian();
@@ -457,7 +505,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    //V12.EraseZeroBody(); // Throwing an error in some mapping function, which I /think/ is in OneBodyChannel or OneBody
    //V12.EraseOneBody();
    //V12.EraseTwoBody();
-   //#pragma omp parallel for // Doesn't seem to be thread-safe // Sorted
+   //#pragma omp parallel for
    for ( int ch : modelspace.SortedTwoBodyChannels )
    {
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
@@ -519,9 +567,10 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 								o2.n,o2.l,m4,
 								o3.n,o3.l,m3,
 								o4.n,o4.l,m4);
+			    bool cache_check = false;
 			    #pragma omp critical
-			    if(find(cache_list.begin(), cache_list.end(), cache_temp) != 
-cache_list.end()) 
+			    cache_check = find(cache_list.begin(), cache_list.end(), cache_temp) != cache_list.end();
+			    if(cache_check==true) 
 			    {
 				//cout << "Found cache_temp in cache_list" << endl;
 				//V12.TwoBody.SetTBME(ch, jket, ibra, cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) - cache_list.begin())
@@ -534,13 +583,14 @@ cache_temp) != cache_list.end());
                                                 o2.n,o2.l,m4,
                                                 o3.n,o3.l,m3,
                                                 o4.n,o4.l,m4,
-                                                modelspace.GetTargetZ() };
+                                                modelspace.GetTargetZ(),
+						modelspace.GetTargetMass() };
                             	hcubature(1, &f, &params, 4, xmin, xmax, 1e6, 0, 1e-5,
 ERROR_INDIVIDUAL, &val, &err);
 				val *= HBARC/137.035999139;
-				//#pragma omp critical // Already contained within critical above find?
+				#pragma omp critical // Already contained within critical above find?
 				cache_list.push_back(cache_temp);
-				//#pragma omp critical
+				#pragma omp critical
 				cache.push_back(val);
 			    }			    
 			    result += val;
@@ -720,7 +770,7 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
     return T;
 }
 
-
+/*
 Operator KineticEnergy_Op(ModelSpace& modelspace)
 {
    Operator T(modelspace);
@@ -746,7 +796,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    #pragma omp master
    T.profiler.timer["KineticEnergy_Op"] += omp_get_wtime() - t_start;
    return T;
-}
+} */
 
 // Energy in atomic systems
 Operator Energy_Op(ModelSpace& modelspace)
@@ -758,33 +808,27 @@ Operator Energy_Op(ModelSpace& modelspace)
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
    int Z = modelspace.GetTargetZ();
-   #pragma omp parallel for
+   int A = modelspace.GetTargetMass();
+   double mu = pow(10,6) * (A*M_ELECTRON*M_NUCLEON) / (A*M_NUCLEON + M_ELECTRON);
+   double alpha = 1./137;
+   //#pragma omp parallel for
    for (int a=0;a<norbits;++a)
    {
       Orbit & oa = modelspace.GetOrbit(a);
-      E.OneBody(a,a) = -hw/2 * Z * Z / (oa.n * oa.n); 
-	//double zarg = Z/137 / ( oa.n - oa.j2/2 - 0.5 + sqrt( pow(oa.j2/2+0.5,2) - pow(Z/137,2) ) );
-	//E.OneBody(a,a) = -1/sqrt( 1 + pow(zarg,2) );
-	//E.OneBody(a,a) = -(1-1/sqrt(1+pow((1/137)/(oa.n - oa.j2/2 - 1/2 + sqrt( pow(oa.j2/2+1/2,2) - pow(1/137,2) ) ),2) ) );
-      //for (int b=0; b<=a; b++)
-      //{
-	// Orbit & ob = modelspace.GetOrbit(b);
-	//if (ob.n == oa.n) E.OneBody(a,b) = -hw/2 * Z * Z / (oa.n * oa.n); 
-	// if (ob.n < oa.n) E.OneBody(a,b) = -hw/2 * Z * Z / (ob.n * ob.n);
-	// if (oa.n < ob.n) E.OneBody(a,b) = -hw/2 * Z * Z / (oa.n * oa.n);
-	// E.OneBody(b,a) = E.OneBody(a,b);
-      //}
-      //cout << "E.OneBody(" << a << "," << a << ")=" << T.OneBody(a,a) << endl;
-      //for ( int b : E.OneBodyChannels.at({oa.l,oa.j2,oa.tz2}) )
-      //{
-      //   if (b<=a) continue;
-      //   Orbit & ob = modelspace.GetOrbit(b);
-      //   if (oa.n == ob.n+1)
-      //      E.OneBody(a,b) = hw * sqrt( (oa.n)*(oa.n + oa.l +1./2));
-      //   else if (oa.n == ob.n-1)
-      //      E.OneBody(a,b) = hw * sqrt( (ob.n)*(ob.n + ob.l +1./2)); // 3/2 ? 1/2
-      //   E.OneBody(b,a) = E.OneBody(a,b);
-      //}
+      //E.OneBody(a,a) = -hw/2 * Z * Z / (oa.n * oa.n); 
+      double k = abs(oa.j2/2 + 0.5);
+      double val = k*k - Z*Z*alpha*alpha;
+      //cout << "val after init=" << val << endl;
+      val = oa.n - k +sqrt(val);
+      //cout << "val after sqrt=" << val << endl;
+      val = pow(Z*alpha/val,2);
+      //cout << "val after pow=" << val << endl;
+      val = 1 - 1/sqrt(1-val);
+      //cout << "val after 1/sqrt=" << val << endl;
+      val = mu*val;
+      //cout << "val after mu*val=" << val << endl;
+      //cout << "Val manually=" << -hw/2 * Z * Z / (oa.n * oa.n) << endl;
+      E.OneBody(a,a) = val;
    }
    E.profiler.timer["Energy_Op"] += omp_get_wtime() - t_start;
    return E;
@@ -1679,9 +1723,9 @@ Yml ( double t, int l, int m)
   //return gsl_sf_legendre_sphPlm( l, m, cos(t) );
 }
 
-double hydrogenWF(double x, double theta, int n, int l, int m, int Z)
+double hydrogenWF(double x, double theta, int n, int l, int m, int Z, int A)
 {
-        double a = BOHR_RADIUS;
+        double a = BOHR_RADIUS * (A*M_NUCLEON + M_ELECTRON) / (A*M_NUCLEON);
         double c = Z/(n * a);
         double h = pow(2*c, 3) * gsl_sf_fact(n-l-1) / (2*n*gsl_sf_fact(n+l) );
         double hy = sqrt(h) * pow(2*c*x, l) * exp(-c*x) * gsl_sf_laguerre_n(n-l-1, 2*l+1,
@@ -1701,6 +1745,7 @@ int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) 
         double theta3 = x[1];
         double theta4 = x[3];
         int Z = (params->Z);
+	int A = (params->A);
         double del = 1e-9;
         double PI = 3.141592;
 
@@ -1735,10 +1780,10 @@ int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) 
         //if (m1 > l1 || m2 > l2 || m3 > l3 || m4 > l4 )
         //	return 0;
 
-        double h1 = hydrogenWF(x3, theta3, n1, l1, m1, Z);
-        double h2 = hydrogenWF(x4, theta4, n2, l2, m2, Z);
-        double h3 = hydrogenWF(x3, theta3, n3, l3, m3, Z);
-        double h4 = hydrogenWF(x4, theta3, n4, l4, m4, Z);
+        double h1 = hydrogenWF(x3, theta3, n1, l1, m1, Z, A);
+        double h2 = hydrogenWF(x4, theta4, n2, l2, m2, Z, A);
+        double h3 = hydrogenWF(x3, theta3, n3, l3, m3, Z, A);
+        double h4 = hydrogenWF(x4, theta3, n4, l4, m4, Z, A);
 
         fval[0] = h1 * h3 * x3*x3 * 1/pow(1-x[0],2);
         fval[0]*= h2 * h4 * x4*x4 * 1/pow(1-x[2],2);
