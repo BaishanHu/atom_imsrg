@@ -189,8 +189,8 @@ int main(int argc, char** argv)
     cout << "Adding InvR to Hbare." << endl;
     Hbare += InverseR_Op(modelspace) * modelspace.GetTargetZ();
     cout << "Added InvR; adding two body." << endl;
-    //Hbare += CorrE2b(modelspace);
-    //cout << "Added Twobody, moving on." << endl;
+    Hbare += CorrE2b(modelspace);
+    cout << "Added Twobody, moving on." << endl;
   } else {
     //cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
     //modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax)+40 );
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
     cout << "Adding two-body correction." << endl;
     Hbare += ElectronTwoBody(modelspace);
   }
-/*
+
   cout << "OneBody=" << endl << Hbare.OneBody << endl;
   cout << "TwoBody=" << endl;
   for (int ch = 0; ch < Hbare.nChannels; ch++) {
@@ -217,7 +217,6 @@ int main(int argc, char** argv)
     Hbare.PrintTwoBody(ch);
     cout << endl;
   }
-*/
 
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);

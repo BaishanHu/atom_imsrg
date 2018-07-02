@@ -554,11 +554,24 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //{
 		//for (int m2=-o2.l; m2==o2.l; m2++)
 		//{
-		    for (int m3=-o3.l; m3==o3.l; m3++)
+		    for (int m3=o3.l; m3>=0; m3--) // start at o3.l and iterate to 0? Might need a factor of 2 for m%2!=0
 		    {
-			for (int m4=-o4.l; m4==o4.l; m4++)
+			for (int m4=o4.l; m4>=0; m4--)
 			{ 
-
+			    //#pragma omp atomic
+			    //cout << "In Electron2Body; m3=" << m3 << ", m4=" << m4 << endl;
+			    if (m3 < 0) cout << "m3 < 0" << endl;
+			    if (m4 < 0) cout << "m4 < 0" << endl;
+			    if (o1.l < m3){
+				// cout << "o1.l < m3" << endl;
+				break;
+			    }
+			    if (o2.l < m4){
+				// cout << "o2.l < m4" << endl;
+				break;
+			    }
+			    if (o3.l < m3) cout << "o3.l < m3" << endl;
+			    if (04.l < m4) cout << "o4.l < m4" << endl;
 			    double xmin[4] = {0,0, 0,0};
 			    double xmax[4] = {1,PI, 1,PI};
 			    double val = 0;
@@ -574,8 +587,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 			    {
 				//cout << "Found cache_temp in cache_list" << endl;
 				//V12.TwoBody.SetTBME(ch, jket, ibra, cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) - cache_list.begin())
-				result += cache.at(find(cache_list.begin(), cache_list.end(), 
-cache_temp) != cache_list.end()); 
+				result += cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) != cache_list.end()); 
 			    } else {
 				//cout << "Didn't find cache_temp in cache_list, calculating..." << endl;
 				/* v does not contain x */
@@ -585,8 +597,7 @@ cache_temp) != cache_list.end());
                                                 o4.n,o4.l,m4,
                                                 modelspace.GetTargetZ(),
 						modelspace.GetTargetMass() };
-                            	hcubature(1, &f, &params, 4, xmin, xmax, 1e6, 0, 1e-5,
-ERROR_INDIVIDUAL, &val, &err);
+                            	hcubature(1, &f, &params, 4, xmin, xmax, 1e6, 0, 1e-5, ERROR_INDIVIDUAL, &val, &err);
 				val *= HBARC/137.035999139;
 				#pragma omp critical // Already contained within critical above find?
 				cache_list.push_back(cache_temp);
@@ -599,7 +610,9 @@ ERROR_INDIVIDUAL, &val, &err);
 		    }
 		//}
 	    //} 
+	    if (result < 0) result = 0;
 	    V12.TwoBody.SetTBME(ch, jket, ibra, result);
+	    V12.TwoBody.SetTBME(ch, ibra, jket, result);
 	    //unsigned long cache_val = CalcCacheIndex(o1.n, o1.l, 
             //double cmInvR = CalculateCMInvR(o1.n, o1.l, 1./2, o1.j2/2.0,
 		//			    o2.n, o2.l, 1./2, o2.j2/2.0,
@@ -809,9 +822,11 @@ Operator Energy_Op(ModelSpace& modelspace)
    double hw = modelspace.GetHbarOmega();
    int Z = modelspace.GetTargetZ();
    int A = modelspace.GetTargetMass();
-   double mu = pow(10,6) * (A*M_ELECTRON*M_NUCLEON) / (A*M_NUCLEON + M_ELECTRON);
+   double me = M_ELECTRON * pow(10,6);
+   double mn = M_NUCLEON * pow(10,6);
+   double mu = (A*me*mn) / (A*mn + me);
    double alpha = 1./137;
-   //#pragma omp parallel for
+   #pragma omp parallel for
    for (int a=0;a<norbits;++a)
    {
       Orbit & oa = modelspace.GetOrbit(a);
@@ -1718,6 +1733,8 @@ struct my_f_params { int n1;int l1;int m1;
 double
 Yml ( double t, int l, int m)
 {
+  if (l+m>170) cout << "Yml throws gamma overflow." << endl;
+  if (l-m<0) cout << "Yml has negative factorial." << endl;
   double temp=pow(-1,m) * sqrt( (2*l+1) * gsl_sf_fact(l-m) / (4*3.141592 * gsl_sf_fact(l+m)));
   return temp*gsl_sf_legendre_Plm( l, m, cos(t) );
   //return gsl_sf_legendre_sphPlm( l, m, cos(t) );
@@ -1727,9 +1744,11 @@ double hydrogenWF(double x, double theta, int n, int l, int m, int Z, int A)
 {
         double a = BOHR_RADIUS * (A*M_NUCLEON + M_ELECTRON) / (A*M_NUCLEON);
         double c = Z/(n * a);
+	if (n-l-1<0) cout << "hydrogenWF has factorial <0" << endl;
+	if (n+l>170) cout << "hydrogenWF overflows gamma" << endl;
+	if (2*l+1<=-1) cout << "hydrogenWF has a <= -1" << endl;
         double h = pow(2*c, 3) * gsl_sf_fact(n-l-1) / (2*n*gsl_sf_fact(n+l) );
-        double hy = sqrt(h) * pow(2*c*x, l) * exp(-c*x) * gsl_sf_laguerre_n(n-l-1, 2*l+1,
-2*x*c) * Yml(theta, l, m);
+        double hy = sqrt(h) * pow(2*c*x, l) * exp(-c*x) * gsl_sf_laguerre_n(n-l-1, 2*l+1, 2*x*c) * Yml(theta, l, m);
 
         return hy;
 }
@@ -1739,7 +1758,7 @@ int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) 
         (void)(fval);
         struct my_f_params * params = (struct my_f_params *)fdata;
         int lim = 1;
-        float a = 0.0529; // Bohr Radius
+        float a = BOHR_RADIUS; // Bohr Radius
         double x3 = x[0]/(1-x[0]);
         double x4 = x[2]/(1-x[2]);
         double theta3 = x[1];

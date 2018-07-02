@@ -2,8 +2,8 @@
 
 # decide if we should run in the current shell or submit to the cluster
 # interactive=true means run in the current shell.
-interactive=false
-NTHREADS=12
+interactive=true
+NTHREADS=10
 WORKDIR=$PWD
 
 exe=../compiled/writeAtomicTBME
@@ -15,8 +15,8 @@ v3n=none
 systemtype=atomic
 # 1.0 Hartree ~= 27.21138505(60) eV (according to Wikipedia)
 hw=27.21138505 
-valence_space=He2
-reference=He2
+valence_space=He4
+reference=He4
 smax=200
 emax=8
 systemBasis=hydrogen

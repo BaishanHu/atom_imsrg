@@ -113,13 +113,14 @@ int main(int argc, char** argv)
     cout << "Using Brueckner flavor of BCH" << endl;
   }
 
-  cout << "Added InvR." << endl;
+  //cout << "Added InvR." << endl;
   //modelspace.PreCalculateMoshinsky();
-  cout << "Precalculated Mosh, moving on." << endl;
+  //cout << "Precalculated Mosh, moving on." << endl;
   cout << "Adding ElectronTwoBody to Hbare." << endl;
   if ( systemBasis == "hydrogen" ) {
     //modelspace.GenerateOsToHydroCoeff(eMax);
-    Hbare += CorrE2b_Hydrogen(modelspace);
+    Hbare += ElectronTwoBody(modelspace);
+    //Hbare += CorrE2b_Hydrogen(modelspace);
   } else Hbare += CorrE2b(modelspace);
   //Hbare += ElectronTwoBody(modelspace);
   cout << "Added ElectronTwoBody to Hbare." << endl;

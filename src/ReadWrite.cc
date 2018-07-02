@@ -1937,7 +1937,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
       for (int twoj=twojMin; twoj<=twojMax; twoj+=2)
       {
 	 int index = modelspace->GetOrbitIndex(n,l,twoj,-1);
-	 if (modelspace->SystemType == "atomic") index = modelspace->indexMap[index]; // index/2 ?
+	 if (modelspace->SystemType == "atomic") index = modelspace->indexMap[index]; // index/2 ? No, need index2 or w/e I called it
 	 cout << "In Write: Pushing back index " << index << endl;
          orbits_remap.push_back( index );
       }
