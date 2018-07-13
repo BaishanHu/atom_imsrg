@@ -14,12 +14,12 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=2
+estart=4
 estop=4
 eiter=2
 
 lstart=2
-lstop=2
+lstop=4
 liter=2
 
 #for ((A=$start;A<=$stop;A++)); do
@@ -30,9 +30,9 @@ for ((Lmax=$lstart;Lmax<=$lstop && Lmax<$emax;Lmax=Lmax+liter)); do
 #state=10
 systemtype=atomic
 # 1.0 Hartree ~= 27.21138505(60) eV (according to Wikipedia)
-hw=27.21138505 
-valence_space=Ne10
-reference=Ne10
+hw=1 #27.21138505 # Doesn't matter anymore, nothing uses Hartrees in the code.
+valence_space=C12
+reference=He4
 systemBasis=hydrogen
 smax=200
 #emax=4
@@ -41,7 +41,7 @@ e3max=0
 lmax3=2
 method=magnus
 basis=HF
-omega_norm_max=0.25 
+omega_norm_max=0.25
 #file3='file3e1max=12 file3e2max=28 file3e3max=12'
 
 jobname="method_${method}_ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${Lmax}"

@@ -550,10 +550,12 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 	    //cout << "Entering m_i loop..." << endl;
 	    // All of this business with the mi's might not matter since the m is just a delta
 	    // Still need m for the legendre polynomials in theta
-	    //for (int m1=-o1.l; m1==o1.l; m1++)
+	    //for (int m1=o1.l; m1>=0; m1--)
 	    //{
-		//for (int m2=-o2.l; m2==o2.l; m2++)
+		//for (int m2=o2.l; m2>=0; m2--)
 		//{
+		    // double m13_cache [int(o3.l)];
+		    // double m24_cache [int(04.l)];
 		    for (int m3=o3.l; m3>=0; m3--) // start at o3.l and iterate to 0? Might need a factor of 2 for m%2!=0
 		    {
 			for (int m4=o4.l; m4>=0; m4--)
@@ -571,7 +573,9 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 				break;
 			    }
 			    if (o3.l < m3) cout << "o3.l < m3" << endl;
-			    if (04.l < m4) cout << "o4.l < m4" << endl;
+			    if (o4.l < m4) cout << "o4.l < m4" << endl;
+			    if (o2.l != o4.l) break;
+			    //if ( (
 			    double xmin[4] = {0,0, 0,0};
 			    double xmax[4] = {1,PI, 1,PI};
 			    double val = 0;
@@ -603,14 +607,57 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 				cache_list.push_back(cache_temp);
 				#pragma omp critical
 				cache.push_back(val);
-			    }			    
-			    result += val;
+			    }
+			    //#pragma omp critical
+			    // if (val < 17.1 && val > 16.9) cout << "Got ~17 in <" << o1.n << o1.l << o1.j2 << m3<< ";" << o2.n << o2.l << o2.j2 << m4 << "|" << o3.n << o3.l << o3.j2 << m3 << ";" << o4.n << o4.l << o4.j2 << m4 << ">" << endl;
 			
-			}
-		    }
-		//}
-	    //} 
+			    double val_m1 = 0;
+			    double val_m2 = 0;
+			    double val_m3 = 0;
+			    double val_m4 = 0;
+			    if (m3 != 0) val_m1 = gsl_sf_fact(o1.l-m3)*pow(-1,m3)/gsl_sf_fact(o1.l+m3);
+			    if (m4 != 0) val_m2	= gsl_sf_fact(o2.l-m4)*pow(-1,m4)/gsl_sf_fact(o2.l+m4);
+			    if (m3 != 0) val_m3 = gsl_sf_fact(o3.l-m3)*pow(-1,m3)/gsl_sf_fact(o3.l+m3);
+			    if (m4 != 0) val_m4 = gsl_sf_fact(o4.l-m4)*pow(-1,m4)/gsl_sf_fact(o4.l+m4);
+			    /*
+			    val = val*(1 + val_m1 + val_m2 + val_m3 + val_m4
+				  	 + val_m1*val_m2 + val_m1*val_m3 + val_m1*val_m4
+					 + val_m2*val_m3 + val_m2*val_m4
+					 + val_m3*val_m4
+					 + val_m1*val_m2*val_m3 + val_m1*val_m2*val_m4 + val_m1*val_m3*val_m4
+					 + val_m2*val_m3*val_m4
+					 + val_m1*val_m2*val_m3*val_m4); */
+			    val = val*(1 + val_m1*val_m3 + val_m2*val_m4 + val_m1*val_m2*val_m3*val_m4);
+			
+		            result += val;
+			} // m4
+			//result /= (2*o3.l + 1);
+		    } // m3
+		//} // m2
+	    //} // m1
+	    result /= ( (2*o1.l + 1) * (2*o2.l + 1) * (2*o3.l + 1) * (2*o4.l + 1) );
+            if (result < 0) result = 0;
+            /* #pragma omp critical
+            if (result >= 16.9 || result <= 17.1) {
+                cout << "Found 17 jket=" << jket << " ibra=" << ibra << " <" << o1.n << o1.l << o1.j2 << ";" << o2.n << o2.l << o2.j2 << "|" << o3.n <<
+o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
+                //result = 0;
+            }
+ 
 	    if (result < 0) result = 0;
+	    #pragma omp critical
+	    if (result >= 67.99 || result <= 68.01) {
+		cout << "Found 68 jket=" << jket << " ibra=" << ibra << " <" << o1.n << o1.l << o1.j2 << ";" << o2.n << o2.l << o2.j2 << "|" << o3.n <<  
+o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
+		//result = 0;
+	    }
+	    #pragma omp critical
+            if (result >= 33.99	|| result <= 34.01) {
+		cout << "Found 34 jket=" <<	jket <<	" ibra=" << ibra << " <" << o1.n << o1.l << o1.j2 << ";" << o2.n << o2.l << o2.j2 << "|" << o3.n <<  
+o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
+		//result = 0;
+	    } */
+
 	    V12.TwoBody.SetTBME(ch, jket, ibra, result);
 	    V12.TwoBody.SetTBME(ch, ibra, jket, result);
 	    //unsigned long cache_val = CalcCacheIndex(o1.n, o1.l, 
@@ -1736,6 +1783,8 @@ Yml ( double t, int l, int m)
   if (l+m>170) cout << "Yml throws gamma overflow." << endl;
   if (l-m<0) cout << "Yml has negative factorial." << endl;
   double temp=pow(-1,m) * sqrt( (2*l+1) * gsl_sf_fact(l-m) / (4*3.141592 * gsl_sf_fact(l+m)));
+  if (m < 0) return temp * pow(-1,-m) * gsl_sf_fact(l+m) * gsl_sf_legendre_Plm( l, -m, cos(t) 
+);
   return temp*gsl_sf_legendre_Plm( l, m, cos(t) );
   //return gsl_sf_legendre_sphPlm( l, m, cos(t) );
 }
@@ -1789,25 +1838,31 @@ int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) 
 	int m4 = (params->m4);
 
         // The phi components are orth
-        if (m1 != m3 || m2 != m4)
+        if (m1 != m3 || m2 != m4) {
+		fval[0] = 0;
                 return 0;
+	}
         // l < n
-        if (l1 >= n1 || l2 >= n2 || l3 >= n3 || l4 >= n4)
+        if (l1 >= n1 || l2 >= n2 || l3 >= n3 || l4 >= n4) {
+		fval[0] = 0;
                 return 0;
+	}
 
         // -l <= m <= l
-        //if (m1 > l1 || m2 > l2 || m3 > l3 || m4 > l4 )
-        //	return 0;
+        if (m1 > l1 || m2 > l2 || m3 > l3 || m4 > l4 || m1 < -l1 || m2 < -l2 || m3 < -l3 || m4 < -l4) {
+		fval[0] = 0;
+        	return 0;
+	}
 
         double h1 = hydrogenWF(x3, theta3, n1, l1, m1, Z, A);
         double h2 = hydrogenWF(x4, theta4, n2, l2, m2, Z, A);
         double h3 = hydrogenWF(x3, theta3, n3, l3, m3, Z, A);
-        double h4 = hydrogenWF(x4, theta3, n4, l4, m4, Z, A);
+        double h4 = hydrogenWF(x4, theta4, n4, l4, m4, Z, A);
 
         fval[0] = h1 * h3 * x3*x3 * 1/pow(1-x[0],2);
         fval[0]*= h2 * h4 * x4*x4 * 1/pow(1-x[2],2);
         fval[0]*= sin(theta3) * sin(theta4) * 4*PI*PI;
-        fval[0]*= 1/sqrt( x3*x3 + x4*x4 - 2*x3*x4*cos(theta3) );
+        fval[0]*= 1/sqrt( x3*x3 + x4*x4 - 2*x3*x4* cos(theta3) );
 
         return 0;
 }

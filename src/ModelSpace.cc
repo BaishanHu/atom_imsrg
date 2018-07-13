@@ -552,10 +552,11 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
              {
                 double occ = 0;
                 int cvq = 2;
-                int indx = Index1(n,l,j2,tz);
+                int indx = Index_atomic(n, l, j2); //Index1(n,l,j2,tz);
     	    	if (SystemType == "atomic" and tz < 0){ // Checks twice, this looks like garbage
-    		    indexMap[indx] = count; // Map atomic orbits as well as nuclear
-    		    indx = indexMap[indx]; 
+		    //indx  =Index_atomic(n, l
+    		    //indexMap[indx] = count; // Map atomic orbits as well as nuclear
+    		    //indx = indexMap[indx]; 
     		    //indexMap[count] = count;
     		    //indx = count;
 		    count++;
@@ -742,13 +743,13 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z)
    for (int N=1; N<=Emax; ++N)
    {
 	//cout << "Gettin' ready!" << endl;
-	for (int l=0; l <= N and l <= Lmax; l++)
+	for (int l=0; l < N and l <= Lmax; l++)
 	{
 	    for (int j2=abs(2*l-1); j2 <= 2*l +1; j2+=2)
 	    {
 		int n = N; //(N-l)/2;
 		int indx = Index_atomic(n,l,j2);
-		cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index1=" << indx << endl;
+		cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index_atomic=" << indx << endl;
 		if (z < Z)
 		{
 		    int dz = min(Z-z, j2+1);
