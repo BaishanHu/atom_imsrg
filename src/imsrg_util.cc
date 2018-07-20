@@ -635,6 +635,8 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 		    } // m3
 		//} // m2
 	    //} // m1
+	    // Average over initial, sum over final?
+	    // Average over all?
 	    result /= ( (2*o1.l + 1) * (2*o2.l + 1) * (2*o3.l + 1) * (2*o4.l + 1) );
             if (result < 0) result = 0;
             /* #pragma omp critical
@@ -691,6 +693,212 @@ o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
    V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
    cout << "Leaving ElectronTwoBody." << endl;
    return V12;
+}
+
+struct RabRcd_params {  int na; int la; int nb; int lb;
+                        int nc; int lc; int nd; int ld; int lp; int Z; };
+
+double Rnl(double r, int n, int l, int Z)
+{
+    double c = Z/(n*BOHR_RADIUS);
+    double h = pow(2*c, 3) * gsl_sf_fact(n-l-1) / ( 2*n*gsl_sf_fact(n+l) );
+    return sqrt(h) * pow(2*c*r, l) * exp(-c*r) * gsl_sf_laguerre_n(n-l-1, 2*l+1, 2*r*c);
+}
+
+int RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval)
+{
+    (void)(ndim); // Avoid unused parameter warnings;
+    (void)(fval);
+    struct RabRcd_params * params = (struct RabRcd_params*)fdata;
+
+    int na = (params->na);
+    int nb = (params->nb);
+    int nc = (params->nc);
+    int nd = (params->nd);
+
+    int la = (params->la);
+    int lb = (params->lb);
+    int lc = (params->lc);
+    int ld = (params->ld);
+
+    int lp = (params->lp);
+
+    int Z = (params->Z);
+
+    double r1 = x[0]/(1-x[0]);
+    double r2 = x[1]/(1-x[1]);
+
+    double rmin = min(r1,r2);
+    double rmax = max(r1,r2);
+
+    double Ra = Rnl(r1,na,la,Z);
+    double Rb = Rnl(r2,nb,lb,Z);
+    double Rc = Rnl(r1,nc,lc,Z);
+    double Rd = Rnl(r2,nd,ld,Z);
+
+    fval[0] = Ra*Rb*Rc*Rd * r1*r1 * r2*r2 * pow(rmin,lp) / pow(rmax,lp+1) * 1/pow(1-x[0],2) * 1/pow(1-x[1],2);
+
+    return 0;
+}
+
+
+Operator eeCoulomb(ModelSpace& modelspace)
+{
+    double t_start = omp_get_wtime();
+    cout << "Entering ElectronTwoBody." << endl;
+    int nchan = modelspace.GetNumberTwoBodyChannels();
+    Operator V12(modelspace);
+    V12.SetHermitian();
+    V12.Erase();
+    double PI = 3.141592;
+    vector<unsigned long> cache_list;
+    vector<unsigned long> cache;
+    //#pragma omp parallel for
+    for ( int ch : modelspace.SortedTwoBodyChannels )
+    {
+	TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+	//if (ch == 1) cout << "+++++ Channel is " << ch << " +++++" << endl;
+	int nkets = tbc.GetNumberKets();
+	//cout << "nkets is " << nkets << endl;
+	if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
+	//bool trunc[nkets][nkets] = { {false} };
+	//cout << "created trunc, moving into ibra loop." << endl;
+	#pragma omp parallel for
+	for (int ibra = 0; ibra < nkets; ++ibra)
+	{
+       	    // cout << "----- ibra is " << ibra << " -----" << endl;
+            Ket & bra = tbc.GetKet(ibra);
+            // cout << "Got bra, getting orbits." << endl;
+            Orbit & oa = modelspace.GetOrbit(bra.p);
+            // cout << "Got o1, getting o2." << endl;
+            Orbit & ob = modelspace.GetOrbit(bra.q);
+            // #pragma omp parallel for
+	    double sqr_coeff_ab = sqrt( (2*oa.l+1) * (2*ob.l+1) );
+            for (int jket = ibra; jket < nkets; jket++)
+            {
+		Ket & ket = tbc.GetKet(jket);
+		Orbit & oc = modelspace.GetOrbit(ket.p);
+		Orbit & od = modelspace.GetOrbit(ket.q);
+		double sqr_coeff_cd = sqrt( (2*oc.l+1) * (2*od.l+1) );
+		double me = 0;
+		for (int Lab = abs(oa.l-ob.l); Lab<=oa.l+ob.l; ++Lab)
+		{
+		for (int mla = -oa.l; mla <= oa.l; ++mla)
+		{
+		    for (int mlb = -ob.l; mlb <= ob.l; ++mlb)
+		    {
+			int Mlab = mla + mlb;
+			//for (int Lab = abs(oa.l-ob.l); Lab <= oa.l +ob.l; ++Lab)
+			//{
+			//int Lab = oa.l + ob.l;
+			double lab_clebsh = pow(-1,-oa.l+oc.l-Mlab) * sqrt(2*Lab+1) * ThreeJ(oa.l, ob.l, Lab, mla, mlb, Mlab);
+			if(lab_clebsh == 0) continue; // redundant, I think
+			//cout << "lab_clebsh=" << lab_clebsh << endl;
+			for (int Lcd = abs(oc.l-od.l); Lcd <= oc.l+od.l; ++Lcd)
+			{
+			for (int mlc = -oc.l; mlc <= oc.l; ++mlc)
+			{
+			    for (int mld = -od.l; mld <= od.l; ++mld) // replace with mld = -mla-mlb-mlc ? Probably
+			    {
+				//if (mld	!= -mla-mlb-mlc) continue; // See above, redundant
+				int Mlcd = mlc + mld;
+                        	//int Lcd = oc.l + od.l;
+				//for (int Lcd=abs(oc.l-od.l); Lcd<=oc.l+od.l; ++Lcd)
+				//{
+				    //if (Lcd != Lab) continue; // Conservation of Ang Mom
+                	            double lcd_clebsh = pow(-1,-oc.l+oc.l-Mlcd) * sqrt(2*Lcd+1) * ThreeJ(oc.l, od.l, Lcd, mlc, mld, Mlcd);
+        	                    if(lcd_clebsh == 0) continue; // redundant, I think
+				    //cout << "lcd_clebsh=" << lcd_clebsh << endl;
+	                            for (float msa = -0.5; msa <= 0.5; ++msa)
+				    {
+				    	for (float msb = -0.5; msb <= 0.5; ++msb)
+				    	{
+					    float Msab = (msa + msb);
+					    //float Sab = abs(tbc.J - Lab);
+					    for (float Sab=0; Sab <= 1; ++Sab)
+					    {
+						//if (abs(Sab-Lab)<tbc.J || Sab+Lab>tbc.J) continue;
+						//if (Sab+Lab != tbc.J) continue;
+						if (Msab > Sab) continue;
+						//if (Lab < tbc.J) Sab = tbc.J - Lab;
+						//if (Lab > tbc.J) Sab = Lab - tbc.J;
+						if (abs(Sab) > 1) continue;
+	                                	double sab_clebsh = pow(-1,Msab) * sqrt(2*Sab+1) * ThreeJ(0.5, 0.5, Sab, msa, msb, Msab);
+						sab_clebsh *= pow(-1, -Lab+Sab-Mlab-Msab) * sqrt(2*tbc.J+1) * ThreeJ(Lab, Sab, tbc.J, Mlab, Msab, Mlab+Msab);
+        	                        	if(sab_clebsh == 0) continue; // redundant, I think
+						//cout << "sab_clebsh=" << sab_clebsh << endl;
+						for (float msc = -0.5; msc <= 0.5; ++msc)
+						{
+					        for (float msd = -0.5; msd <= 0.5; ++msd) // replace with msd = -msa-msb-msc ? Probably
+					        {
+						    //if (msd != -msa-msb-msc) continue; // See above, redundant
+						    float Mscd = (msc + msd);
+						    for (float Scd=0; Scd<=1; ++Scd)
+						    {
+							//if (abs(Scd-Lcd)<tbc.J || Scd+Lcd>tbc.J) continue;
+							//if (Scd+Lcd != tbc.J) continue;
+							if (Mscd > Scd) continue;
+                	                        	//float Scd = abs(tbc.J-Lab);
+							//if (Lcd < tbc.J) Scd = tbc.J - Lcd;
+							//if (Lcd > tbc.J) Scd = Lcd - tbc.J;
+							if (abs(Scd) > 1) continue;
+        	                                	double scd_clebsh = pow(-1,Mscd) * sqrt(2*Scd+1) * ThreeJ(0.5, 0.5, Scd, msc, msd, Mscd);
+							scd_clebsh *= pow(-1, -Lcd+Scd-Mlcd-Mscd) * sqrt(2*tbc.J+1) * ThreeJ(Lcd, Scd, tbc.J, Mlcd, Mscd, Mlcd+Mscd);
+	                                        	if(scd_clebsh == 0) continue; // redundant, I think
+							//cout << "scd_clebsh=" << scd_clebsh << endl;
+							//for (int Jab=abs(Lab-Sab); Jab <=Lab+Sab; ++Jab)
+							//{
+							//for (int Jcd
+							for (int lp = max(abs(oa.l-ob.l),abs(oc.l-od.l)); lp <= min(oa.l+ob.l,oc.l+od.l); ++lp)
+							{
+						    	    double coeff_3j_l0 = ThreeJ(oa.l,lp,ob.l,0,0,0) * ThreeJ(oc.l,lp,od.l,0,0,0);
+						    	    if (coeff_3j_l0 == 0) continue;
+						    	    //cout << "coeff_3j_l0=" << coeff_3j_l0 << endl;
+						    	    double coeff_3j_mp = 0;
+						    	    for (int mp = -lp; mp <= lp; ++mp)
+						    	    {
+								//cout << "Calculating ME..." << endl;
+								if (mp != mla+mlb || mp != -mlc-mld) continue; // redundant, I think
+								coeff_3j_mp += ThreeJ(oa.l,lp,ob.l,mla,mp,mlb) * ThreeJ(oc.l,lp,od.l,mlc,-mp,mld);
+						            } // mp
+						    	if (coeff_3j_mp == 0) continue;
+                                                    	//cout << "coeff_3j_l0=" << coeff_3j_l0 << endl;
+                                                    	double coeff_3j = coeff_3j_l0 * coeff_3j_mp;
+                                                    	double xmin[2] = {0,0};
+                                                    	double xmax[2] = {1,1};
+                                                    	double val = 0;
+                                                    	double err = 0;
+                                                    	RabRcd_params params =  {oa.n,oa.l, ob.n,ob.l,
+                                                        	                 oc.n,oc.l, od.n,od.l,
+                                                                	         lp, modelspace.GetTargetZ() };
+                                                    	hcubature(1, &RabRcd, &params, 2, xmin, xmax, 1e4, 0, 1e-5, ERROR_INDIVIDUAL, &val, &err);
+                                                    	val *= coeff_3j;
+                                                    	me += val;
+						    } // lp
+						} // Scd
+					    } // msd
+					} // msc
+					} // Sab
+				    } // msb
+				} // msa
+				//} // Lcd
+			    } // mld
+			} // mlc
+			} // Lcd
+			//} // Lab
+		    } // mlb
+		} // mla
+		} // Lab
+		me *= sqr_coeff_ab * sqr_coeff_cd * HBARC/137.035999139; // Factor of 4 off
+		V12.TwoBody.SetTBME(ch, jket, ibra, me);
+	        V12.TwoBody.SetTBME(ch, ibra, jket, me);
+
+	    } // jket
+	} // ibra
+    } // channels
+    V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
+    cout << "Leaving ElectronTwoBody." << endl;
+    return V12;
 }
 
 
@@ -1776,7 +1984,6 @@ struct my_f_params { int n1;int l1;int m1;
 		int n3;int l3;int m3;
 		int n4;int l4;int m4; int Z;};
 */
-
 double
 Yml ( double t, int l, int m)
 {

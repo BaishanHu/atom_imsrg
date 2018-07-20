@@ -74,6 +74,7 @@ namespace imsrg_util
  double hydrogenWF(double x, double theta, int n, int l, int m, int Z, int A);
  int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval);
 
+ Operator eeCoulomb(ModelSpace& modelspace);
  Operator ElectronTwoBody(ModelSpace& modelspace);
  double CalculateCMInvR( double n1, double l1, double s1, double j1,
 			 double n2, double l2, double s2, double j2,

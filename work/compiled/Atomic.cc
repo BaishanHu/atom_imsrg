@@ -207,7 +207,8 @@ int main(int argc, char** argv)
     Hbare += Energy_Op(modelspace);
     cout << "Onebody:" << endl << Hbare.OneBody << endl;
     cout << "Adding two-body correction." << endl;
-    Hbare += ElectronTwoBody(modelspace);
+    //Hbare += ElectronTwoBody(modelspace);
+    Hbare += eeCoulomb(modelspace);
   }
 
   cout << "OneBody=" << endl << Hbare.OneBody << endl;
