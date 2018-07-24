@@ -2,8 +2,8 @@
 
 # decide if we should run in the current shell or submit to the cluster
 # interactive=true means run in the current shell.
-interactive=false
-NTHREADS=12
+interactive=true
+NTHREADS=1
 WORKDIR=$PWD
 
 exe=../compiled/Atomic
