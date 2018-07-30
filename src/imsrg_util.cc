@@ -674,21 +674,10 @@ o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
 	    //V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
 	    //trunc[ibra][jket] = true;
 	    //cout << "Set ibra,jket, setting jket,ibra." << endl; // TwoBodyKE only sets ibra,jket, should mimick this?
-	    //V12.TwoBody.SetTBME(ch,jket,ibra,cmInvR);
-	    //trunc[jket][ibra] = true;
-	    //cout << "Got past setting TBME." << endl;
-	    //delete &ket;
-	    //delete &o3;
-	    //delete &o4;
-	    //delete &cmInvR;
+	    //V12.TwoBody.SetTBME(ch,j
 	 } // jket
-	 //delete &bra;
-	 //delete &o1;
-         //delete &o2;
       } // ibra
    } // ch
-   //delete &tbc;
-   //delete &modelspace;
    #pragma omp master
    V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
    cout << "Leaving ElectronTwoBody." << endl;
@@ -697,6 +686,116 @@ o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
 
 struct RabRcd_params {  int na; int la; int nb; int lb;
                         int nc; int lc; int nd; int ld; int lp; int Z; };
+
+
+// takes in a set of QN, return `1' if a has "<=" qn than b
+// return 0 if b is "lower" than a
+bool get_min_qn( int na, int la, int j2a, int nb, int lb, int j2b)
+{
+    if (na < nb) return true;
+    if (na > nb) return false;
+    // na == nb
+    if (la < lb) return true;
+    if (la > lb) return false;
+    // la == lb
+    if (j2a<j2b) return true;
+    if (j2a>j2b) return false;
+    // j2a==j2b
+    return true;    
+}
+
+unsigned long GetMinParams(struct RabRcd_params& params)
+{
+    int na = (params.na);
+    int nb = (params.nb);
+    int nc = (params.nc);
+    int nd = (params.nd);
+
+    int la = (params.la);
+    int lb = (params.lb);
+    int lc = (params.lc);
+    int ld = (params.ld);
+
+    int lp = (params.lp);
+
+    int min_ac_n = 0;
+    int min_ac_l = 0;
+    int max_ac_n = 0;
+    int max_ac_l = 0;
+
+    int min_bd_n = 0;
+    int min_bd_l = 0;
+    int max_bd_n = 0;
+    int max_bd_l = 0;
+
+    bool min_ac = get_min_qn(na,la,0, nc,lc,0); // check if \vec(r_1) "<=" \vec(r_2)
+    bool min_bd = get_min_qn(nb,lb,0, nd,ld,0);
+
+    if (min_ac) { // a "<=" c
+	min_ac_n = na;
+	min_ac_l = la;
+	max_ac_n = nc;
+	max_ac_l = lc;
+    } else {
+	min_ac_n = nc;
+	min_ac_l = lc;
+	max_ac_n = na;
+	max_ac_l = la;
+    }
+    if (min_bd) { // b "<=" d
+	min_bd_n = nb;
+	min_bd_l = lb;
+	max_bd_n = nd;
+	max_bd_l = ld;
+    } else {
+	min_bd_n = nd;
+        min_bd_l = ld;
+        max_bd_n = nb;
+        max_bd_l = lb;
+    }
+
+    bool min_bra = get_min_qn(min_bd_n,min_bd_l,0, min_ac_n,min_ac,0);
+
+    int min_bra_n = 0;
+    int min_bra_l = 0;
+    int max_bra_n = 0;
+    int max_bra_l = 0;
+
+    int min_ket_n = 0;
+    int min_ket_l = 0;
+    int max_ket_n = 0;
+    int max_ket_l = 0;
+
+    if (min_bra) { // bd "<=" ac
+	min_bra_n = min_bd_n;
+	min_bra_l = min_bd_l;
+	max_bra_n = min_ac_n;
+	max_bra_l = min_ac_l;
+	min_ket_n = max_bd_n;
+	min_ket_l = max_bd_n;
+	max_ket_n = max_ac_n;
+	max_ket_l = max_ac_l;
+    } else {
+	min_bra_n = min_ac_n;
+	min_bra_l = min_ac_l;
+	max_bra_n = min_bd_n;
+	max_bra_l = min_bd_l;
+	min_ket_n = max_ac_n;
+	min_ket_l = max_ac_l;
+	max_ket_n = max_bd_n;
+	max_ket_l = max_bd_l;
+    }
+    
+    return pow(10,12)* lp
+	 * pow(10,10)* min_bra_n
+	 * pow(10,8) * max_bra_n
+	 * pow(10,7) * min_bra_l
+	 * pow(10,6) * max_bra_l
+	 * pow(10,4) * min_ket_n
+	 * pow(10,2) * max_ket_n
+	 * pow(10,1) * min_ket_l
+	 * pow(10,0) * max_ket_l;
+}
 
 double Rnl(double r, int n, int l, int Z)
 {
@@ -760,7 +859,7 @@ Operator eeCoulomb(ModelSpace& modelspace)
     for ( int ch : modelspace.SortedTwoBodyChannels )
     {
 	TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
-        cout << "In channel: " << ch << endl;
+        //cout << "In channel: " << ch << "with tbc.J=" << tbc.J << endl;
 	//if (ch == 1) cout << "+++++ Channel is " << ch << " +++++" << endl;
 	int nkets = tbc.GetNumberKets();
 	//cout << "nkets is " << nkets << endl;
@@ -774,20 +873,23 @@ Operator eeCoulomb(ModelSpace& modelspace)
             Orbit & oa = modelspace.GetOrbit(bra.p);
             Orbit & ob = modelspace.GetOrbit(bra.q);
 	    double sqr_coeff_ab = sqrt( (2*oa.l+1) * (2*ob.l+1) );
-	    cout << "In ibra: "<< ibra << " with oa=<nl|=" << oa.n << oa.l << " and ob=<nl|="<< ob.n << ob.l << endl;
+	    //cout << "In ibra: "<< ibra << " with oa=<nlj|=" << oa.n << oa.l << oa.j2 << " and ob=<nlj|="<< ob.n << ob.l << ob.j2 << endl;
 
 	    for (int Lab=abs(oa.l-ob.l); Lab<=oa.l+ob.l; Lab++)
             {
-		cout << "Lab=" << Lab << endl;
-            	for (float sa=-0.5;sa<=0.5;sa++)
-                {
-		    if (oa.j2/2 < abs(oa.l-0.5) || oa.j2/2 > oa.l+0.5) continue;
-		    for (float sb=-0.5; sb<=0.5; sb++)
-                    {
-			if (ob.j2/2 < abs(ob.l-0.5) || ob.j2/2 > ob.l+0.5) continue;
+		//cout << "Lab=" << Lab << endl;
+            	//for (float sa=-0.5;sa<=0.5;sa++)
+                //{
+		    //if (oa.j2/2 < abs(oa.l-0.5) || oa.j2/2 > oa.l+0.5) continue;
+		    //for (float sb=-0.5; sb<=0.5; sb++)
+                    //{
+			//if (ob.j2/2 < abs(ob.l-0.5) || ob.j2/2 > ob.l+0.5) continue;
                     	for (int Sab=0; Sab<=1; Sab++)
                         {
-			    double ab_9j = modelspace.GetNineJ(oa.l,0.5,oa.j2/2, ob.l,0.5,ob.j2/2, Lab,Sab,tbc.J);
+			    //#pragma omp critical
+			    //cout << "Sab=" << Sab << endl;
+			    double ab_9j = sqrt( (oa.j2+1) * (ob.j2+1) * (2*Lab+1) * (2*Sab+1) ) * modelspace.GetNineJ(oa.l,0.5,oa.j2*1./2, ob.l,0.5,ob.j2*1./2, Lab,Sab,tbc.J);
+			    //cout << "ab_9j=" << ab_9j << endl;
 			    if (ab_9j == 0)
 			    {
 				//cout << "9j is zero, moving on..." << endl;
@@ -800,18 +902,23 @@ Operator eeCoulomb(ModelSpace& modelspace)
 				Orbit & oc = modelspace.GetOrbit(ket.p);
 				Orbit & od = modelspace.GetOrbit(ket.q);
 				double sqr_coeff_cd = sqrt( (2*oc.l+1) * (2*od.l+1) );
-				cout << "In jket: "<< jket << " with oc=<nl|=" << oc.n << oc.l << " and od=<nl|="<< od.n << od.l << endl;
+				//cout << "In jket: "<< jket << " with oc=<nlj|=" << oc.n << oc.l << oc.j2 << " and od=<nlj|="<< od.n << od.l << od.j2 << endl;
 			    	double me = 0;
 
 				for (int Lcd=abs(oc.l-od.l); Lcd<=oc.l+od.l; Lcd++)
 				{
-				    for (float sc=-0.5; sc<=0.5; sc++)
-				    {
-					for (float sd=-0.5; sd<=0.5; sd++)
-					{
+				    //cout << "Lcd=" << Lcd << endl;
+				    //for (float sc=-0.5; sc<=0.5; sc++)
+				    //{
+					//for (float sd=-0.5; sd<=0.5; sd++)
+					//{
 					    for (int Scd=0; Scd<=1; Scd++)
 					    {
-						double cd_9j = modelspace.GetNineJ(oc.l,0.5,oc.j2/2, od.l,0.5,od.j2/2, Lcd,Scd,tbc.J);
+						//cout << "Scd=" << Scd << endl;
+						
+						//#pragma omp critical
+						double cd_9j = sqrt( (oc.j2+1) * (od.j2+1) * (2*Lcd+1) * (2*Scd+1) ) * modelspace.GetNineJ(oc.l,0.5,oc.j2*1./2, od.l,0.5,od.j2*1./2, Lcd,Scd,tbc.J);
+						//cout << "cd_9j=" << cd_9j << endl;
 						if (cd_9j == 0)
 						{
 						    continue;
@@ -819,10 +926,13 @@ Operator eeCoulomb(ModelSpace& modelspace)
 						
 						for (int mLab=-Lab; mLab<=Lab; mLab++)
 						{
+						    //cout << "mLab=" << mLab << endl;
 						    for (int mSab=-Sab; mSab<=Sab; mSab++)
 						    {
+							//cout << "mSab=" << mSab << endl;
 							int mJab = mLab + mSab;
 							double LSab_clebsh = pow(-1,Lab-Sab+mJab) * sqrt(2*tbc.J+1) * ThreeJ(Lab,Sab,tbc.J, mLab,mSab,-mJab);
+							//cout << "LSab_clebsh=" << LSab_clebsh << endl;
 							if (LSab_clebsh == 0)
 							{
 							    continue;
@@ -830,18 +940,23 @@ Operator eeCoulomb(ModelSpace& modelspace)
 
 							for (int mLcd=-Lcd; mLcd<=Lcd; mLcd++)
 							{
+							    //cout << "mLcd=" << mLcd << endl;
 							    for (int mScd=-Scd; mScd<=Scd; mScd++)
 							    {
+								//cout << "mScd=" << endl;
 								int mJcd = mLcd + mScd;
 								double LScd_clebsh = pow(-1,Lcd-Scd+mJcd) * sqrt(2*tbc.J+1) * ThreeJ(Lcd,Scd,tbc.J, mLcd,mScd,-mJcd);
+								//cout << "LScd_clebsh=" << LScd_clebsh << endl;
 								if (LScd_clebsh == 0) continue;
 
 								for (int mla=-oa.l; mla<=oa.l; mla++)
 								{
+								    //cout << "mla=" << mla << endl;
 								    for (int mlb=-ob.l; mlb<=ob.l; mlb++)
 								    {
 									int Mlab = mla+mlb;
 									double mlab_clebsh = pow(-1,oa.l-ob.l+Mlab) * sqrt(2*Lab+1) * ThreeJ(oa.l,ob.l,Lab, mla,mlb,-Mlab);
+									//cout << "mlab_clebsh=" << mlab_clebsh << endl;
 									if (mlab_clebsh == 0) continue;
 
 									for (int mlc=-oc.l; mlc<=oc.l; mlc++)
@@ -850,89 +965,142 @@ Operator eeCoulomb(ModelSpace& modelspace)
 									    {
 										int Mlcd = mlc+mld;
 										double mlcd_clebsh = pow(-1,oc.l-od.l+Mlcd) * sqrt(2*Lcd+1) * ThreeJ(oc.l,od.l,Lcd, mlc,mld,-Mlcd);
+										//cout << "mlcd_clebsh=" << mlcd_clebsh << endl;
 										if (mlcd_clebsh == 0) continue;
 
 										for (int lp=max(abs(oa.l-ob.l), abs(oc.l-od.l)); lp <= min(oa.l+ob.l, oc.l+od.l); lp++)
 										{
 										    //int mlp = mla+mlc;
 										    //if (mlp != -(mlb+mld)) continue;
+										    double lp_3j = 0; //ThreeJ(oa.l,lp,oc.l, 0,0,0) * ThreeJ(ob.l,lp,od.l, 0,0,0);
+                                                                                    double lp_3j_inv = 0; //ThreeJ(oa.l,lp,od.l, 0,0,0) * ThreeJ(ob.l,lp,oc.l, 0,0,0);
+										    int d_ab = 0;
+										    int d_cd = 0;
+										    double sym_term = 2;
+										    if (oa.n == ob.n && oa.l == ob.l) // && oa.j2 == ob.j2)
+                                                                                    {
+                                                                                         d_ab = 1;
+										    }
+										    if (oc.n == od.n && oc.l == od.l)
+										    {
+											 d_cd = 1;
+										    }
+										    sym_term *= sqrt(1+ pow(-1,tbc.J)*d_ab) / (1+d_ab);
+										    sym_term *=	sqrt(1+	pow(-1,tbc.J)*d_cd) / (1+d_cd);
+										    if (sym_term == 0) continue;
+
+										
 										    for (int mlp = -lp; mlp <= lp; mlp++)
 										    {
-										    	double lp_3j = ThreeJ(oa.l,lp,oc.l, 0,0,0) * ThreeJ(ob.l,lp,od.l, 0,0,0);
-										    	double lp_3j_inv = ThreeJ(oa.l,lp,od.l, 0,0,0) * ThreeJ(ob.l,lp,oc.l, 0,0,0);  
-										    	if (lp_3j == 0 && lp_3j_inv == 0) continue; // && because sym or antisym can be non-zero, butno affect the other
+										    	//double lp_3j = ThreeJ(oa.l,lp,oc.l, 0,0,0) * ThreeJ(ob.l,lp,od.l, 0,0,0);
+										    	//double lp_3j_inv = ThreeJ(oa.l,lp,od.l, 0,0,0) * ThreeJ(ob.l,lp,oc.l, 0,0,0);  
+										    	//if (lp_3j == 0 && lp_3j_inv == 0) continue; // && because sym or antisym can be non-zero, butno affect the other
 
 											// This part looks like a mess, will clean later
-										    	double lp_ac = 0;
-											double lp_acp= 0;
-										    	double lp_bd = 0;
-											double lp_bdp= 0;
-										    	double lp_ad = 0;
-											double lp_adp= 0;
-										    	double lp_bc = 0;
-											double lp_bcp= 0;
+										    	double lp_ac = ThreeJ(oa.l,oc.l,lp, mla,-mlc,-mlp);
+										    	double lp_bd = ThreeJ(ob.l,od.l,lp, mlb,-mld,mlp);
+										    	double lp_ad = ThreeJ(oa.l,od.l,lp, mla,-mld,-mlp);
+										    	double lp_bc = ThreeJ(ob.l,oc.l,lp, mlb,-mlc,mlp); 
 
+											/*
 										    	if (mlp == 0)
 											{
 											    lp_3j *= ThreeJ(oa.l,lp,oc.l, mla,0,mlc) * ThreeJ(ob.l,lp,od.l, mlb,0,mld);
 											    lp_3j_inv *= ThreeJ(oa.l,lp,od.l, mla,0,mld) * ThreeJ(ob.l,lp,oc.l, mlb,0,mlc);
 											} else  // if (mlp < 0) Also handles mlp > 0 case b/c of abs(mlp)
 											{
-											    lp_ac = ThreeJ(oa.l,lp,oc.l, mla,abs(mlp),mlc);
-											    lp_acp= ThreeJ(oa.l,lp,oc.l, mla,-abs(mlp),mlc);
-											    lp_bd = ThreeJ(ob.l,lp,od.l, mlb,abs(mlp),mld);                                         
-                                                                                            lp_bdp= ThreeJ(ob.l,lp,od.l, mlb,-abs(mlp),mld);
-
-											    lp_ad = ThreeJ(oa.l,lp,od.l, mla,abs(mlp),mld);                                         
-                                                                                            lp_adp= ThreeJ(oa.l,lp,od.l, mla,-abs(mlp),mld);
-                                                                                            lp_bc = ThreeJ(ob.l,lp,oc.l, mlb,abs(mlp),mlc);
-                                                                                            lp_bcp= ThreeJ(ob.l,lp,oc.l, mlb,-abs(mlp),mlc);
-
-											    lp_3j *= pow(-1,mlp) * (lp_ac*lp_bd + lp_acp*lp_bdp)/2;
-											    lp_3j_inv *= pow(-1,mlp) * (lp_ad*lp_bc + lp_adp*lp_bcp)/2;
+											    lp_ac = 
 											} 
+											*/
+											lp_3j += pow(-1,mlc+mld) * lp_ac*lp_bd;
+											lp_3j_inv += pow(-1,mlc+mld) * lp_ad*lp_bc;
 
-										    	
-										    	if (lp_3j == 0 && lp_3j_inv == 0) continue;
+											} // mlp
 
-										    	double val_sym = 0;
-										    	double err_sym = 0;
-										    	double xmin[2] = {0,0};
-										    	double xmax[2] = {1,1};
-										    	int max_iter = 1e3;
-										    	double max_err = 1e-4;
+											if (lp_3j == 0 && lp_3j_inv == 0) continue;
 
-										    	//cout << "Calculating RabRcd..." << endl;
+											lp_3j *= ThreeJ(oa.l,lp,oc.l, 0,0,0) * ThreeJ(ob.l,lp,od.l, 0,0,0);
+											lp_3j_inv *= ThreeJ(oa.l,lp,od.l, 0,0,0) * ThreeJ(ob.l,lp,oc.l, 0,0,0);
 
-										    	struct RabRcd_params p_abcd= { oa.n,oa.l,ob.n,ob.l,
+											double val_sym = 0;
+											double err_sym = 0;
+											//double sym_term = 2;
+											double xmin[2] = {0,0};
+                                                                                        double xmax[2] = {1,1};
+                                                                                        int max_iter = 1e3;
+                                                                                        double max_err = 1e-2;
+											vector<unsigned long>:: iterator it;
+											
+											if (lp_3j != 0)  // && because sym or antisym can be non-zero, butno affect the other
+											{
+										    	    //cout << "Calculating RabRcd..." << endl;
+											    //if (oa.n == ob.n && oa.l == ob.l) // && oa.j2 == ob.j2)
+											    //{
+											//	sym_term *= 1./sqrt(2);
+											    //}
+
+										    	    struct RabRcd_params p_abcd= { oa.n,oa.l,ob.n,ob.l,
 															   oc.n,oc.l,od.n,od.l,
 															   lp, modelspace.GetTargetZ() };
 
-										    	hcubature(1, &RabRcd, &p_abcd, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_sym, &err_sym);
+											    unsigned long cache_val = GetMinParams(p_abcd);
+                                                                                            it = find(cache_list.begin(), cache_list.end(), cache_val);
+											    if (it == cache_list.end()) // didn't find in list
+											    {
+										    	    	hcubature(1, &RabRcd, &p_abcd, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_sym, &err_sym);
+											    } else {
+												val_sym = cache[it-cache_list.begin()+1];
+											    }
 
-										    	//cout << "Symmetric term: " << val_sym * lp_3j << endl;
+										    	    //cout << "Symmetric term: " << val_sym * lp_3j << endl;
 
-										    	//cout << "Calculating RabRdc..." << endl;
-
-										    	double val_asym= 0;
-										    	double err_asym= 0;
-										    	struct RabRcd_params p_abdc= { oa.n,oa.l,ob.n,ob.l,
+										    	    //cout << "Calculating RabRdc..." << endl;
+											} // if(lp_3j!=0)
+											double val_asym = 0;
+											double err_asym = 0;
+											if (lp_3j_inv != 0)
+											{
+											    //if (oc.n == od.n && oc.l == od.l) // && oc.j2 == od.j2) // 
+                                                                                            //{
+											//	sym_term *= 1./sqrt(2);
+											    //} // if(oc.n ...
+										    	    struct RabRcd_params p_abdc= { oa.n,oa.l,ob.n,ob.l,
 															   od.n,od.l,oc.n,oc.l,
 															   lp, modelspace.GetTargetZ() };
 
-											hcubature(1, &RabRcd, &p_abdc, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_asym,&err_asym);
+											    long cache_val = GetMinParams(p_abdc);
+                                                                                            it = find(cache_list.begin(), cache_list.end(), cache_val);
+                                                                                            if (it == cache_list.end()) // didn't find in list
+                                                                                            {
+                                                                                        	hcubature(1, &RabRcd, &p_abdc, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_sym, &err_sym);
+                                                                                            } else {
+                                                                                                val_asym = cache[it-cache_list.begin()+1];
+                                                                                            } // if(it == ...
 
-										    	//cout << "Anti-symmetric term: " << val_asym * lp_3j_inv << endl;
-
-										    	double val = val_sym*lp_3j - val_asym*lp_3j_inv;
+										    	    //cout << "Anti-symmetric term: " << val_asym * lp_3j_inv << endl;
+											} // if(lp_3j_inv == 0)
+										    	double val = val_sym*lp_3j - pow(-1, oc.j2*1./2+od.j2*1./2-tbc.J)*val_asym*lp_3j_inv;
 
 										    	//cout << "Val=" << val << endl;
 
 										    	val *= mlab_clebsh*mlcd_clebsh;
 										    	val *= LSab_clebsh*LScd_clebsh;
-										    	val *= ab_9j*cd_9j;
+										    	val *= ab_9j*cd_9j/sym_term; // factor of 2 in sym_term?
 										    	me += val;
-										    } // mlp
+											/* if (tbc.J == 0 && ibra == 0 && jket == 0)
+											{
+											    cout << "me=" << me << endl;
+											    cout << "val=" << val << endl;
+											    cout << "mlab_clebsh=" << mlab_clebsh << endl;
+											    cout << "mlcd_clebsh=" << mlcd_clebsh << endl;
+											    cout << "LSab_clebsh=" << LSab_clebsh << endl;
+											    cout << "LScd_clebsh=" << LScd_clebsh << endl;
+											    cout << "val_sym=" << val_sym << endl;
+											    cout << "lp_3j=" << lp_3j << endl;
+											    cout << "val_asym=" << val_asym << endl;
+											    cout << "lp_3j_inv=" << lp_3j_inv << endl;
+											} */ // if tbc.J...
+										    // } // mlp
 										} // lp
 									    } // mld
 									} // mlc
@@ -943,17 +1111,17 @@ Operator eeCoulomb(ModelSpace& modelspace)
 						    } // mSab
 						} // mLab
 					    } // Scd
-					} // sd
-				    } // sc
+					//} // sd
+				    //} // sc
 				} // Lcd
 
-				me *= sqr_coeff_ab * sqr_coeff_cd * HBARC/137.035999139; // Factor of 4 off :(
+				me *= sqr_coeff_ab * sqr_coeff_cd * HBARC/137.035999139; 
                    		V12.TwoBody.SetTBME(ch, jket, ibra, me);
                 		V12.TwoBody.SetTBME(ch, ibra, jket, me);
 			    } // jket
 			} // Sab
-		    } // sb
-		} // Sab
+		    //} // sb
+		//} // sa
 	    } // Lab
 	} // ibra
     } // channels

@@ -1774,7 +1774,6 @@ void ModelSpace::PrecalculateNineJ( vector<unsigned long long int>& ninejList )
     }
 }
 
-
 double ModelSpace::GetNineJ(double j1, double j2, double J12, double j3, double j4, double J34, double J13, double J24, double J)
 {
 //   cout << "Calling GetNineJ" << endl;
@@ -1844,7 +1843,7 @@ double ModelSpace::GetNineJ(double j1, double j2, double J12, double j3, double 
    //cout << "Missing NineJ, making a new one; key=" << key << endl;
    double ninej = AngMom::NineJ(jlist[0],jlist[1],jlist[2],jlist[3],jlist[4],jlist[5],jlist[6],jlist[7],jlist[8]);
    //cout << "NineJ calculated." << endl;
-   //#pragma omp critical
+   #pragma omp critical
    NineJList[key] = ninej;
    //cout << "Nine J added to list, returning." << endl;
    return ninej;

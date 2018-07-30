@@ -2,8 +2,8 @@
 
 # decide if we should run in the current shell or submit to the cluster
 # interactive=true means run in the current shell.
-interactive=true
-NTHREADS=1
+interactive=false
+NTHREADS=12
 WORKDIR=$PWD
 
 exe=../compiled/Atomic
@@ -15,11 +15,11 @@ file2lmax=6
 v3n=none
 
 estart=2
-estop=2
+estop=4
 eiter=2
 
-lstart=2
-lstop=2
+lstart=0
+lstop=4
 liter=2
 
 #for ((A=$start;A<=$stop;A++)); do
@@ -43,6 +43,8 @@ method=magnus
 basis=HF
 omega_norm_max=0.25
 #file3='file3e1max=12 file3e2max=28 file3e3max=12'
+mode=batchmpi
+#mode=debug
 
 jobname="method_${method}_ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${Lmax}"
 
@@ -65,7 +67,7 @@ export OMP_NUM_THREADS=${NTHREADS}
 $command
 else
 echo jobname is ${jobname}
-qsub -N ${jobname} -q batchmpi -d $PWD -l walltime=192:00:00 -l nodes=1:ppn=${NTHREADS} -l vmem=60gb -m ae -M davidedwardlivermore@gmail.com -j oe -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"` << END
+qsub -N ${jobname} -q $mode -d $PWD -l walltime=192:00:00 -l nodes=1:ppn=${NTHREADS} -l vmem=60gb -m ae -M davidedwardlivermore@gmail.com -j oe -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"` << END
 cd $WORKDIR
 export OMP_NUM_THREADS=${NTHREADS}
 $command
