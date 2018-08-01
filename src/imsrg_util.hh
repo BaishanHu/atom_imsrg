@@ -31,6 +31,7 @@ namespace imsrg_util
  Operator Trel_Op(ModelSpace& modelspace);
  Operator TCM_Op(ModelSpace& modelspace);
  Operator HCM_Op(ModelSpace& modelspace);
+ Operator HarmonicOneBody(ModelSpace& modelspace);
  Operator InverseR_Op(ModelSpace& modelspace);
  Operator KineticEnergy_Op(ModelSpace& modelspace);
  Operator Energy_Op(ModelSpace& modelspace);

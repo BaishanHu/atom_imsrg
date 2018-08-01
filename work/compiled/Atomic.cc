@@ -168,27 +168,24 @@ int main(int argc, char** argv)
   //rw.ReadBareTBME_Darmstadt( inputtbme, Hbare, file2e1max, file2e2max, file2lmax);
   
   if (systemBasis == "harmonic") {
-    cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
-    modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax));
+    cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
+    modelspace.GenerateFactorialList( min(4*(2*eMax + 1*Lmax),170) );
     cout << "About to precalculate radial integrals." << endl;
-    GenerateRadialIntegrals(modelspace,1*eMax*101011);
+    GenerateRadialIntegrals(modelspace,eMax*1010101);
     cout << "FactorialList calculated." << endl;
     //rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
     cout << "Read in interaction, moving to precalculating moshinsky." << endl;
     cout << "Adding T and V to Hbare; emax=" << modelspace.GetEmax() << endl;
-    //Hbare += Trel_Op(modelspace) + InverseR_Op(modelspace);
-    //Operator KE = KineticEnergy_Op(modelspace);
-    //Operator& K = KE;
-    //Operator IR = InverseR_Op(modelspace);
-    //Operator& I = IR;
-    //Hbare += KE + IR;
     cout << "TargetZ=" << modelspace.GetTargetZ() << endl;
-    cout << "Adding KE to Hbare." << endl;
-    Hbare += KineticEnergy_Op(modelspace);
-    cout << "Added KE." << endl;
     cout << "Adding InvR to Hbare." << endl;
-    Hbare += InverseR_Op(modelspace) * modelspace.GetTargetZ();
-    cout << "Added InvR; adding two body." << endl;
+    Hbare += InverseR_Op(modelspace);
+    cout << "Added InvR; adding KE." << endl;
+    cout << "Invr=" << endl << Hbare.OneBody << endl;
+    Hbare += KineticEnergy_Op(modelspace);
+    cout << "Added KE..." << endl;
+    //cout << "Adding HO energies..." << endl;
+    //Hbare += HarmonicOneBody(modelspace);
+    cout << "Onebodies added, adding twobody..." << endl;
     Hbare += CorrE2b(modelspace);
     cout << "Added Twobody, moving on." << endl;
   } else {

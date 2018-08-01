@@ -273,7 +273,7 @@ ModelSpace::~ModelSpace()
 
 ModelSpace::ModelSpace()
 :  Emax(0), E2max(0), E3max(0), Lmax(0), Lmax2(0), Lmax3(0), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0), norbits(0),
-  hbar_omega(20), target_mass(16), SystemType("nuclear")
+  hbar_omega(20), target_mass(16), SystemType("nuclear"), systemBasis("harmonic")
 {
   cout << "In default constructor" << endl;
 }
@@ -391,8 +391,9 @@ void ModelSpace::Init(int emax, string reference, string valence, int Lmax, stri
 	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);}
   else if (SystemType == "atomic"){
 	cout << "Atomic basis selected, getting hole_list..." << endl;
-	map<index_t,double> hole_list = GetOrbitsE(Zref); // This was an attempt to redo the way modelspaces are built
-	//map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
+	map<index_t,double> hole_list = GetOrbitsE(Zref, systemBasis);
+	//if (systemBasis == "hydrogen") hole_list = GetOrbitsE(Zref); // This was an attempt to redo the way modelspaces are built
+	//if (systemBasis == "harmonic") hole_list = GetOrbitsAZ(Aref,Zref);
 	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);} // Need to ensure all of these are init'd before passed.
 }
 
@@ -424,7 +425,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, i
     //core_map = GetOrbitsAZ(Ac,Zc);
     //for (auto& it_core : core_map) core_list.push_back(it_core.first);
     cout << "Getting core_list..." << endl;
-    if (SystemType == "atomic") for (auto& it_core : GetOrbitsE(Zc) ) core_list.push_back(it_core.first);
+    if (SystemType == "atomic") for (auto& it_core : GetOrbitsE(Zc,systemBasis) ) core_list.push_back(it_core.first);
     if (SystemType == "nuclear") for (auto& it_core : GetOrbitsAZ(Ac,Zc) ) core_list.push_back(it_core.first);
   }
 
@@ -552,14 +553,20 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
              {
                 double occ = 0;
                 int cvq = 2;
-                int indx = Index_atomic(n, l, j2); //Index1(n,l,j2,tz);
-    	    	if (SystemType == "atomic" and tz < 0){ // Checks twice, this looks like garbage
+	
+                int indx = 0; // Index_atomic(n, l, j2); //Index1(n,l,j2,tz); // doesn't handle n=0 case for HO
+		if (systemBasis == "hydrogen") indx = Index_atomic(n, l, j2);
+		//if (systemBasis == "harmonic") indx = Index1(n,l,j2,tz);
+    	    	if (SystemType == "atomic" and tz < 0 and systemBasis=="harmonic"){ // Checks twice, this looks like garbage
 		    //indx  =Index_atomic(n, l
-    		    //indexMap[indx] = count; // Map atomic orbits as well as nuclear
-    		    //indx = indexMap[indx]; 
-    		    //indexMap[count] = count;
-    		    //indx = count;
-		    count++;
+    		    //indexMap[] = count; // Map atomic orbits as well as nuclear
+    		    //indx = indexMap[indx];
+		    //int indx = Index_atomic(n-1,l,j2); //Index1(n,l,j2,tz);
+                    //indexMap[indx] = count;
+                    //indx = indexMap[indx];
+		    indexMap[count] = count;
+		    indx = count;
+                    count++;
 		    //indx /= 2;
 	        }
                 if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
@@ -735,11 +742,12 @@ map<index_t,double> ModelSpace::GetOrbitsAZ(int A, int Z)
 
 }
 
-map<index_t,double> ModelSpace::GetOrbitsE(int Z)
+map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
 {
     int z=0;
     map<index_t,double> holesE;
-    cout << "In GetOrbitsE for Z=" << Z << endl;
+    cout << "In GetOrbitsE for Z=" << Z << " systemBasis=" << systemBase << endl;
+    int count = 0;
    for (int N=1; N<=Emax; ++N)
    {
 	//cout << "Gettin' ready!" << endl;
@@ -755,9 +763,19 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z)
 		    int dz = min(Z-z, j2+1);
 		    cout << "dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << endl;
 		    //indexMap[indx] = indexMap.size()-1;
-		    //holesE[indexMap[Index1(n,l,j2,-1)]] = dz/(j2+1.0);
-		    holesE[indx] = dz/(j2+1.0); // indx/2 ?
+		    if (systemBase == "harmonic")
+		    {
+			cout << "indexMap[count]=" << indexMap[count] << endl;
+			holesE[indexMap[count]] = dz/(j2+1.0); // indexMap[Index1(n,l,j2,-1)] ?
+			cout << "holesE[indexMap[count]]=" <<  holesE[indexMap[count]] << endl;
+		    }
+		    if (systemBase == "hydrogen")
+		    {
+			cout << "for some reason systemBasis=" << systemBase << endl;
+			holesE[indx] = dz/(j2+1.0); // indx/2 ?
+		    }
 		    z += dz;
+		    count++;
 		}
 	    }
 	}
@@ -939,10 +957,7 @@ void ModelSpace::AddOrbit(Orbit orb)
 void ModelSpace::AddOrbit(int n, int l, int j2, int tz2, double occ, int cvq, int index)
 {
    int ind = index;
-   if (index == -1)
-	index = Index1(n, l, j2, tz2);
-   else
-	ind = index;
+   if (index == -1) index = Index1(n, l, j2, tz2);
    //index_t ind = Index1(n, l, j2, tz2)
    //ind = indexMap[ind];
    Orbits[index] = Orbit(n,l,j2,tz2,occ,cvq,index);
@@ -1025,15 +1040,15 @@ void ModelSpace::SetupKets(string Sys)
 	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
 	}
         //cout << "index=" << index << " p=" << p << " q=" << q << endl;
-        //Orbit& orbp = GetOrbit(p);
+        Orbit& orbp = GetOrbit(p);
 	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
-	//Orbit& orbq = GetOrbit(q);
+	Orbit& orbq = GetOrbit(q);
 	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         
      }
    }
   
-  //cout << "Set up Kets[], moving to Ket& ket; Kets[].size()=" << Kets.size() << endl;
+  cout << "Set up Kets[], moving to Ket& ket; Kets[].size()=" << Kets.size() << endl;
   for (index_t index=0;index<Kets.size();++index)
   {
     //cout << "index=" << index << endl;
@@ -1071,7 +1086,7 @@ void ModelSpace::SetupKets(string Sys)
     }
     //cout << "About to loop again." << endl;
    }
-   //cout << "Got past Ket&; resizing TB." << endl;
+   cout << "Got past Ket&; resizing TB." << endl;
    SortedTwoBodyChannels.resize(nTwoBodyChannels);
    SortedTwoBodyChannels_CC.resize(nTwoBodyChannels);
    //cout << "Resized TB; sorting TB., nTwoBodyChannels=" << nTwoBodyChannels << endl;
@@ -1084,7 +1099,7 @@ void ModelSpace::SetupKets(string Sys)
       //cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
       //cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
    }
-   //cout << "Initialized dem channels." << endl;
+   cout << "Initialized dem channels." << endl;
    // Sort the two body channels in descending order of matrix dimension and discard the size-0 ones.
    // Hopefully this can help with load balancing.
    bool isSorted = true;
@@ -1121,7 +1136,7 @@ void ModelSpace::SetupKets(string Sys)
         // return in > jn;
      // }
    //); // Neet to ensure GetNumberKets is handled properly?
-   //cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
+   cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
    int temp2;
    count = 0;
    isSorted = true;
@@ -1650,11 +1665,13 @@ void ModelSpace::GenerateFactorialList(double m){
     factorialList.resize(m+1);
     //long double t=1;
     factorialList[0] = 1;
-    #pragma omp parallel for
-    for (int i=1; i < factorialList.size(); i++)
+    factorialList[1] = 1;
+    //#pragma omp parallel for
+    for (int i=2; i < factorialList.size(); i++)
     {
-	if (factorialList[i] == 0)
-	    factorialList[i] = gsl_sf_fact(i);
+	factorialList[i] = i*factorialList[i-1];
+	//if (factorialList[i] == 0)
+	//    factorialList[i] = gsl_sf_fact(i);
 	//t *= abs(i);
 	//factorialList[i] = abs(t);
 	//cout << "Generating factorial for " << i << "!=" << factorialList[i] << endl;
