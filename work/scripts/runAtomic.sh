@@ -14,23 +14,23 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=8
-estop=8
+estart=2
+estop=2
 eiter=2
 
-lstart=2
+lstart=4
 lstop=4
 liter=2
 
 #for ((A=$start;A<=$stop;A++)); do
 for ((emax=$estart;emax<=$estop;emax=emax+eiter)); do
-#for ((Lmax=$lstart; Lmax<=$lstop; Lmax=Lmax+liter)); do
-for ((Lmax=$lstart;Lmax<=$lstop && Lmax<=$emax;Lmax=Lmax+liter)); do
+for ((Lmax=$lstart; Lmax<=$lstop; Lmax=Lmax+liter)); do
+#for ((Lmax=$lstart;Lmax<=$lstop && Lmax<=$emax;Lmax=Lmax+liter)); do
 #A=4
 #state=10
 systemtype=atomic
 # 1.0 Hartree ~= 27.21138505(60) eV (according to Wikipedia)
-hw= 27.21138505 # Only matters in HO
+hw=27.21138505 # Only matters in HO
 valence_space=He4
 reference=He4
 #systemBasis=hydrogen
@@ -44,8 +44,8 @@ method=magnus
 basis=HF
 omega_norm_max=0.25
 #file3='file3e1max=12 file3e2max=28 file3e3max=12'
-#mode=batchmpi
-mode=debug
+mode=batchmpi
+#mode=debug
 
 jobname="method_${method}_ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${Lmax}"
 

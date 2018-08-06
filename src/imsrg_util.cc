@@ -487,7 +487,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
    double t_start = omp_get_wtime();
-
+   #pragma omp parallel for
    for (int a=0;a<norbits;++a)
    {
       Orbit & oa = modelspace.GetOrbit(a);
@@ -496,6 +496,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
       {
        	 if (b<a) continue;
          Orbit & ob = modelspace.GetOrbit(b);
+	 if (ob.l != oa.l) continue;
 	 if (oa.n == ob.n) 
 	    T.OneBody(a,b) = 0.5 * hw * (2*oa.n + oa.l + 3./2);
          if (oa.n == ob.n+1)
