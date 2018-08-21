@@ -341,7 +341,7 @@ Operator HarmonicOneBody(ModelSpace& modelspace)
     op.SetHermitian();
     double t_start = omp_get_wtime();
     int norbits = modelspace.GetNumberOrbits();
-    double hw = 27.21138505; //modelspace.GetHbarOmega();
+    double hw = modelspace.GetHbarOmega();
     #pragma omp parallel for
     for (int i=0; i<norbits; i++)
     {
@@ -369,14 +369,8 @@ Operator InverseR_Op(ModelSpace& modelspace)
      for (int j=0; j<=i; j++)
      {
 	Orbit& oj = modelspace.GetOrbit(j);
-	if ( oi.l != oj.l ) continue; // From spherical harmonics orthogonality
-	double temp1 = 0-getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace); //*HBARC*modelspace.GetTargetZ()*1./137.035999139;
-	//double temp2 = 0-RadialIntegral(oi.n, oi.l, oj.n, oj.l, -1, modelspace); // consider n +/- 1; selection rules
-	//if (temp1 != temp2){
-	//	cout << "Temps are different for n1=" << oi.n << " l1=" << oi.l << " n2=" << oj.n << " l2=" << oj.l << endl;
-	//	cout << "getRad=" << temp1 << " radint=" << temp2 << endl;
-	//}
-	//InvR.SetOneBody(i,j,temp);
+	//if ( oi.l != oj.l ) continue; // From spherical harmonics orthogonality; \delta_j1j2 ?
+	double temp1 = 0-getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace);
 	InvR.OneBody(i,j) = temp1;
 	InvR.OneBody(j,i) = temp1;
      }
@@ -483,6 +477,7 @@ Operator FineStructure(Modelspace& modelspace)
 // Number 1
 Operator KineticEnergy_Op(ModelSpace& modelspace)
 {
+   cout << "In KineticEnergy_Op..." << endl;
    Operator T(modelspace);
    int norbits = modelspace.GetNumberOrbits();
    double hw = modelspace.GetHbarOmega();
@@ -496,18 +491,19 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
       {
        	 if (b<a) continue;
          Orbit & ob = modelspace.GetOrbit(b);
-	 if (ob.l != oa.l) continue;
+	 //if (ob.l != oa.l) continue;
 	 if (oa.n == ob.n) 
 	    T.OneBody(a,b) = 0.5 * hw * (2*oa.n + oa.l + 3./2);
          if (oa.n == ob.n+1)
-            T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l +1./2) );
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (oa.n)*(oa.n + oa.l + 1./2) );
          else if (oa.n == ob.n-1)
-            T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l +1./2) );
+            T.OneBody(a,b) = 0.5 * hw * sqrt( (ob.n)*(ob.n + ob.l + 1./2) );
          T.OneBody(b,a) = T.OneBody(a,b);
       }
    }
    #pragma omp master
    T.profiler.timer["KineticEnergy_Op"] += omp_get_wtime() - t_start;
+   cout << "Exiting KineticEnergy_Op..." << endl;
    return T;
 }
 
@@ -1977,8 +1973,13 @@ Operator Energy_Op(ModelSpace& modelspace)
        double njab = NormNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
        //if (njab < 0) cout << "njab=" << njab << " la=" << la << " sa=" << sa << " ja=" << ja << " lb=" << lb << " sb=" << sb << " jb=" << jb << " Lab=" << Lab << " Sab=" << Sab << " J=" << J << endl;
        if (njab == 0 or abs(njab) < 1e-8) continue;
-       int Scd = Sab;
-       int Lcd = Lab;
+       int Scd = Sab; // This should iterate over all possible Scd
+       int Lcd = Lab; // This should iterate over all possible Lcd
+       for (int Lcd=abs(lc-ld); Lcd<=lc+ld; ++Lcd)
+       {
+       for (int Scd=0; Scd<=1; ++Scd)
+       {
+       if ( abs(Lcd-Scd)>J or Lcd+Scd<J) continue;
        double njcd = NormNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
        //if (njcd < 0) cout << "njcd=" << njcd << " lc=" << lc << " sa=" << sc << " jc=" << jc << " ld=" << ld << " sd=" << sd << " jd=" << jd << " Lcd=" << Lcd << " Scd=" << Scd << " J=" << J << endl;
        if (njcd == 0 or abs(njcd) < 1e-8) continue;

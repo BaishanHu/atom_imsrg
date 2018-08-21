@@ -15,11 +15,11 @@ file2lmax=6
 v3n=none
 
 estart=2
-estop=2
+estop=6
 eiter=2
 
-lstart=4
-lstop=4
+lstart=0
+lstop=0
 liter=2
 
 #for ((A=$start;A<=$stop;A++)); do
@@ -31,6 +31,8 @@ for ((Lmax=$lstart; Lmax<=$lstop; Lmax=Lmax+liter)); do
 systemtype=atomic
 # 1.0 Hartree ~= 27.21138505(60) eV (according to Wikipedia)
 hw=27.21138505 # Only matters in HO
+#hw=40.817077575 # 1.5*H
+#hw=13.605692525 # 0.5*H
 valence_space=He4
 reference=He4
 #systemBasis=hydrogen

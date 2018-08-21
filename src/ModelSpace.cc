@@ -392,7 +392,7 @@ void ModelSpace::Init(int emax, string reference, string valence, int Lmax, stri
   else if (SystemType == "atomic"){
 	cout << "Atomic basis selected, getting hole_list..." << endl;
 	map<index_t,double> hole_list = GetOrbitsE(Zref, systemBasis);
-	//if (systemBasis == "hydrogen") hole_list = GetOrbitsE(Zref); // This was an attempt to redo the way modelspaces are built
+	//if (systemBasis == "hydrogen") hole_list = GetOrbitsE(Zref,systemBasis); // This was an attempt to redo the way modelspaces are built
 	//if (systemBasis == "harmonic") hole_list = GetOrbitsAZ(Aref,Zref);
 	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);} // Need to ensure all of these are init'd before passed.
 }
@@ -425,8 +425,8 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, i
     //core_map = GetOrbitsAZ(Ac,Zc);
     //for (auto& it_core : core_map) core_list.push_back(it_core.first);
     cout << "Getting core_list..." << endl;
-    if (SystemType == "atomic") for (auto& it_core : GetOrbitsE(Zc,systemBasis) ) core_list.push_back(it_core.first);
-    if (SystemType == "nuclear") for (auto& it_core : GetOrbitsAZ(Ac,Zc) ) core_list.push_back(it_core.first);
+    if (systemBasis == "atomic") for (auto& it_core : GetOrbitsE(Zc,systemBasis) ) core_list.push_back(it_core.first);
+    if (systemBasis == "nuclear") for (auto& it_core : GetOrbitsAZ(Ac,Zc) ) core_list.push_back(it_core.first);
   }
 
   target_mass = Aref;
@@ -510,83 +510,38 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    norbits = (Emax+1)*(Emax+2); // Need to take into account effect of Lmax
    Orbits.resize(norbits);
    int real_norbits = 0;
-   int count = 0;
+   int counter = 0;
    if (systemBasis == "harmonic"){
-       for (int N=0; N<=Emax; ++N)
-       {
-         //min(N,Lmax)
-         //cout << "Lmax=" << Lmax << " N=" << N << endl;
-	 int lmax = 0;
-	 int lmin = 0;
-	 int ldiff = 0;
-	 if (SystemType == "atomic")
-	   {
-		lmax = N;
-		if (N%2==0) lmin=0;
-		else lmin=1;
-		ldiff = 2;
-	   } else {
-		lmax = 0;
-		lmin = N;
-		ldiff = -2;
-	   }
-         for (int l=lmin; l<=lmax; l+=ldiff)
-         {
-           if (l>Lmax) continue;
-           int n = (N-l)/2;
-	   int jmax = 0;
-	   int jmin = 0;
-	   int jdiff = 0;
-	   if (SystemType == "atomic")
-	   {
-		jmax = 2*l+1;
-		jmin = abs(2*l-1);
-		jdiff = 2;
-	   } else {
-		jmax = abs(2*l-1);
-		jmin = 2*l+1;
-		jdiff = -2;
-	   }
-           for (int j2=jmin; j2<=jmax and j2>0; j2+=jdiff)
-           {
-             for (int tz : {-1, 1} )
-             {
-                double occ = 0;
-                int cvq = 2;
-	
-                int indx = 0; // Index_atomic(n, l, j2); //Index1(n,l,j2,tz); // doesn't handle n=0 case for HO
-		if (systemBasis == "hydrogen") indx = Index_atomic(n, l, j2);
-		//if (systemBasis == "harmonic") indx = Index1(n,l,j2,tz);
-    	    	if (SystemType == "atomic" and tz < 0 and systemBasis=="harmonic"){ // Checks twice, this looks like garbage
-		    //indx  =Index_atomic(n, l
-    		    //indexMap[] = count; // Map atomic orbits as well as nuclear
-    		    //indx = indexMap[indx];
-		    //int indx = Index_atomic(n-1,l,j2); //Index1(n,l,j2,tz);
-                    //indexMap[indx] = count;
-                    //indx = indexMap[indx];
-		    indexMap[count] = count;
-		    indx = count;
-                    count++;
-		    //indx /= 2;
-	        }
-                if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
-                if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
-                if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
-                cout << "Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
-	        if (SystemType == "atomic" and tz < 0) { // Only allow isospin -1/2.  this simulates only protons being added
-		    AddOrbit(n,l,j2,tz,occ,cvq,indx);
-		    cout << "Added orbit." << endl;
-		    real_norbits++;
-	        } else if (SystemType == "nuclear" ) {
-		    AddOrbit(n,l,j2,tz,occ,cvq);
-		    real_norbits++;
-	        } else {
-		    //offset++; // In case we don't add an orbit, iterate a bit further to try to get all the orbits in.
-	        }
-             }
-           }
-         }
-       }
+	for (int N=0; N<=Emax; ++N)
+        {
+	    for (int l=N; l>=0; l-=2)
+            {
+           	//if (l>Lmax) continue;
+           	int n = (N-l)/2;
+	   	for (int j2=2*l+1; j2>=2*l-1 and j2>0; j2-=2)
+       		{
+          	    for (int tz : {-1, 1} )
+         	    {
+			if (SystemType == "atomic" && tz != -1) continue;
+            	    	double occ = 0;
+            	    	int cvq = 2;
+            	    	int indx; // = Index1(n,l,j2,tz);
+			if (SystemType == "atomic")
+			    indx = Index_atomic(n,l,j2);
+			else
+			    indx = Index1(n,l,j2,tz);
+			indexMap[indx] = counter;
+			indx = indexMap[indx];
+			counter++;
+                    	if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
+                    	if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
+                    	if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
+            	    	AddOrbit(n,l,j2,tz,occ,cvq,indx);
+			real_norbits++;
+         	    }
+   	    	}
+	    }
+	}
    } else if (systemBasis == "hydrogen") {
 	for (int n=1; n<=Emax; n++) 
 	{
@@ -598,24 +553,26 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
 		    double occ = 0;
 		    int cvq = 2;
 		    int indx = Index_atomic(n,l,j2); //Index1(n,l,j2,tz);
-		    indexMap[indx] = count;
+		    indexMap[indx] = counter;
 		    indx = indexMap[indx];
-		    count++;
+		    counter++;
 		    if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
 		    if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
 		    if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
-		    cout << "Hydrogen Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
+		    //cout << "Hydrogen Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " cvq=" << cvq << " at indx=" << indx << endl;
 		    AddOrbit(n,l,j2,tz,occ,cvq,indx);
 		    real_norbits++;
 		}
 	    }
 	}
    }
-	
-   norbits = real_norbits;
-   cout << "Reset norbits=" << norbits << endl;
-   Orbits.resize(norbits);
-   cout << "Resized Orbits; Orbits.size()=" << Orbits.size() << endl;
+   if (real_norbits > 0)
+   {	
+   	norbits = real_norbits;
+   	cout << "Reset norbits=" << norbits << endl;
+   	Orbits.resize(norbits);
+   	cout << "Resized Orbits; Orbits.size()=" << Orbits.size() << endl;
+   }
    Aref = 0;
    Zref = 0;
    for (auto& h : holes)
@@ -625,8 +582,8 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      if (oh.tz2 < 0) Zref += (oh.j2+1)*oh.occ;
    }
    cout << "Setting up kets." << endl;
-   if (SystemType != ""){
-      SetupKets(SystemType);
+   if (systemBasis != ""){
+      SetupKets(systemBasis);
    } else {
       SetupKets("nuclear");
    }
@@ -748,38 +705,63 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
     map<index_t,double> holesE;
     cout << "In GetOrbitsE for Z=" << Z << " systemBasis=" << systemBase << endl;
     int count = 0;
-   for (int N=1; N<=Emax; ++N)
-   {
-	//cout << "Gettin' ready!" << endl;
-	for (int l=0; l < N and l <= Lmax; l++)
-	{
-	    for (int j2=abs(2*l-1); j2 <= 2*l +1; j2+=2)
+    if (systemBase == "hydrogen")
+    {
+    	for (int N=1; N<=Emax; ++N)
+    	{
+	    //cout << "Gettin' ready!" << endl;
+	    for (int l=0; l < N and l <= Lmax; l++)
 	    {
-		int n = N; //(N-l)/2;
-		int indx = Index_atomic(n,l,j2);
-		cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index_atomic=" << indx << endl;
-		if (z < Z)
-		{
-		    int dz = min(Z-z, j2+1);
-		    cout << "dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << endl;
-		    //indexMap[indx] = indexMap.size()-1;
-		    if (systemBase == "harmonic")
+	    	for (int j2=abs(2*l-1); j2 <= 2*l +1; j2+=2)
+	    	{
+		    int n = N; //(N-l)/2;
+		    int indx = Index_atomic(n,l,j2);
+		    //cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index_atomic=" << indx << endl;
+		    if (z < Z)
 		    {
-			cout << "indexMap[count]=" << indexMap[count] << endl;
-			holesE[indexMap[count]] = dz/(j2+1.0); // indexMap[Index1(n,l,j2,-1)] ?
-			cout << "holesE[indexMap[count]]=" <<  holesE[indexMap[count]] << endl;
-		    }
-		    if (systemBase == "hydrogen")
-		    {
-			cout << "for some reason systemBasis=" << systemBase << endl;
-			holesE[indx] = dz/(j2+1.0); // indx/2 ?
-		    }
-		    z += dz;
-		    count++;
-		}
+		    	int dz = min(Z-z, j2+1);
+		    	cout << "dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << endl;
+		    	//indexMap[indx] = indexMap.size()-1;
+		    	if (systemBase == "harmonic")
+		    	{
+			    cout << "indexMap[count]=" << indexMap[count] << endl;
+			    holesE[indexMap[count]] = dz/(j2+1.0); // indexMap[Index1(n,l,j2,-1)] ?
+			    cout << "holesE[indexMap[count]]=" <<  holesE[indexMap[count]] << endl;
+		 	}
+		    	if (systemBase == "hydrogen")
+		    	{
+			    cout << "for some reason systemBasis=" << systemBase << endl;
+			    holesE[indx] = dz/(j2+1.0); // indx/2 ?
+		    	} // if(systemBase
+		    	z += dz;
+		    	count++;
+		    } // if(z<Z)
+	    	} // for (int j2
+	    } // for (l=0
+	    if (z == Z) return holesE; // We're all done here.
+    	} // for (N=
+    } else {
+	for (int N=0; N<=Emax; ++N)
+	{
+    	    for (int g=2*N+1;g>=-2*N;g-=4)
+    	    {
+      	    	int j2 = abs(g);
+            	int l = g<0 ? (j2+1)/2 : (j2-1)/2;
+            	int n = (N-l)/2;
+		//cout << "l=" << l << endl;
+
+            	if (z < Z)
+            	{
+        	    int dz = min(Z-z,j2+1);
+        	    int indx = Index1(n,l,j2,-1);
+        	    //if (SystemType == "atomic"){
+        	    //  indx = indexMap[indx];}
+        	    holesE[indx] = dz/(j2+1.0);
+        	    z += dz;
+      	    	}
 	    }
-	}
-	if (z == Z) return holesE; // We're all done here.
+    	}
+	if (z == Z) return holesE;
     }
     cout << "Didn't set ModelSpace big enough to fill Z=" << Z << " with emax = " << Emax << endl;
     return holesE;
@@ -1017,23 +999,23 @@ void ModelSpace::SetupKets(string Sys)
    //   Kets.resize(0);
    //}
    //Kets.resize(0.5*norbits*norbits + 0.5*norbits);
-   //int count = 0;
+   int counter = 0;
    for (int p=0;p<norbits;p++)
    {
      for (int q=p;q<norbits;q++)
      {
 	if (Sys == "atomic")
 	{
-	   index = Index2(p,q);
-	   //cout << "Grabbing ket with p=" << p << " q=" << q << " at indexMap[p]= " << indexMap[p] << " and indexMap[q]=" << indexMap[q] << "and setting to index=" << index << endl;
-	   //index = Kets.size();
+	   //index = Index2(p,q);
+	   index = Kets.size();
+	   cout << "Grabbing ket with p=" << p << " q=" << q << " at indexMap[p]= " << indexMap[p] << " and indexMap[q]=" << indexMap[q] << "and setting to index=" << index << endl;
 	   //Kets.emplace_back(Ket(GetOrbit(p),GetOrbit(q)));
 	   Orbit& o1 = GetOrbit(p);
 	   Orbit& o2 = GetOrbit(q);
 	   //index = Index2(o1.index,o2.index);
-	   Kets[index] = Ket(o1,o2);
-	   //Kets[index] = Ket(GetOrbit(indexMap[p]),GetOrbit(indexMap[q]));
-	   //count++;
+	   //Kets[index] = Ket(o1,o2);
+	   Kets[index] = Ket(GetOrbit(indexMap[p]),GetOrbit(indexMap[q]));
+	   counter++;
 	} else
 	{
 	   index = Index2(p,q);
@@ -1049,13 +1031,16 @@ void ModelSpace::SetupKets(string Sys)
    }
   
   cout << "Set up Kets[], moving to Ket& ket; Kets[].size()=" << Kets.size() << endl;
-  for (index_t index=0;index<Kets.size();++index)
+  //for (index_t index=0;index<Kets.size();++index) // replace with for (auto& ket in kets) indx = Index2(ket.p.index,ket.q.index)
+  for (auto& ket : Kets)
   {
     //cout << "index=" << index << endl;
-    Ket& ket = Kets[index];
+    //Ket& ket = Kets[index];
+    int index = Index2(ket.p,ket.q);
     //cout << "Got the ket, checking parity and Tz." << endl;
     int Tz = (ket.op->tz2 + ket.oq->tz2)/2;
     int parity = (ket.op->l + ket.oq->l)%2;
+    if (ket.op->l == -1 || ket.oq->l == -1) continue;
     //cout << "ket.op->l=" << ket.op->l << " ket.oq->l=" << ket.oq->l << endl;
     //cout << "About to add MonopoleKet with Tz=" << Tz << " parity=" << parity << " at index=" << index << endl;
     MonopoleKets[Tz+1][parity][index] = MonopoleKets[Tz+1][parity].size()-1;
@@ -1086,7 +1071,7 @@ void ModelSpace::SetupKets(string Sys)
     }
     //cout << "About to loop again." << endl;
    }
-   cout << "Got past Ket&; resizing TB." << endl;
+   //cout << "Got past Ket&; resizing TB." << endl;
    SortedTwoBodyChannels.resize(nTwoBodyChannels);
    SortedTwoBodyChannels_CC.resize(nTwoBodyChannels);
    //cout << "Resized TB; sorting TB., nTwoBodyChannels=" << nTwoBodyChannels << endl;
@@ -1099,7 +1084,7 @@ void ModelSpace::SetupKets(string Sys)
       //cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
       //cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
    }
-   cout << "Initialized dem channels." << endl;
+   //cout << "Initialized dem channels." << endl;
    // Sort the two body channels in descending order of matrix dimension and discard the size-0 ones.
    // Hopefully this can help with load balancing.
    bool isSorted = true;
@@ -1136,7 +1121,7 @@ void ModelSpace::SetupKets(string Sys)
         // return in > jn;
      // }
    //); // Neet to ensure GetNumberKets is handled properly?
-   cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
+   //cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
    int temp2;
    count = 0;
    isSorted = true;
@@ -1156,6 +1141,7 @@ void ModelSpace::SetupKets(string Sys)
 	 }
       }
    } while (!isSorted and count < maxSort);
+   //cout << "do { ... } while" << endl;
    //for (int i=nTwoBodyChannels-1; i >= 0; i--){
       //cout << "TwoBodyChannels_CC[" << i << "].GetNumberKets()=" << TwoBodyChannels_CC[i].GetNumberKets() << endl;
       //if (TwoBodyChannels_CC[i].GetNumberKets() == 0) {
@@ -1174,6 +1160,7 @@ void ModelSpace::SetupKets(string Sys)
    //); // Neet to ensure GetNumberKets is handled properly?
    //cout << "About to pop_back." << endl;
    while (  TwoBodyChannels[ SortedTwoBodyChannels.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels.pop_back();
+   //cout << "done base, doing _CC." << endl;
    while (  TwoBodyChannels_CC[ SortedTwoBodyChannels_CC.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels_CC.pop_back();
    //for (int i=0; i < SortedTwoBodyChannels.size(); i++){
    //   cout << "Sorted TwoBodyChannels[" << i << "].GetNumberKets()=" << TwoBodyChannels[i].GetNumberKets() << endl;
