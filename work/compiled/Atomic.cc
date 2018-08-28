@@ -171,7 +171,7 @@ int main(int argc, char** argv)
     cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << 4*(2*eMax + 1*Lmax) << endl;
     modelspace.GenerateFactorialList( min(4*(2*eMax + 1*Lmax),170) );
     cout << "About to precalculate radial integrals." << endl;
-    GenerateRadialIntegrals(modelspace, eMax*1010000 + (eMax+Lmax)*101); // Should handle most/all integrals
+    GenerateRadialIntegrals(modelspace, eMax*1010000 + (eMax+Lmax)*202); // Should handle most/all integrals
     cout << "FactorialList calculated." << endl;
     //rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
     cout << "Read in interaction, moving to precalculating moshinsky." << endl;
@@ -187,7 +187,7 @@ int main(int argc, char** argv)
     //Hbare += HarmonicOneBody(modelspace);
     cout << "Onebodies added, adding twobody..." << endl;
     Hbare += CorrE2b(modelspace);
-    //cout << "Added Twobody, moving on." << endl;
+    cout << "Added Twobody, moving on." << endl;
   } else {
     //cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
     //modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax)+40 );

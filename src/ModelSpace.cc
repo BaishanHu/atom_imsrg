@@ -1469,7 +1469,8 @@ double ModelSpace::GetMoshinsky( int N, int Lam, int n, int lam, int n1, int l1,
 //   cout << "Shouldn't be here..." << N << " " << Lam << " " <<  n << " " << lam << " " << n1 << " " << l1 << " " << n2 << " " << l2 << " " << L << endl;
    //#pragma omp critial
    //{
-       MoshList[key] = mosh;
+   #pragma omp critical	
+   MoshList[key] = mosh;
    //}
    return mosh * phase_mosh;
 

@@ -22,17 +22,23 @@ lstart=0
 lstop=0
 liter=2
 
+hwstart=4
+hwstop=108
+hwiter=4
+
 #for ((A=$start;A<=$stop;A++)); do
 for ((emax=$estart;emax<=$estop;emax=emax+eiter)); do
 for ((Lmax=$lstart; Lmax<=$lstop; Lmax=Lmax+liter)); do
+for ((hw=$hwstart; hw<=$hwstop; hw=hw+hwiter)); do
 #for ((Lmax=$lstart;Lmax<=$lstop && Lmax<=$emax;Lmax=Lmax+liter)); do
 #A=4
 #state=10
 systemtype=atomic
 # 1.0 Hartree ~= 27.21138505(60) eV (according to Wikipedia)
-hw=27.21138505 # Only matters in HO
+#hw=27.21138505 # Only matters in HO
 #hw=40.817077575 # 1.5*H
 #hw=13.605692525 # 0.5*H
+#hw=108.8
 valence_space=He4
 reference=He4
 #systemBasis=hydrogen
@@ -49,7 +55,8 @@ omega_norm_max=0.25
 mode=batchmpi
 #mode=debug
 
-jobname="method_${method}_ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${Lmax}"
+#jobname="method_${method}_ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${Lmax}"
+jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_hw_${hw}"
 
 #Operators=KineticEnergy,InverseR,CorrE2b
 #Operators=KineticEnergy,InverseR,ElectronTwoBody
@@ -77,6 +84,7 @@ $command
 END
 fi
 
+done
 done
 done
 
