@@ -79,6 +79,11 @@ int main(int argc, char** argv)
   //cout << "About to generate radial integrals." << endl;
   //GenerateRadialIntegrals(modelspace,2*eMax*101011);
   //cout << "Generated Radial integrals." << endl;
+  cout << "About to generate factorialList." << endl;
+  modelspace.GenerateFactorialList( min(4*(2*eMax + 1*Lmax),170) );
+  cout << "About to precalculate radial integrals." << endl;
+  GenerateRadialIntegrals(modelspace, eMax*1010000 + (eMax+Lmax)*202); // Should handle most/all integrals
+
   cout << "modelspace initialized." << endl;
   cout << "Emax is "<< modelspace.GetEmax() << endl;
 
@@ -125,11 +130,23 @@ int main(int argc, char** argv)
   //Hbare += ElectronTwoBody(modelspace);
   cout << "Added ElectronTwoBody to Hbare." << endl;
   std::stringstream fn;
-  fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug29_emax" << eMax << "_lmax" << Lmax << "_hw" << hw << ".json";
+  if (systemBasis == "harmonic") {
+	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_hw" << hw << ".me2j";
+	cout << "Writing Hbare to file with filename=" << fn.str() << endl;
+	rw.Write_me2j( fn.str(),  Hbare, eMax, 2*eMax );
+	cout << "Written, making new operator." << endl;
+	Operator New = Operator(modelspace);
+	cout << "Reading back in operator." << endl;
+	rw.ReadBareTBME_Darmstadt( fn.str(), New, eMax, 2*eMax );
+  } else {
+  	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_lmax" << Lmax << "_hw" << hw << ".json";
+	cout << "Writing Hbare to file with filename=" << fn.str() << endl;
+	rw.WriteOperatorToJSON( fn.str(), Hbare, eMax, 2*eMax, Lmax, 0.1 );
+  }
 
-  cout << "Writing Hbare to file with filename=" << fn.str() << endl;
+  //cout << "Writing Hbare to file with filename=" << fn.str() << endl;
   //rw.Write_me2j( fn.str(),  Hbare, eMax, 2*eMax, Lmax );
-  rw.WriteOperatorToJSON( fn.str(), Hbare, eMax, 2*eMax, Lmax, 0.1 );
+  //rw.WriteOperatorToJSON( fn.str(), Hbare, eMax, 2*eMax, Lmax, 0.1 );
   cout << "Written, making new operator." << endl;
   Operator New = Operator(modelspace);
   cout << "Reading back in operator." << endl;

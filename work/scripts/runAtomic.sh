@@ -6,7 +6,8 @@ interactive=false
 NTHREADS=12
 WORKDIR=$PWD
 
-exe=../compiled/Atomic
+#exe=../compiled/Atomic
+exe=../compiled/writeAtomicTBME
 
 vnn=
 file2e1max=6
@@ -14,7 +15,7 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=2
+estart=6
 estop=6
 eiter=2
 
@@ -22,9 +23,9 @@ lstart=0
 lstop=0
 liter=2
 
-hwstart=4
-hwstop=108
-hwiter=4
+hwstart=1
+hwstop=1
+hwiter=5
 
 #for ((A=$start;A<=$stop;A++)); do
 for ((emax=$estart;emax<=$estop;emax=emax+eiter)); do
@@ -39,8 +40,8 @@ systemtype=atomic
 #hw=40.817077575 # 1.5*H
 #hw=13.605692525 # 0.5*H
 #hw=108.8
-valence_space=He4
-reference=He4
+valence_space=Ne20
+reference=Ne20
 #systemBasis=hydrogen
 systemBasis=harmonic
 smax=200

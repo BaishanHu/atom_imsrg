@@ -369,7 +369,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
      {
 	Orbit& oj = modelspace.GetOrbit(j);
 	if ( oi.l != oj.l ) continue; // From spherical harmonics orthogonality; \delta_j1j2 ?
-	double temp1 = 0-getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace);
+	double temp1 = getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace)*(-HBARC / (137.035999139) * modelspace.GetTargetZ()); //  -Z\hbarc\alpha + L\dotS ?
 	InvR.OneBody(i,j) = temp1;
 	InvR.OneBody(j,i) = temp1;
      }
@@ -377,7 +377,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
    // 1/137 comes from fine struct const {alpha} = e^2/(4pi{epsilon}{hbar}c) ~= 1/137 
    // Therefore e^2/(4pi{epsilon}) = {hbar}{c}{alpha}; b from R^L_ab = b^L * ~R^L_ab; b = oscillator length (Suhonen 3.43,6.41); L is the degree of r^L
    double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega() ); // 511 from electron mass in eV
-   InvR *= 1./b * HBARC / (137.035999139) * modelspace.GetTargetZ();
+   InvR *= 1./b ;
    InvR.profiler.timer["InverseR_Op"] += omp_get_wtime() - t_start;
    return InvR  ;
 }
@@ -2027,8 +2027,8 @@ Operator Energy_Op(ModelSpace& modelspace)
 
 		double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega() ); // 511 from electron mass in eV
 
-		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym * HBARC / 137. * delta_ab * delta_cd * sqrt(2*lam_ab+1) / b;
-
+		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym * delta_ab * delta_cd * sqrt(2*lam_ab+1) / b * (HBARC / (137.035999139)); // + lam_ab*(lam_ab + 1) );
+		
               //} // N_cd
            } // lam_ab
          } // Lam_ab

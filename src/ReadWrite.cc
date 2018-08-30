@@ -569,7 +569,7 @@ void ReadWrite::WriteTBME_Navratil( string filename, Operator& Hbare)
 
 
 /// Decide if the file is gzipped or ascii, create a stream, then call ReadBareTBME_Darmstadt_from_stream().
-void ReadWrite::ReadBareTBME_Darmstadt( string filename, Operator& Hbare, int emax, int Emax, int lmax)
+void ReadWrite::ReadBareTBME_Darmstadt( string filename, Operator& Hbare, int emax, int Emax, int lmax )
 {
 
   File2N = filename;
@@ -611,12 +611,12 @@ void ReadWrite::ReadBareTBME_Darmstadt( string filename, Operator& Hbare, int em
     infile.close();
     VectorStream vectorstream(v);
     cout << "n_elem = " << n_elem << endl;
-    ReadBareTBME_Darmstadt_from_stream(vectorstream, Hbare,  emax, Emax, lmax);
+    ReadBareTBME_Darmstadt_from_stream(vectorstream, Hbare,  emax, Emax, lmax );
   }
   else
   {
     ifstream infile(filename);
-    ReadBareTBME_Darmstadt_from_stream(infile, Hbare,  emax, Emax, lmax);
+    ReadBareTBME_Darmstadt_from_stream(infile, Hbare,  emax, Emax, lmax );
   }
 }
 
@@ -708,7 +708,7 @@ void ReadWrite::Read_Darmstadt_3body( string filename, Operator& Hbare, int E1ma
 /// the M scheme matrix elements multiplied by Clebsch-Gordan coefficients for JT coupling.
 //void ReadWrite::ReadBareTBME_Darmstadt_from_stream( istream& infile, Operator& Hbare, int emax, int Emax, int lmax)
 template<class T>
-void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, int emax, int Emax, int lmax)
+void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, int emax, int Emax, int lmax )
 {
   if ( !infile.good() )
   {
@@ -731,9 +731,9 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
   vector<Orbit> tOrbits;
   for (int e=0; e<=emax; ++e) // e<=min(emax,modelspace->Emax)
   {
-    int lmin = 0; // =e%2;
+    int lmin = e%2;
     int lmax = min(emax,lmax);
-    for (int l=e; l>=0; l-=2) // l<=min(e,lmax); l+= 2
+    for (int l=lmin; l<=min(e,lmax); l+= 2)
     {
       int n = (e-l)/2;
       int twojMin = abs(2*l-1);
@@ -1924,7 +1924,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
   vector<int> orbits_remap;
 
   if (emax < 0)  emax = modelspace->GetEmax();
-  if (lmax < 0)  lmax = modelspace->GetLmax();
+  if (lmax < 0)  lmax = emax;
 
   for (int e=0; e<=min(emax,modelspace->GetEmax()); ++e)
   {
@@ -1937,7 +1937,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
       for (int twoj=twojMin; twoj<=twojMax; twoj+=2)
       {
 	 int index = modelspace->GetOrbitIndex(n,l,twoj,-1);
-	 if (modelspace->SystemType == "atomic") index = modelspace->indexMap[index]; // index/2 ? No, need Index_atomic
+	 //if (modelspace->SystemType == "atomic") index = modelspace->indexMap[index]; // index/2 ? No, need Index_atomic
 	 cout << "In Write: Pushing back index " << index << endl;
          orbits_remap.push_back( index );
       }

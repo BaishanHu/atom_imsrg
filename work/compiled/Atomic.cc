@@ -185,9 +185,13 @@ int main(int argc, char** argv)
     cout << "Added KE..." << endl;
     //cout << "Adding HO energies..." << endl;
     //Hbare += HarmonicOneBody(modelspace);
-    cout << "Onebodies added, adding twobody..." << endl;
-    Hbare += CorrE2b(modelspace);
-    cout << "Added Twobody, moving on." << endl;
+    cout << "Onebodies added,";
+    if (modelspace.GetTargetZ() > 1)
+    {
+	cout << " adding twobody..." << endl;
+	Hbare += CorrE2b(modelspace);
+	cout << "Added Twobody, moving on." << endl;
+    }
   } else {
     //cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
     //modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax)+40 );
@@ -203,9 +207,12 @@ int main(int argc, char** argv)
     cout << "Adding Hydrogen Energies." << endl;
     Hbare += Energy_Op(modelspace);
     cout << "Onebody:" << endl << Hbare.OneBody << endl;
-    cout << "Adding two-body correction." << endl;
-    //Hbare += ElectronTwoBody(modelspace);
-    Hbare += eeCoulomb(modelspace);
+    if (modelspace.GetTargetZ()	> 1)
+    {
+	cout << "Adding two-body correction." << endl;
+	//Hbare += ElectronTwoBody(modelspace);
+	Hbare += eeCoulomb(modelspace);
+    }
   }
 
   cout << "OneBody=" << endl << Hbare.OneBody << endl;
