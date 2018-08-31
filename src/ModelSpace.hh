@@ -264,8 +264,6 @@ class ModelSpace
    void GenerateOsToHydroCoeff_fromlist( vector<int>& hy_list );
    void PrecalculateNineJ( vector<unsigned long long int>& ninejList );
 
-   
-
    // Data members
    vector<index_t> holes;           // in the reference Slater determinant
 //   map<index_t,double> holes;           // in the reference Slater determinant

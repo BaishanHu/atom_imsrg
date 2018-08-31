@@ -15,8 +15,8 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=6
-estop=6
+estart=2
+estop=2
 eiter=2
 
 lstart=0

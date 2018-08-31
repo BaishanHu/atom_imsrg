@@ -1855,4 +1855,3 @@ double ModelSpace::GetNineJ(double j1, double j2, double J12, double j3, double 
 
 }
 
-

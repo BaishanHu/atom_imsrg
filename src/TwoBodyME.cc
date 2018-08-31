@@ -446,16 +446,22 @@ void TwoBodyME::Set_pn_TBME_from_iso(int j, int T, int tz, int a, int b, int c, 
    b -= b%2;
    c -= c%2;
    d -= d%2;
+   cout << "About to get orbital a, b..." << endl;
    int parity = (modelspace->GetOrbit(a).l + modelspace->GetOrbit(b).l)%2;
+   cout << "Got Orbitals, setting phase and shit." << endl;
    int isospin_phase = 2*T-1;
    tbme *= 0.5;
    if (a==b) tbme *= SQRT2;
    if (c==d) tbme *= SQRT2;
-   AddToTBME(j,parity,tz,a,b+1,c  ,d+1,tbme);
+   cout << "Adding stuff to TBME; j=" << j << " parity=" << parity << " tz=" << tz << endl;
+   AddToTBME(j,parity,tz,a,b+1,c,d+1,tbme);
+   cout << "Adding cases where c!=d..." << endl;
    if (c!=d)
      AddToTBME(j,parity,tz,a,b+1,c+1,d  ,tbme*isospin_phase);
+   cout << "Adding cases where a!=b and c!=d..." << endl;
    if (a!=b and c!=d)
      AddToTBME(j,parity,tz,a+1,b,c+1,d,tbme);
+   cout << "Adding case where a!=b and (a!=c or b!=d)..." << endl;
    if (a!=b and (a!=c or b!=d) )
      AddToTBME(j,parity,tz,a+1,b,c,d+1,tbme*isospin_phase);
 
