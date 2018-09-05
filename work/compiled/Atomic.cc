@@ -100,7 +100,7 @@ int main(int argc, char** argv)
   ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, Lmax, SystemType, systemBasis);
   cout << "Default modelspace constructed, setting SystemType." << endl;
   modelspace.SetSystemType(SystemType);
-
+  modelspace.SetSystemBasis(systemBasis);
 
   cout << "modelspace initialized." << endl;
   cout << "Emax is "<< modelspace.GetEmax() << endl;
@@ -166,7 +166,8 @@ int main(int argc, char** argv)
 //  }
   //cout << "Modelspace has this many tbc: " << modelspace.nTwoBodyChannels << endl;
   //rw.ReadBareTBME_Darmstadt( inputtbme, Hbare, file2e1max, file2e2max, file2lmax);
-  
+  Operator Diff = Operator(modelspace);
+  Operator twoBody = Operator(modelspace);
   if (systemBasis == "harmonic") {
     cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << 4*(2*eMax + 1*Lmax) << endl;
     modelspace.GenerateFactorialList( min(4*(2*eMax + 1*Lmax),170) );
@@ -186,10 +187,19 @@ int main(int argc, char** argv)
     //cout << "Adding HO energies..." << endl;
     //Hbare += HarmonicOneBody(modelspace);
     cout << "Onebodies added,";
+    Operator New = CorrE2b( modelspace );
+    // Operator Diff= Operator( modelspace);
     if (modelspace.GetTargetZ() > 1)
     {
 	cout << " adding twobody..." << endl;
-	Hbare += CorrE2b(modelspace);
+	//Hbare += CorrE2b(modelspace);
+	//Operator twoBody = Operator(modelspace);
+	std::stringstream fn;
+	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_He4_basis_harmonicAug30_emax6_hw1.me2j";
+	rw.ReadBareTBME_Darmstadt( fn.str(), twoBody, eMax, 2*eMax, -1 );
+	twoBody *= sqrt( double(hw) );
+	Hbare += twoBody;
+	Diff = New - twoBody;
 	cout << "Added Twobody, moving on." << endl;
     }
   } else {
@@ -215,13 +225,17 @@ int main(int argc, char** argv)
     }
   }
 
-  cout << "OneBody=" << endl << Hbare.OneBody << endl;
-  cout << "TwoBody=" << endl;
-  for (int ch = 0; ch < Hbare.nChannels; ch++) {
+//  cout << "OneBody=" << endl << Hbare.OneBody << endl;
+  cout << "Diff TwoBody=" << endl;
+  for (int ch = 0; ch < Diff.nChannels; ch++) {
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
+    Diff.PrintTwoBody(ch);
+    cout << endl;
     Hbare.PrintTwoBody(ch);
     cout << endl;
-  }
+    twoBody.PrintTwoBody(ch);
+    cout << endl;
+  } 
 
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);

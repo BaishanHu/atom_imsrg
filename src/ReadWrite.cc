@@ -11,7 +11,6 @@
 #include <unordered_map>
 #include <json/json-forwards.h>
 #include <json/json.h>
-//#include <json/writer.h>
 #include <jsoncpp.cpp>
 
 #include <boost/iostreams/filtering_streambuf.hpp>
@@ -571,7 +570,7 @@ void ReadWrite::WriteTBME_Navratil( string filename, Operator& Hbare)
 /// Decide if the file is gzipped or ascii, create a stream, then call ReadBareTBME_Darmstadt_from_stream().
 void ReadWrite::ReadBareTBME_Darmstadt( string filename, Operator& Hbare, int emax, int Emax, int lmax )
 {
-
+  cout << "Reading from " << filename << endl;
   File2N = filename;
   Aref = Hbare.GetModelSpace()->GetAref();
   Zref = Hbare.GetModelSpace()->GetZref();
@@ -581,6 +580,7 @@ void ReadWrite::ReadBareTBME_Darmstadt( string filename, Operator& Hbare, int em
     boost::iostreams::filtering_istream zipstream;
     zipstream.push(boost::iostreams::gzip_decompressor());
     zipstream.push(infile);
+    cout << "Reading from .gz" << endl;
     ReadBareTBME_Darmstadt_from_stream(zipstream, Hbare,  emax, Emax, lmax);
   }
   else if (filename.substr( filename.find_last_of(".")) == ".bin")
@@ -611,11 +611,13 @@ void ReadWrite::ReadBareTBME_Darmstadt( string filename, Operator& Hbare, int em
     infile.close();
     VectorStream vectorstream(v);
     cout << "n_elem = " << n_elem << endl;
+    cout << "Reading from .bin" << endl;
     ReadBareTBME_Darmstadt_from_stream(vectorstream, Hbare,  emax, Emax, lmax );
   }
   else
   {
     ifstream infile(filename);
+    cout << "Else." << endl;
     ReadBareTBME_Darmstadt_from_stream(infile, Hbare,  emax, Emax, lmax );
   }
 }
@@ -734,14 +736,29 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
       int twojMax = 2*l+1;
       for (int twoj=twojMin; twoj<=twojMax; twoj+=2)
       {
-         orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+       	 //cout << "twoj=" << twoj << " l=" << l << " n=" <<  n << " modelspace->GetOrbitIndex(n,l,twoj,-1)=" << modelspace->GetOrbitIndex(n,l,twoj,-1) << endl;
+         //cout << "SystemType=" << modelspace->GetSystemType() << " systemBasis=" << modelspace->GetSystemBasis() << endl;
+         if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "harmonic" ) {
+                orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1)/2 );
+         } else if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "hydrogen" ) {
+                orbits_remap.push_back( modelspace->Index_atomic(n, l, twoj) );
+         } else {
+                orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+         }
       }
     }
   }
   int nljmax = orbits_remap.size()-1;
+  //cout << "In ReadBare...; orbits_remap has been made; here it is:" << endl;
+  //for (auto i = orbits_remap.begin(); i != orbits_remap.end(); ++i)
+  //  cout << *i << ' ';  
+  //cout << endl;
 
 //  double tbme_pp,tbme_nn,tbme_10,tbme_00;
-  float tbme_pp,tbme_nn,tbme_10,tbme_00;
+  float tbme_pp=0;
+  float tbme_nn=0;
+  float tbme_10=0;
+  float tbme_00=0;
   // skip the first line
   char line[LINESIZE];
   infile.getline(line,LINESIZE);
@@ -795,13 +812,16 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
 
              if (norm_factor>0.9 or J%2==0)
              {
-		cout << "Writing element with J=" << J << " a=" << a << " b=" << b << " c=" << c << " d=" << d << endl;
+		//cout << "Writing element with J=" << J << " a=" << a << " b=" << b << " c=" << c << " d=" << d << endl;
                 Hbare.TwoBody.SetTBME(J,parity,-1,a,b,c,d,tbme_pp*norm_factor);
-		cout << "Wrote tbme! about to set tbme_nn=" << tbme_nn << endl;
-                Hbare.TwoBody.SetTBME(J,parity,1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
-                Hbare.TwoBody.Set_pn_TBME_from_iso(J,1,0,a,b,c,d,tbme_10*norm_factor);
+		//cout << "Wrote tbme! about to set tbme_pp=" << tbme_pp << endl;
+		//cout << "norm_factor=" << norm_factor << endl;
+		if ( modelspace->GetSystemType() != "atomic" ) {
+                    Hbare.TwoBody.SetTBME(J,parity,1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
+                    Hbare.TwoBody.Set_pn_TBME_from_iso(J,1,0,a,b,c,d,tbme_10*norm_factor);
+		}
              }
-             if ( (norm_factor>0.9 or J%2!=0) ) // and modelspace->GetSystemType() != "atomic" )
+             if ( (norm_factor>0.9 or J%2!=0) and modelspace->GetSystemType() != "atomic" )
              { 
                 Hbare.TwoBody.Set_pn_TBME_from_iso(J,0,0,a,b,c,d,tbme_00*norm_factor);
              }
@@ -1843,14 +1863,29 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
       int twojMax = 2*l+1;
       for (int twoj=twojMin; twoj<=twojMax; twoj+=2)
       {
-         orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+	 cout << "twoj=" << twoj << " l=" << l << " n=" <<  n << " modelspace->GetOrbitIndex(n,l,twoj,-1)=" << modelspace->GetOrbitIndex(n,l,twoj,-1) << endl;
+	 cout << "SystemType=" << modelspace->GetSystemType() << " systemBasis=" << modelspace->GetSystemBasis() << endl;
+	 if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "harmonic" ) {
+         	orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1)/2 );
+	 } else if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "hydrogen" ) {
+	  	orbits_remap.push_back( modelspace->Index_atomic(n, l, twoj) );
+	 } else {
+		orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+	 }
       }
     }
   }
   int nljmax = orbits_remap.size()-1;
+  //cout << "In write_me2j, orbits_remap is made; here it is:" << endl;
+  //for (auto i = orbits_remap.begin(); i != orbits_remap.end(); ++i)
+  //  cout << *i << ' ';
+  //cout << endl;
 
 //  double tbme_pp,tbme_nn,tbme_10,tbme_00;
-  float tbme_pp,tbme_nn,tbme_10,tbme_00;
+  float tbme_pp=0;
+  float tbme_nn=0;
+  float tbme_10=0;
+  float tbme_00=0;
   // skip the first line
   time_t time_now = chrono::system_clock::to_time_t(chrono::system_clock::now());
 //  outfile << "    generated by IMSRG code on " << ctime(&time_now)<< endl;
@@ -1898,29 +1933,37 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
              if (a==b)  norm_factor *= SQRT2;
              if (c==d)  norm_factor *= SQRT2;
 
+	     //cout << "About to get ME J=" << J << " a=" << a << " b=" << b << " c=" << c <<" d=" << d << endl;
+	     //cout << "norm_factor=" << norm_factor << endl;
+
              // Matrix elements are written in the file with (T,Tz) = (0,0) (1,1) (1,0) (1,-1)
              tbme_pp = Hbare.TwoBody.GetTBME(J,parity,-1,a,b,c,d);        // unnormalized
-             tbme_nn = Hbare.TwoBody.GetTBME(J,parity,1,a+1,b+1,c+1,d+1); // unnormalized
-             tbme_10 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,1,0,a,b,c,d); // normalized
-             tbme_00 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,0,0,a,b,c,d); // normalized
-
+	     if (modelspace->GetSystemType() != "atomic") {
+             	tbme_nn = Hbare.TwoBody.GetTBME(J,parity,1,a+1,b+1,c+1,d+1); // unnormalized
+             	tbme_10 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,1,0,a,b,c,d); // normalized
+             	tbme_00 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,0,0,a,b,c,d); // normalized
+	     }
              
              outfile << setprecision(7) << setw(12) << tbme_00*norm_factor<< " "  ;
+	     //cout << "Writing tbme_00:" << tbme_00 << endl;
              if ((icount++)%10==9)
              {
                outfile << endl;
              }
              outfile << setprecision(7) << setw(12) << tbme_nn<< " "  ;
+	     //cout << "Writing tbme_nn:"	<< tbme_nn << endl;
              if ((icount++)%10==9)
              {
                outfile << endl;
              }
              outfile << setprecision(7) << setw(12) << tbme_10*norm_factor << " "  ;
+	     //cout << "Writing tbme_10:"	<< tbme_10 << endl;
              if ((icount++)%10==9)
              {
                outfile << endl;
              }
              outfile << setprecision(7) << setw(12) << tbme_pp << " "  ;
+	     //cout << "Writing tbme_pp:"	<< tbme_pp << endl;
              if ((icount++)%10==9)
              {
                outfile << endl;

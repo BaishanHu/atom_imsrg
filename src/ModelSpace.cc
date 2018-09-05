@@ -1217,6 +1217,11 @@ void ModelSpace::SetSystemType(string str)
    SystemType = str;
 }
 
+void ModelSpace::SetSystemBasis(string str)
+{
+   systemBasis = str;
+}
+
 
 double ModelSpace::GetSixJ(double j1, double j2, double j3, double J1, double J2, double J3)
 {

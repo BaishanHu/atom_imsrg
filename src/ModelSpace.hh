@@ -223,7 +223,9 @@ class ModelSpace
    void SetReference(map<index_t,double>);
    void SetReference(string);
    string GetSystemType(){return SystemType;};
+   string GetSystemBasis(){return systemBasis;};
    void SetSystemType(string);
+   void SetSystemBasis(string);
 
    int GetEmax(){return Emax;};
    int GetE2max(){return E2max;};

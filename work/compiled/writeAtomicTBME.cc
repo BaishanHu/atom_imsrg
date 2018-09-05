@@ -66,13 +66,14 @@ int main(int argc, char** argv)
 
   string SystemType = "atomic";
   if (Lmax > eMax) Lmax = eMax;
-  cout << "About to construct modelspace eMax="<< eMax << " Lmax=" << Lmax << " SystemType=" << SystemType << " Valence_Space=" << valence_space << " reference=" << reference << endl;
+  cout << "About to construct modelspace eMax="<< eMax << " Lmax=" << Lmax << " SystemType=" << SystemType << " Valence_Space=" << valence_space << " reference=" << reference << " systemBasis=" << systemBasis << endl;
   if (eMax == 0) eMax = 4;
   if (reference == "default") reference = "He2";
   //if (valence_space == "016")
   ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, Lmax, SystemType, systemBasis);
   cout << "Default modelspace constructed, setting SystemType." << endl;
   modelspace.SetSystemType(SystemType);
+  modelspace.SetSystemBasis(systemBasis);
   //cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
   //modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax) );
   //cout << "FactorialList calculated." << endl;
@@ -134,16 +135,24 @@ int main(int argc, char** argv)
   if (systemBasis == "harmonic") {
 	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_hw" << hw << ".me2j";
 	cout << "Writing Hbare to file with filename=" << fn.str() << endl;
-	rw.Write_me2j( fn.str(),  Hbare, eMax, 2*eMax, -1 );
+	rw.Write_me2j( fn.str(),  Hbare, eMax, 3*eMax, -1 );
+	/*
+	for (int ch = 0; ch < Hbare.nChannels; ch++) {
+        	cout << endl;
+        	cout << "----- Channel " << ch << " -----" << endl;
+        	Hbare.PrintTwoBody(ch);
+        	cout << endl;
+  	} */
+
 	cout << "Written, making new operator." << endl;
-	rw.ReadBareTBME_Darmstadt( fn.str(), New, eMax, 2*eMax, -1 );
+	rw.ReadBareTBME_Darmstadt( fn.str(), New, eMax, 3*eMax, -1 );
   } else {
   	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_lmax" << Lmax << "_hw" << hw << ".json";
 	cout << "Writing Hbare to file with filename=" << fn.str() << endl;
-	rw.WriteOperatorToJSON( fn.str(), Hbare, eMax, 2*eMax, Lmax, 0.1 );
+	rw.WriteOperatorToJSON( fn.str(), Hbare, eMax, 3*eMax, Lmax, 0.1 );
 	cout << "Written, making new operator." << endl;
 	cout << "Reading back in operator." << endl;
-	rw.ReadOperatorFromJSON( fn.str(), New, eMax, 2*eMax, Lmax, 0.1 );
+	rw.ReadOperatorFromJSON( fn.str(), New, eMax, 3*eMax, Lmax, 0.1 );
   }
 
   Operator Diff = Hbare - New;
@@ -160,7 +169,7 @@ int main(int argc, char** argv)
   cout << "TwoBodyNorm of New=" << New.TwoBodyNorm() << endl;
   cout << "TwoBodyNorm of Hbare=" << Hbare.TwoBodyNorm() << endl;
   cout << "TwoBodyNorm of diff=" << Diff.TwoBodyNorm() << endl;
-
+ /*
   cout << "New:" << endl;
   cout << "OneBody=" << endl << New.OneBody << endl;
   cout << "TwoBody=" << endl;
@@ -178,7 +187,17 @@ int main(int argc, char** argv)
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     Hbare.PrintTwoBody(ch);
     cout << endl;
+  } */
+
+  cout << "Diff:" << endl;
+  cout << "OneBody=" << endl << New.OneBody << endl;
+  cout << "TwoBody=" << endl;
+  for (int ch = 0; ch < Diff.nChannels; ch++) {
+    cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
+    Diff.PrintTwoBody(ch);
+    cout << endl;
   }
+  cout << endl << endl;
 
  /* for (int ch = 0; ch < Hbare.nChannels; ch++) {
 	cout << endl;

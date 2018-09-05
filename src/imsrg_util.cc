@@ -636,14 +636,7 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
 			    if (m4 != 0) val_m2	= gsl_sf_fact(o2.l-m4)*pow(-1,m4)/gsl_sf_fact(o2.l+m4);
 			    if (m3 != 0) val_m3 = gsl_sf_fact(o3.l-m3)*pow(-1,m3)/gsl_sf_fact(o3.l+m3);
 			    if (m4 != 0) val_m4 = gsl_sf_fact(o4.l-m4)*pow(-1,m4)/gsl_sf_fact(o4.l+m4);
-			    /*
-			    val = val*(1 + val_m1 + val_m2 + val_m3 + val_m4
-				  	 + val_m1*val_m2 + val_m1*val_m3 + val_m1*val_m4
-					 + val_m2*val_m3 + val_m2*val_m4
-					 + val_m3*val_m4
-					 + val_m1*val_m2*val_m3 + val_m1*val_m2*val_m4 + val_m1*val_m3*val_m4
-					 + val_m2*val_m3*val_m4
-					 + val_m1*val_m2*val_m3*val_m4); */
+
 			    val = val*(1 + val_m1*val_m3 + val_m2*val_m4 + val_m1*val_m2*val_m3*val_m4);
 			
 		            result += val;
@@ -1906,19 +1899,19 @@ Operator Energy_Op(ModelSpace& modelspace)
 	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J, modelspace.systemBasis); 
 	     
-	    Ket ketp = Ket(od,oc);
-	    double mat_el_asym = pow(-1,(od.j2+oc.j2)/2.0 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
-	    mat_el -= mat_el_asym;
-	    if (oc.n == od.n && oc.l == od.l && oc.j2 == od.j2)
-            {
-             	mat_el /= sqrt(2);
-            }
-	    Orbit oa = modelspace.GetOrbit(ket.p);
-	    Orbit ob = modelspace.GetOrbit(ket.q);
-	    if (oa.n == ob.n && oa.l == ob.l && oa.j2 == ob.j2)
-            {
-             	mat_el /= sqrt(2);
-            }
+	    //Ket ketp = Ket(od,oc);
+	    //double mat_el_asym = pow(-1,(od.j2+oc.j2)/2.0 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
+	    //mat_el -= mat_el_asym;
+	    //if (oc.n == od.n && oc.l == od.l && oc.j2 == od.j2)
+            //{
+            // 	mat_el /= sqrt(2);
+            //}
+	    //Orbit oa = modelspace.GetOrbit(ket.p);
+	    //Orbit ob = modelspace.GetOrbit(ket.q);
+	    //if (oa.n == ob.n && oa.l == ob.l && oa.j2 == ob.j2)
+            //{
+            // 	mat_el /= sqrt(2);
+            //}
 	    //if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
             E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
@@ -2021,7 +2014,7 @@ Operator Energy_Op(ModelSpace& modelspace)
 
                 //double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace);
 		double rad_sym = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
-		//double rad_asym= getRadialIntegral(n_ab, lam_ab
+		//double rad_asym= getRadialIntegral(n_ab, lam_ab, 
 		//if (rad_sym < 0) cout << "Rad=" << rad_sym << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
 		if (abs(rad_sym) < 1e-8) continue;
 
