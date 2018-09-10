@@ -131,7 +131,7 @@ int main(int argc, char** argv)
   //Hbare += ElectronTwoBody(modelspace);
   cout << "Added ElectronTwoBody to Hbare." << endl;
   std::stringstream fn;
-  Operator New = Operator(modelspace);
+  //Operator New = Operator(modelspace);
   if (systemBasis == "harmonic") {
 	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_hw" << hw << ".me2j";
 	cout << "Writing Hbare to file with filename=" << fn.str() << endl;
@@ -145,30 +145,30 @@ int main(int argc, char** argv)
   	} */
 
 	cout << "Written, making new operator." << endl;
-	rw.ReadBareTBME_Darmstadt( fn.str(), New, eMax, 3*eMax, -1 );
+	//rw.ReadBareTBME_Darmstadt( fn.str(), New, eMax, 3*eMax, -1 );
   } else {
   	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_lmax" << Lmax << "_hw" << hw << ".json";
 	cout << "Writing Hbare to file with filename=" << fn.str() << endl;
 	rw.WriteOperatorToJSON( fn.str(), Hbare, eMax, 3*eMax, Lmax, 0.1 );
 	cout << "Written, making new operator." << endl;
 	cout << "Reading back in operator." << endl;
-	rw.ReadOperatorFromJSON( fn.str(), New, eMax, 3*eMax, Lmax, 0.1 );
+	//rw.ReadOperatorFromJSON( fn.str(), New, eMax, 3*eMax, Lmax, 0.1 );
   }
 
-  Operator Diff = Hbare - New;
-  cout << "Norm of New=" << New.Norm() << endl;
+  //Operator Diff = Hbare - New;
+  //cout << "Norm of New=" << New.Norm() << endl;
   cout << "Norm of Hbare=" << Hbare.Norm() << endl;
-  cout << "Norm of diff=" << Diff.Norm() << endl;
+  //cout << "Norm of diff=" << Diff.Norm() << endl;
 
   cout << endl;
-  cout << "OneBodyNorm of New=" << New.OneBodyNorm() << endl;
+  //cout << "OneBodyNorm of New=" << New.OneBodyNorm() << endl;
   cout << "OneBodyNorm of Hbare=" << Hbare.OneBodyNorm() << endl;
-  cout << "OneBodyNorm of diff=" << Diff.OneBodyNorm() << endl;
+  //cout << "OneBodyNorm of diff=" << Diff.OneBodyNorm() << endl;
 
   cout << endl;
-  cout << "TwoBodyNorm of New=" << New.TwoBodyNorm() << endl;
+  //cout << "TwoBodyNorm of New=" << New.TwoBodyNorm() << endl;
   cout << "TwoBodyNorm of Hbare=" << Hbare.TwoBodyNorm() << endl;
-  cout << "TwoBodyNorm of diff=" << Diff.TwoBodyNorm() << endl;
+  //cout << "TwoBodyNorm of diff=" << Diff.TwoBodyNorm() << endl;
  /*
   cout << "New:" << endl;
   cout << "OneBody=" << endl << New.OneBody << endl;
@@ -187,7 +187,7 @@ int main(int argc, char** argv)
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     Hbare.PrintTwoBody(ch);
     cout << endl;
-  } */
+  } 
 
   cout << "Diff:" << endl;
   cout << "OneBody=" << endl << New.OneBody << endl;
@@ -198,7 +198,7 @@ int main(int argc, char** argv)
     cout << endl;
   }
   cout << endl << endl;
-
+ */
  /* for (int ch = 0; ch < Hbare.nChannels; ch++) {
 	cout << endl;
 	cout << "----- Channel " << ch << " -----" << endl;
