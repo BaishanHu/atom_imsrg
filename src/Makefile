@@ -1,4 +1,4 @@
-CC = g++
+CC = mpiCC
 
 # Compiler flags:
 #  -DNO_ODE=1 compiles without boost/ode package used for flow equation solver

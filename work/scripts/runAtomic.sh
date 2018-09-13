@@ -7,7 +7,7 @@ NTHREADS=12
 WORKDIR=$PWD
 
 #exe=../compiled/Atomic
-exe=../compiled/writeAtomicTBME
+exe=/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME
 
 vnn=
 file2e1max=6
@@ -15,8 +15,8 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=20
-estop=20
+estart=2
+estop=2
 eiter=2
 
 lstart=2
@@ -42,8 +42,8 @@ systemtype=atomic
 #hw=108.8
 valence_space=He4
 reference=He4
-systemBasis=hydrogen
-#systemBasis=harmonic
+#systemBasis=hydrogen
+systemBasis=harmonic
 smax=200
 #emax=4
 #Lmax=2
@@ -79,11 +79,23 @@ export OMP_NUM_THREADS=${NTHREADS}
 $command
 else
 echo jobname is ${jobname}
-qsub -N ${jobname} -q $mode -d $PWD -l walltime=192:00:00 -l nodes=1:ppn=${NTHREADS} -l vmem=60gb -m ae -M davidedwardlivermore@gmail.com -j oe -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"` << END
+echo "running"
+
+#PBS -N ${jobname}
+#PBS -q oak
+#PBS -d /global/home/dlivermore/imsrg/work/scripts
+#PBS -l walltime=516:00:00
+#PBS -l nodes=1:ppn=32
+#PBS -l vmem=251gb
+#PBS -m abe
+#PBS -M dlivermore@triumf.ca
+#PBS -j oe
+#PBS -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
+
+#qsub -N ${jobname} -q $mode -d $PWD -l walltime=192:00:00 -l nodes=1:ppn=${NTHREADS} -l vmem=60gb -m ae -M davidedwardlivermore@gmail.com -j oe -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
 cd $WORKDIR
 export OMP_NUM_THREADS=${NTHREADS}
 $command
-END
 fi
 
 done
