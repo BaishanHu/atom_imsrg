@@ -1,4 +1,5 @@
-CC = mpiCC
+#CC = mpiCC
+CC = g++
 
 # Compiler flags:
 #  -DNO_ODE=1 compiles without boost/ode package used for flow equation solver
@@ -22,10 +23,16 @@ endif
 
 PYTHONFLAGS = -I/usr/include/python2.7 -lboost_python #-lpython 
 
-THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; else echo other; fi)
+THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; elif [ `hostname|grep oak` ]; then echo oak; else echo other; fi)
 
 ALL = libIMSRG.so imsrg++
 LIBS = -lopenblas -lgsl -lm -lz -lhdf5_cpp -lhdf5 -fext-numeric-literals -I ~/jsoncpp/dist -fPIC
+
+ifeq ($(HDF5),on)
+ LIBS += -lhdf5_cpp -lhdf5
+else
+ FLAGS += -DNO_HDF5   # By default, don't bother building with HDF5, since it's not used very often and can make building a pain
+endif
 
 ifeq ($(THEHOST),jureca) # specific options for jureca cluster
 # FLAGS += -DOPENBLAS_NOUSEOMP=1
@@ -42,6 +49,17 @@ ifeq ($(THEHOST),cronos)
   ALL += pyIMSRG.so
   endif
 endif
+
+ifeq ($(THEHOST),oak)
+#  FLAGS += -DOLD_BOOST
+#  FLAGS += -DOPENBLAS_NOUSEOMP=1
+  NEWLIBS := $(filter-out -lopenblas,$(LIBS))
+  LIBS = $(NEWLIBS) -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
+ ifneq ($(PYTHON),off)
+  ALL += pyIMSRG.so
+  endif
+endif
+
 ifeq ($(THEHOST),other)  # default options. assumes boost and python are set up nicely.
  LIBS += -llapack
  ifneq ($(PYTHON),off)
@@ -49,12 +67,14 @@ ifeq ($(THEHOST),other)  # default options. assumes boost and python are set up 
  endif
 endif
 
+ifeq ($(HDF5),on)
 # The new version of Ubuntu puts the hdf5 libraries in a different location
-NEWHDF5LOC = $(shell if [ -d /usr/include/hdf5/serial ]; then echo yes; else echo no; fi)
-ifeq ($(NEWHDF5LOC),yes)
-  INCLUDE += -I/usr/include/hdf5/serial
-  NEWLIBS := $(filter-out -lhdf5,$(LIBS))
-  LIBS = $(NEWLIBS) -lhdf5_serial
+ NEWHDF5LOC = $(shell if [ -d /usr/include/hdf5/serial ]; then echo yes; else echo no; fi)
+ ifeq ($(NEWHDF5LOC),yes)
+   INCLUDE += -I/usr/include/hdf5/serial
+   NEWLIBS := $(filter-out -lhdf5,$(LIBS))
+   LIBS = $(NEWLIBS) -lhdf5_serial
+ endif
 endif
 
 all: $(ALL)

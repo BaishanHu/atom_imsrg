@@ -18,7 +18,9 @@
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
-#include "H5Cpp.h"
+#ifndef NO_HDF5
+  #include "H5Cpp.h"
+#endif
 
 #define LINESIZE 496
 //#define HEADERSIZE 500
@@ -31,7 +33,9 @@
 #endif
 
 using namespace std;
-using namespace H5;
+#ifndef NO_HDF5
+  using namespace H5;
+#endif
 
 ReadWrite::~ReadWrite()
 {
