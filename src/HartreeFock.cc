@@ -2,6 +2,9 @@
 #include "HartreeFock.hh"
 #include "ModelSpace.hh"
 #include <iomanip>
+#include <vector>
+#include <array>
+#include <map>
 #include <utility> // for make_pair
 #include "gsl/gsl_sf_gamma.h" // for radial wave function
 #include "gsl/gsl_sf_laguerre.h" // for radial wave function
@@ -14,53 +17,53 @@
 #define M_NUCLEON 938.9185 // average nucleon mass in MeV
 
 
-using namespace std;
+//using namespace std;
 
 HartreeFock::HartreeFock(Operator& hbare)
   : Hbare(hbare), modelspace(hbare.GetModelSpace()), 
     KE(Hbare.OneBody), energies(Hbare.OneBody.diag()),
     tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0)
 {
-   //cout << "Entering HartreeFock." << endl;
+   std::cout << "Entering HartreeFock." << endl;
    int norbits = modelspace->GetNumberOrbits();
 
    C             = arma::mat(norbits,norbits,arma::fill::eye);
    Vij           = arma::mat(norbits,norbits,arma::fill::zeros);
    V3ij          = arma::mat(norbits,norbits,arma::fill::zeros);
    F             = arma::mat(norbits,norbits);
-   //cout << "Assigned matrices." << endl;
+   std::cout << "Assigned matrices." << endl;
    for (int Tz=-1;Tz<=1;++Tz)
    {
-     //cout << "Iterating over Tz; Tz=" << Tz << endl;
+     std::cout << "Iterating over Tz; Tz=" << Tz << endl;
      for (int parity=0; parity<=1; ++parity)
      {
-       //cout << "Iterating over parity, parity=" << parity << endl;
+       std::cout << "Iterating over parity, parity=" << parity << endl;
        int nKetsMon = modelspace->MonopoleKets[Tz+1][parity].size();
-       //cout << "retrieved nKetsMon" << endl;
+       std::cout << "retrieved nKetsMon" << endl;
        Vmon[Tz+1][parity] = arma::mat(nKetsMon,nKetsMon);
-       //cout << "Assigned Vmon[Tz+1][parity]." << endl;
+       std::cout << "Assigned Vmon[Tz+1][parity]." << endl;
        Vmon_exch[Tz+1][parity] = arma::mat(nKetsMon,nKetsMon);
-       //cout << "Assigned Vmon_exch[Tz+1][parity]." << endl;
+       std::cout << "Assigned Vmon_exch[Tz+1][parity]." << endl;
      }
    }
    prev_energies = arma::vec(norbits,arma::fill::zeros);
-   vector<double> occvec;
-   //cout << "Pushing back occvec." << endl;
+   std::vector<double> occvec;
+   std::cout << "Pushing back occvec." << std::endl;
    for (auto& h : modelspace->holes) occvec.push_back(modelspace->GetOrbit(h).occ);
-   //cout << "making hole_orbs" << endl;
+   std::cout << "making hole_orbs" << std::endl;
    holeorbs = arma::uvec(modelspace->holes);
-   //cout << "making hole_occ" << endl;
+   std::cout << "making hole_occ" << std::endl;
    hole_occ = arma::rowvec(occvec);
-   //cout << "calling BuildMonopoleV()" << endl;
+   std::cout << "calling BuildMonopoleV()" << std::endl;
    BuildMonopoleV();
-   //cout << "Checking particle rank, should be ignored in atomic systems." << endl;
+   std::cout << "Checking particle rank, should be ignored in atomic systems." << std::endl;
    if (hbare.GetParticleRank()>2)
    {
       BuildMonopoleV3();
    }
-   //cout << "Updating Density Matrix." << endl;
+   std::cout << "Updating Density Matrix." << std::endl;
    UpdateDensityMatrix();
-   //cout << "Updating F()" << endl;
+   std::cout << "Updating F()" << std::endl;
    UpdateF();
 
 }
@@ -88,33 +91,33 @@ void HartreeFock::Solve()
    }
    CalcEHF();
 
-   cout << setw(15) << setprecision(10);
+   std::cout << setw(15) << setprecision(10);
    if (iterations < maxiter)
    {
-      cout << "HF converged after " << iterations << " iterations. " << endl;
+      std::cout << "HF converged after " << iterations << " iterations. " << std::endl;
    }
    else
    {
-      cout << "!!!! Warning: Hartree-Fock calculation didn't converge after " << iterations << " iterations." << endl;
-      cout << "!!!! Last " << convergence_ediff.size() << " points in convergence check:";
+      std::cout << "!!!! Warning: Hartree-Fock calculation didn't converge after " << iterations << " iterations." << std::endl;
+      std::cout << "!!!! Last " << convergence_ediff.size() << " points in convergence check:";
       for (auto& x : convergence_ediff ) cout << x << " ";
-      cout << "  (tolerance = " << tolerance << ")" << endl;
-      cout << "!!!! Last " << convergence_EHF.size() << "  EHF values: ";
+      std::cout << "  (tolerance = " << tolerance << ")" << std::endl;
+      std::cout << "!!!! Last " << convergence_EHF.size() << "  EHF values: ";
       for (auto& x : convergence_EHF ) cout << x << " ";
-      cout << endl;
+      std::cout << std::endl;
       /*
-      cout << "OneBody=" << endl << Hbare.OneBody << endl;
-      cout << "TwoBody=" << endl;
+      std::cout << "OneBody=" << std::endl << Hbare.OneBody << std::endl;
+      std::cout << "TwoBody=" << std::endl;
       for (int ch = 0; ch < Hbare.nChannels; ch++) {
-	cout << endl;
-	cout << "----- Channel " << ch << " -----" << endl;
+	std::cout << std::endl;
+	std::cout << "----- Channel " << ch << " -----" << std::endl;
 	Hbare.PrintTwoBody(ch);
       }
       */
    }
    PrintEHF();
-   cout << "Rho=" << endl;
-   cout << rho << endl;
+   std::cout << "Rho=" << std::endl;
+   std::cout << rho << std::endl;
 }
 
 
@@ -163,11 +166,11 @@ void HartreeFock::CalcEHF()
 //**************************************************************************************
 void HartreeFock::PrintEHF()
 {
-   cout << fixed <<  setprecision(7);
-   cout << "e1hf = " << e1hf << endl;
-   cout << "e2hf = " << e2hf << endl;
-   cout << "e3hf = " << e3hf << endl;
-   cout << "EHF = "  << EHF  << endl;
+   std::cout << fixed <<  setprecision(7);
+   std::cout << "e1hf = " << e1hf << std::endl;
+   std::cout << "e2hf = " << e2hf << std::endl;
+   std::cout << "e3hf = " << e3hf << std::endl;
+   std::cout << "EHF = "  << EHF  << std::endl;
 }
 
 //*********************************************************************
@@ -207,8 +210,8 @@ void HartreeFock::Diagonalize()
          ++diag_tries;
          if (diag_tries > 5)
          {
-           cout << "Hartree-Fock: Failed to diagonalize the submatrix " 
-                << " on iteration # " << iterations << ". The submatrix looks like:" << endl;
+           std::cout << "Hartree-Fock: Failed to diagonalize the submatrix " 
+                << " on iteration # " << iterations << ". The submatrix looks like:" << std::endl;
            F_ch.print();
            break;
          }
@@ -239,51 +242,51 @@ void HartreeFock::Diagonalize()
 //*********************************************************************
 void HartreeFock::BuildMonopoleV()
 {
-   //cout << "Entering BuildMonopoleV()." << endl;
+   std::cout << "Entering BuildMonopoleV()." << std::endl;
    for (int Tz=-1; Tz<=1; ++Tz)
    {
-     //cout << "Iterating over Tz=" << Tz << endl;
+     std::cout << "Iterating over Tz=" << Tz << std::endl;
      for (int parity=0; parity<=1; ++parity)
      {
-	//cout << "Iterating over parity=" << parity << endl;
+	std::cout << "Iterating over parity=" << parity << std::endl;
         Vmon[Tz+1][parity].zeros();
         Vmon_exch[Tz+1][parity].zeros();
         for ( auto& itbra : modelspace->MonopoleKets[Tz+1][parity] )
         {
-	   //cout << "Iterating over modelspace->MonopoleKets" << endl;
+	   std::cout << "Iterating over modelspace->MonopoleKets" << std::endl;
            Ket & bra = modelspace->GetKet(itbra.first);
-	   //cout << "Retrieved first bra." << endl;
+	   std::cout << "Retrieved first bra." << std::endl;
            int a = bra.p;
            int b = bra.q;
-	   //cout << "a=" << a << " b=" << b << endl;
+	   std::cout << "a=" << a << " b=" << b << std::endl;
 	   if (a == -1 or b == -1) continue;
            Orbit & oa = modelspace->GetOrbit(a);
 	   //Orbit & oa = bra->op;
-	   //cout << "Got first orbit, getting second; a=" << a << " b=" << b << endl;
+	   std::cout << "Got first orbit, getting second; a=" << a << " b=" << b << std::endl;
 	   //Orbit & ob = bra->oq;
            Orbit & ob = modelspace->GetOrbit(b);
-	   //cout << "Got both, beginning iteration over kets." << endl;
+	   std::cout << "Got both, beginning iteration over kets." << std::endl;
            double norm = (oa.j2+1)*(ob.j2+1);
            for ( auto& itket : modelspace->MonopoleKets[Tz+1][parity] )
            {
-	      //cout << "Iterating over MonopoleKets." << endl;
+	      std::cout << "Iterating over MonopoleKets." << std::endl;
               if (itket.second < itbra.second) continue;
               Ket & ket = modelspace->GetKet(itket.first);
-	      //cout << "Got ket, getting indecies." << endl;
+	      std::cout << "Got ket, getting indecies." << std::endl;
               int c = ket.p;
               int d = ket.q;
-	      //cout << "c=" << c << " d=" << d << endl;
-	      //cout << "monopole at (" << a << "," << b << "," << c << "," << d << ")=" << Hbare.TwoBody.GetTBMEmonopole(a,b,c,d) << "*" << norm << endl;
-	      //cout << "at Tz+1=" << Tz+1 << " parity=" << parity << " itbra.second=" << itbra.second << " itket.second=" << itket.second << endl;
+	      std::cout << "c=" << c << " d=" << d << std::endl;
+	      std::cout << "monopole at (" << a << "," << b << "," << c << "," << d << ")=" << Hbare.TwoBody.GetTBMEmonopole(a,b,c,d) << "*" << norm << std::endl;
+	      std::cout << "at Tz+1=" << Tz+1 << " parity=" << parity << " itbra.second=" << itbra.second << " itket.second=" << itket.second << std::endl;
               Vmon[Tz+1][parity](itbra.second,itket.second)       = Hbare.TwoBody.GetTBMEmonopole(a,b,c,d)*norm;
-	      //cout << "Set Vmon." << endl;
+	      std::cout << "Set Vmon." << std::endl;
               Vmon_exch[Tz+1][parity](itbra.second,itket.second)  = Hbare.TwoBody.GetTBMEmonopole(a,b,d,c)*norm;
-	      //cout << "Set Vmon_exch." << endl;
+	      std::cout << "Set Vmon_exch." << std::endl;
            }
         }
-	//cout << "Setting Vmon with symmatu." << endl;
+	std::cout << "Setting Vmon with symmatu." << std::endl;
         Vmon[Tz+1][parity] = arma::symmatu(Vmon[Tz+1][parity]);
-	//cout << "Setting Vmon_exch with symmatu." << endl;
+	std::cout << "Setting Vmon_exch with symmatu." << std::endl;
         Vmon_exch[Tz+1][parity] = arma::symmatu(Vmon_exch[Tz+1][parity]);
     }
   }

@@ -133,7 +133,7 @@ int main(int argc, char** argv)
   std::stringstream fn;
   //Operator New = Operator(modelspace);
   if (systemBasis == "harmonic") {
-	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_hw" << hw << ".me2j";
+	fn << "/global/scratch/dlivermore/atomicME_" << reference << "_basis_" << systemBasis << "Aug30_emax" << eMax << "_hw" << hw << ".me2j";
 	cout << "Writing Hbare to file with filename=" << fn.str() << endl;
 	rw.Write_me2j( fn.str(),  Hbare, eMax, 3*eMax, -1 );
 	/*

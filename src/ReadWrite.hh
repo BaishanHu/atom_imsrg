@@ -1,4 +1,3 @@
-
 #ifndef ReadWrite_h
 #define ReadWrite_h 1
 #define BOOST_IOSTREAMS_NO_LIB 1
@@ -25,9 +24,6 @@ class ReadWrite
    template<class T> void ReadBareTBME_Darmstadt_from_stream( T & infile, Operator& Hbare, int E1max, int E2max, int lmax);
    void Read_Darmstadt_3body( string filename, Operator& Hbare, int E1max, int E2max, int E3max);
    template<class T>void Read_Darmstadt_3body_from_stream( T & infile, Operator& Hbare, int E1max, int E2max, int E3max);
-   void GetHDF5Basis( ModelSpace* modelspace, string filename, vector<array<int,5>>& Basis );
-   void Read3bodyHDF5( string filename, Operator& op);
-   void Read3bodyHDF5_new( string filename, Operator& op);
    void ReadOperator_Nathan( string filename1b, string filename2b, Operator& op);
    void ReadTensorOperator_Nathan( string filename1b, string filename2b, Operator& op);	
    void WriteOperatorToJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version);
@@ -105,4 +101,3 @@ class VectorStream
 };
 
 #endif
-

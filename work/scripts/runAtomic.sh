@@ -3,11 +3,11 @@
 # decide if we should run in the current shell or submit to the cluster
 # interactive=true means run in the current shell.
 interactive=false
-NTHREADS=12
+NTHREADS=32
 WORKDIR=$PWD
 
-#exe=../compiled/Atomic
-exe=/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME
+exe=/
+#exe=/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME
 
 vnn=
 file2e1max=6
@@ -90,9 +90,11 @@ echo "running"
 #PBS -m abe
 #PBS -M dlivermore@triumf.ca
 #PBS -j oe
-#PBS -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
+###PBS -e pbslog/${jobname}.e.`date +"%g%m%d%H%M"`
+###PBS -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
+#PBS -e pbslog/
+#PBS -o pbslog/
 
-#qsub -N ${jobname} -q $mode -d $PWD -l walltime=192:00:00 -l nodes=1:ppn=${NTHREADS} -l vmem=60gb -m ae -M davidedwardlivermore@gmail.com -j oe -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
 cd $WORKDIR
 export OMP_NUM_THREADS=${NTHREADS}
 $command

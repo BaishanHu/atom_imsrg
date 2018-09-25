@@ -5,6 +5,7 @@
 #include <omp.h>
 #include "IMSRG.hh"
 #include "Parameters.hh"
+//#include <cmath>
 
 using namespace imsrg_util;
 
@@ -166,7 +167,7 @@ int main(int argc, char** argv)
 //  }
   //cout << "Modelspace has this many tbc: " << modelspace.nTwoBodyChannels << endl;
   //rw.ReadBareTBME_Darmstadt( inputtbme, Hbare, file2e1max, file2e2max, file2lmax);
-  Operator Diff = Operator(modelspace);
+//  Operator Diff = Operator(modelspace);
   Operator twoBody = Operator(modelspace);
   if (systemBasis == "harmonic") {
     cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << 4*(2*eMax + 1*Lmax) << endl;
@@ -187,7 +188,7 @@ int main(int argc, char** argv)
     //cout << "Adding HO energies..." << endl;
     //Hbare += HarmonicOneBody(modelspace);
     cout << "Onebodies added,";
-    Operator New = CorrE2b( modelspace );
+  //  Operator New = CorrE2b( modelspace );
     // Operator Diff= Operator( modelspace);
     if (modelspace.GetTargetZ() > 1)
     {
@@ -195,11 +196,11 @@ int main(int argc, char** argv)
 	//Hbare += CorrE2b(modelspace);
 	//Operator twoBody = Operator(modelspace);
 	std::stringstream fn;
-	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_He4_basis_harmonicAug30_emax6_hw1.me2j";
+	fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonicSep24_emax20_h1.me2j";
 	rw.ReadBareTBME_Darmstadt( fn.str(), twoBody, eMax, 2*eMax, -1 );
 	twoBody *= sqrt( double(hw) );
 	Hbare += twoBody;
-	Diff = New - twoBody;
+//	Diff = New - twoBody;
 	cout << "Added Twobody, moving on." << endl;
     }
   } else {
@@ -221,12 +222,13 @@ int main(int argc, char** argv)
     {
 	cout << "Adding two-body correction." << endl;
 	//Hbare += ElectronTwoBody(modelspace);
-	Hbare += eeCoulomb(modelspace);
+	//Hbare += eeCoulomb(modelspace);
+	//rw.
     }
   }
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
-  cout << "Diff TwoBody=" << endl;
+/*  cout << "Diff TwoBody=" << endl;
   for (int ch = 0; ch < Diff.nChannels; ch++) {
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     Diff.PrintTwoBody(ch);
@@ -236,7 +238,7 @@ int main(int argc, char** argv)
     twoBody.PrintTwoBody(ch);
     cout << endl;
   } 
-
+*/
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);
   //Hbare += ElectronTwoBody(modelspace);
@@ -490,7 +492,7 @@ int main(int argc, char** argv)
     {
       for (auto c : modelspace.core)
       {
-         if ( (find( modelspace.holes.begin(), modelspace.holes.end(), c) == modelspace.holes.end()) or (abs(1-modelspace.holes[c])>1e-6))
+         if ( (find( modelspace.holes.begin(), modelspace.holes.end(), c) == modelspace.holes.end()) or (fabs(1-modelspace.holes[c])>1e-6))
          {
            renormal_order = true;
            break;
