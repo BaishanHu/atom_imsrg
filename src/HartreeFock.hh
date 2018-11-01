@@ -7,6 +7,8 @@
 #include <armadillo>
 #include <map>
 #include <deque>
+#include <vector>
+#include <array>
 
 class HartreeFock
 {

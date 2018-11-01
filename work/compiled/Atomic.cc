@@ -190,7 +190,8 @@ int main(int argc, char** argv)
     cout << "Onebodies added,";
   //  Operator New = CorrE2b( modelspace );
     // Operator Diff= Operator( modelspace);
-    if (modelspace.GetTargetZ() > 1)
+    Hbare += ElectronTwoBody( modelspace );
+/*    if (modelspace.GetTargetZ() > 1)
     {
 	cout << " adding twobody..." << endl;
 	//Hbare += CorrE2b(modelspace);
@@ -202,7 +203,7 @@ int main(int argc, char** argv)
 	Hbare += twoBody;
 //	Diff = New - twoBody;
 	cout << "Added Twobody, moving on." << endl;
-    }
+    } */
   } else {
     //cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
     //modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax)+40 );
@@ -222,7 +223,7 @@ int main(int argc, char** argv)
     {
 	cout << "Adding two-body correction." << endl;
 	//Hbare += ElectronTwoBody(modelspace);
-	//Hbare += eeCoulomb(modelspace);
+	Hbare += eeCoulomb(modelspace);
 	//rw.
     }
   }

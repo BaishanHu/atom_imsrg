@@ -507,196 +507,8 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    return T;
 }
 
-
-Operator ElectronTwoBody(ModelSpace& modelspace)
-{
-   double t_start = omp_get_wtime();
-   cout << "Entering ElectronTwoBody." << endl;
-   int nchan = modelspace.GetNumberTwoBodyChannels();
-   Operator V12(modelspace);
-   V12.SetHermitian();
-   V12.Erase();
-   double PI = 3.141592;
-   vector<unsigned long> cache_list;
-   vector<unsigned long> cache;
-   //V12.EraseZeroBody(); // Throwing an error in some mapping function, which I /think/ is in OneBodyChannel or OneBody
-   //V12.EraseOneBody();
-   //V12.EraseTwoBody();
-   //#pragma omp parallel for
-   for ( int ch : modelspace.SortedTwoBodyChannels )
-   {
-      TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
-      //if (ch == 1) cout << "+++++ Channel is " << ch << " +++++" << endl;
-      int nkets = tbc.GetNumberKets();
-      //cout << "nkets is " << nkets << endl;
-      if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
-      //bool trunc[nkets][nkets] = { {false} };
-      //cout << "created trunc, moving into ibra loop." << endl;
-      #pragma omp parallel for
-      for (int ibra = 0; ibra < nkets; ++ibra)
-      {
-	 //cout << "----- ibra is " << ibra << " -----" << endl;
-         Ket & bra = tbc.GetKet(ibra);
-	 //cout << "Got bra, getting orbits." << endl;
-         Orbit & o1 = modelspace.GetOrbit(bra.p);
-	 //cout << "Got o1, getting o2." << endl;
-         Orbit & o2 = modelspace.GetOrbit(bra.q);
-	 //#pragma omp parallel for
-	 //for (int jket = 0; jket <= ibra; jket++)
-	 for (int jket = ibra; jket < nkets; jket++)
-	 {
-	    //cout << "----- jket is " << jket << " -----" << endl;
-	    //cout << "nkets= " << nkets << " for ch= " << ch << endl;
-	    //if(trunc[ibra][jket] == true or trunc[jket][ibra] == true) continue; // should save both anyway, but w/e
-	    //cout << "Got past if(trunc[ch][ibra][jket]..." << endl;
-	    //cout << "Just to Recap: ch=" << ch << " ibra=" << ibra << " jket=" << jket << endl;
-	    Ket & ket = tbc.GetKet(jket);
-	    //cout << "Got past Ket & ket; ket.p=" << ket.p << " ket.q=" << ket.q << endl;
-	    Orbit & o3 = modelspace.GetOrbit(ket.p);
-	    //cout << "Got Past Orbit & o3..." << endl;
-	    Orbit & o4 = modelspace.GetOrbit(ket.q);
-	    //cout << "Got Past Orbit & o4..." << endl;
-	    
-	    //if ( o1.index > o2.index or o3.index > o4.index ) continue;
-	    //cout << "o1.index=" << o1.index << endl;
-	    //cout << "o2.index=" << o2.index << endl;
-	    //cout << "o3.index=" << o3.index << endl;
-	    //cout << "o4.index=" << o4.index << endl;
-	    //double t2_start = omp_get_wtime();
-	    double result = 0;
-	    //cout << "Entering m_i loop..." << endl;
-	    // All of this business with the mi's might not matter since the m is just a delta
-	    // Still need m for the legendre polynomials in theta
-	    //for (int m1=o1.l; m1>=0; m1--)
-	    //{
-		//for (int m2=o2.l; m2>=0; m2--)
-		//{
-		    // double m13_cache [int(o3.l)];
-		    // double m24_cache [int(04.l)];
-		    for (int m3=o3.l; m3>=0; m3--) // start at o3.l and iterate to 0? Might need a factor of 2 for m%2!=0
-		    {
-			for (int m4=o4.l; m4>=0; m4--)
-			{ 
-			    //#pragma omp atomic
-			    //cout << "In Electron2Body; m3=" << m3 << ", m4=" << m4 << endl;
-			    if (m3 < 0) cout << "m3 < 0" << endl;
-			    if (m4 < 0) cout << "m4 < 0" << endl;
-			    if (o1.l < m3){
-				// cout << "o1.l < m3" << endl;
-				break;
-			    }
-			    if (o2.l < m4){
-				// cout << "o2.l < m4" << endl;
-				break;
-			    }
-			    if (o3.l < m3) cout << "o3.l < m3" << endl;
-			    if (o4.l < m4) cout << "o4.l < m4" << endl;
-			    if (o2.l != o4.l) break;
-			    //if ( (
-			    double xmin[4] = {0,0, 0,0};
-			    double xmax[4] = {1,PI, 1,PI};
-			    double val = 0;
-			    double err = 0;
-			    unsigned long cache_temp = CalcCacheIndex(tbc.J, o1.n,o1.l,m3,
-								o2.n,o2.l,m4,
-								o3.n,o3.l,m3,
-								o4.n,o4.l,m4);
-			    bool cache_check = false;
-			    #pragma omp critical
-			    cache_check = find(cache_list.begin(), cache_list.end(), cache_temp) != cache_list.end();
-			    if(cache_check==true) 
-			    {
-				//cout << "Found cache_temp in cache_list" << endl;
-				//V12.TwoBody.SetTBME(ch, jket, ibra, cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) - cache_list.begin())
-				result += cache.at(find(cache_list.begin(), cache_list.end(), cache_temp) != cache_list.end()); 
-			    } else {
-				//cout << "Didn't find cache_temp in cache_list, calculating..." << endl;
-				/* v does not contain x */
-				my_f_params params={o1.n,o1.l,m3,
-                                                o2.n,o2.l,m4,
-                                                o3.n,o3.l,m3,
-                                                o4.n,o4.l,m4,
-                                                modelspace.GetTargetZ(),
-						modelspace.GetTargetMass() };
-                            	hcubature(1, &f, &params, 4, xmin, xmax, 1e6, 0, 1e-5, ERROR_INDIVIDUAL, &val, &err);
-				val *= HBARC/137.035999139;
-				#pragma omp critical // Already contained within critical above find?
-				cache_list.push_back(cache_temp);
-				#pragma omp critical
-				cache.push_back(val);
-			    }
-			    //#pragma omp critical
-			    // if (val < 17.1 && val > 16.9) cout << "Got ~17 in <" << o1.n << o1.l << o1.j2 << m3<< ";" << o2.n << o2.l << o2.j2 << m4 << "|" << o3.n << o3.l << o3.j2 << m3 << ";" << o4.n << o4.l << o4.j2 << m4 << ">" << endl;
-			
-			    double val_m1 = 0;
-			    double val_m2 = 0;
-			    double val_m3 = 0;
-			    double val_m4 = 0;
-			    if (m3 != 0) val_m1 = gsl_sf_fact(o1.l-m3)*pow(-1,m3)/gsl_sf_fact(o1.l+m3);
-			    if (m4 != 0) val_m2	= gsl_sf_fact(o2.l-m4)*pow(-1,m4)/gsl_sf_fact(o2.l+m4);
-			    if (m3 != 0) val_m3 = gsl_sf_fact(o3.l-m3)*pow(-1,m3)/gsl_sf_fact(o3.l+m3);
-			    if (m4 != 0) val_m4 = gsl_sf_fact(o4.l-m4)*pow(-1,m4)/gsl_sf_fact(o4.l+m4);
-
-			    val = val*(1 + val_m1*val_m3 + val_m2*val_m4 + val_m1*val_m2*val_m3*val_m4);
-			
-		            result += val;
-			} // m4
-			//result /= (2*o3.l + 1);
-		    } // m3
-		//} // m2
-	    //} // m1
-	    // Average over initial, sum over final?
-	    // Average over all?
-	    result /= ( (2*o1.l + 1) * (2*o2.l + 1) * (2*o3.l + 1) * (2*o4.l + 1) );
-            if (result < 0) result = 0;
-            /* #pragma omp critical
-            if (result >= 16.9 || result <= 17.1) {
-                cout << "Found 17 jket=" << jket << " ibra=" << ibra << " <" << o1.n << o1.l << o1.j2 << ";" << o2.n << o2.l << o2.j2 << "|" << o3.n <<
-o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
-                //result = 0;
-            }
- 
-	    if (result < 0) result = 0;
-	    #pragma omp critical
-	    if (result >= 67.99 || result <= 68.01) {
-		cout << "Found 68 jket=" << jket << " ibra=" << ibra << " <" << o1.n << o1.l << o1.j2 << ";" << o2.n << o2.l << o2.j2 << "|" << o3.n <<  
-o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
-		//result = 0;
-	    }
-	    #pragma omp critical
-            if (result >= 33.99	|| result <= 34.01) {
-		cout << "Found 34 jket=" <<	jket <<	" ibra=" << ibra << " <" << o1.n << o1.l << o1.j2 << ";" << o2.n << o2.l << o2.j2 << "|" << o3.n <<  
-o3.l << o3.j2 << ";" << o4.n << o4.l << o4.j2 << ">" << endl;
-		//result = 0;
-	    } */
-
-	    V12.TwoBody.SetTBME(ch, jket, ibra, result);
-	    V12.TwoBody.SetTBME(ch, ibra, jket, result);
-	    //unsigned long cache_val = CalcCacheIndex(o1.n, o1.l, 
-            //double cmInvR = CalculateCMInvR(o1.n, o1.l, 1./2, o1.j2/2.0,
-		//			    o2.n, o2.l, 1./2, o2.j2/2.0,
-		//			    o3.n, o3.l, 1./2, o3.j2/2.0,
-		//			    o4.n, o4.l, 1./2, o4.j2/2.0, modelspace, tbc.J);
-	    //V12.profiler.timer["CalculateCMInvR"] += (omp_get_wtime() - t2_start);//12;
-	    //cout << "Got past CalcCMInvR." << endl;
-	    //if (abs(cmInvR)>1e-7) V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR); // See TwoBody KE
-	    //if (ch == 1 and ibra == 2 and jket == 1) cout << "About to set tbme." << endl;
-	    //V12.TwoBody.SetTBME(ch,ibra,jket,cmInvR);
-	    //trunc[ibra][jket] = true;
-	    //cout << "Set ibra,jket, setting jket,ibra." << endl; // TwoBodyKE only sets ibra,jket, should mimick this?
-	    //V12.TwoBody.SetTBME(ch,j
-	 } // jket
-      } // ibra
-   } // ch
-   #pragma omp master
-   V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
-   cout << "Leaving ElectronTwoBody." << endl;
-   return V12;
-}
-
 struct RabRcd_params {  int na; int la; int nb; int lb;
                         int nc; int lc; int nd; int ld; int lp; int Z; };
-
 
 // takes in a set of QN, return `1' if a has "<=" qn than b
 // return 0 if b is "lower" than a
@@ -711,7 +523,7 @@ bool get_min_qn( int na, int la, int j2a, int nb, int lb, int j2b)
     if (j2a<j2b) return true;
     if (j2a>j2b) return false;
     // j2a==j2b
-    return true;    
+    return true;
 }
 
 unsigned long GetMinParams(struct RabRcd_params& params)
@@ -742,21 +554,21 @@ unsigned long GetMinParams(struct RabRcd_params& params)
     bool min_bd = get_min_qn(nb,lb,0, nd,ld,0);
 
     if (min_ac) { // a "<=" c
-	min_ac_n = na;
-	min_ac_l = la;
-	max_ac_n = nc;
-	max_ac_l = lc;
+        min_ac_n = na;
+        min_ac_l = la;
+        max_ac_n = nc;
+        max_ac_l = lc;
     } else {
 	min_ac_n = nc;
-	min_ac_l = lc;
-	max_ac_n = na;
-	max_ac_l = la;
+        min_ac_l = lc;
+        max_ac_n = na;
+        max_ac_l = la;
     }
     if (min_bd) { // b "<=" d
-	min_bd_n = nb;
-	min_bd_l = lb;
-	max_bd_n = nd;
-	max_bd_l = ld;
+        min_bd_n = nb;
+        min_bd_l = lb;
+        max_bd_n = nd;
+        max_bd_l = ld;
     } else {
 	min_bd_n = nd;
         min_bd_l = ld;
@@ -777,33 +589,33 @@ unsigned long GetMinParams(struct RabRcd_params& params)
     int max_ket_l = 0;
 
     if (min_bra) { // bd "<=" ac
-	min_bra_n = min_bd_n;
-	min_bra_l = min_bd_l;
-	max_bra_n = min_ac_n;
-	max_bra_l = min_ac_l;
-	min_ket_n = max_bd_n;
-	min_ket_l = max_bd_n;
-	max_ket_n = max_ac_n;
-	max_ket_l = max_ac_l;
+        min_bra_n = min_bd_n;
+        min_bra_l = min_bd_l;
+        max_bra_n = min_ac_n;
+        max_bra_l = min_ac_l;
+        min_ket_n = max_bd_n;
+        min_ket_l = max_bd_n;
+        max_ket_n = max_ac_n;
+        max_ket_l = max_ac_l;
     } else {
 	min_bra_n = min_ac_n;
-	min_bra_l = min_ac_l;
-	max_bra_n = min_bd_n;
-	max_bra_l = min_bd_l;
-	min_ket_n = max_ac_n;
-	min_ket_l = max_ac_l;
-	max_ket_n = max_bd_n;
-	max_ket_l = max_bd_l;
+        min_bra_l = min_ac_l;
+        max_bra_n = min_bd_n;
+        max_bra_l = min_bd_l;
+        min_ket_n = max_ac_n;
+        min_ket_l = max_ac_l;
+        max_ket_n = max_bd_n;
+        max_ket_l = max_bd_l;
     }
-    
+
     return pow(10,12)* lp
-	 * pow(10,10)* min_bra_n
-	 * pow(10,8) * max_bra_n
-	 * pow(10,7) * min_bra_l
-	 * pow(10,6) * max_bra_l
-	 * pow(10,4) * min_ket_n
-	 * pow(10,2) * max_ket_n
-	 * pow(10,1) * min_ket_l
+         * pow(10,10)* min_bra_n
+         * pow(10,8) * max_bra_n
+         * pow(10,7) * min_bra_l
+         * pow(10,6) * max_bra_l
+         * pow(10,4) * min_ket_n
+         * pow(10,2) * max_ket_n
+         * pow(10,1) * min_ket_l
 	 * pow(10,0) * max_ket_l;
 }
 
@@ -853,6 +665,76 @@ int RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *f
     return 0;
 }
 
+double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z, vector<unsigned long> &cache, vector<unsigned long> &cache_list)
+{
+    double me = 0;
+    double xmin[2] = {0,0};
+    double xmax[2] = {1,1};
+    int max_iter = 1e3;
+    double max_err = 1e-2;
+    vector<unsigned long>:: iterator it;
+
+    for (int L=max(abs(oa.j2-oc.j2)/2, abs(ob.j2-od.j2)/2); L<=min((oa.j2+oc.j2)/2, (ob.j2+od.j2)/2); L++)
+    {
+	struct RabRcd_params p_abcd= { oa.n,oa.l, ob.n,ob.l,
+                                       oc.n,oc.l, od.n,od.l,
+                                       L, Z};
+	double val;
+	double err;
+        unsigned long cache_val = GetMinParams(p_abcd);
+        it = find(cache_list.begin(), cache_list.end(), cache_val);
+	#pragma omp critical
+        if (it == cache_list.end()) // didn't find in list
+        {
+	    hcubature(1, &RabRcd, &p_abcd, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val, &err);
+        } else {
+            val = cache[it-cache_list.begin()+1];
+        }
+
+	me += val * SixJ( oa.j2/2,ob.j2/2,J, oc.j2/2,od.j2/2,L ) * ThreeJ(oa.j2/2,L,oc.j2/2, -1./2,0,1./2) * ThreeJ(ob.j2/2,L,od.j2/2, -1./2,0,1./2);
+    }
+    return me*sqrt( (oa.j2+1) * (ob.j2+1) * (oc.j2+1) * (od.j2+1) )*pow(-1, oa.j2+ob.j2+J);
+}
+
+
+Operator ElectronTwoBody(ModelSpace& modelspace)
+{
+   double t_start = omp_get_wtime();
+   cout << "Entering ElectronTwoBody." << endl;
+   int nchan = modelspace.GetNumberTwoBodyChannels();
+   Operator V12(modelspace);
+   V12.SetHermitian();
+   V12.Erase();
+   double PI = 3.141592;
+   vector<unsigned long> cache_list;
+   vector<unsigned long> cache;
+   //#pragma omp parallel for schedule(dynamic,1) // Throws an error on for ( int ch : .. .  claims it requires an = before :
+   for ( int ch : modelspace.SortedTwoBodyChannels )
+   {
+	TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+        int nkets = tbc.GetNumberKets();
+        if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
+	#pragma omp parallel for schedule(dynamic,1)
+        for (int ibra = 0; ibra < nkets; ++ibra)
+        {
+            Ket & bra = tbc.GetKet(ibra);
+            Orbit & o1 = modelspace.GetOrbit(bra.p);
+            Orbit & o2 = modelspace.GetOrbit(bra.q);
+	    for (int jket = ibra; jket < nkets; jket++)
+	    {
+		Ket & ket = tbc.GetKet(jket);
+		Orbit & o3 = modelspace.GetOrbit(ket.p);
+		Orbit & o4 = modelspace.GetOrbit(ket.q);
+		double me = HBARC*(1./137)/(sqrt( (1+ket.delta_pq())*(1+bra.delta_pq()) )) * ( ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ(), cache,cache_list) - pow(-1,(o1.j2+o2.j2)/2 - tbc.J) * ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ(), cache,cache_list) );
+		//me /= 
+	    } // jket 
+     	} // ibra
+   } // ch
+   #pragma omp master
+   V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
+   cout << "Leaving ElectronTwoBody." << endl;
+   return V12;
+}
 
 Operator eeCoulomb(ModelSpace& modelspace)
 {
@@ -911,6 +793,7 @@ Operator eeCoulomb(ModelSpace& modelspace)
 			        Ket & ket = tbc.GetKet(jket);
 				Orbit & oc = modelspace.GetOrbit(ket.p);
 				Orbit & od = modelspace.GetOrbit(ket.q);
+				if ( (oa.l + ob.l + oc.l + od.l)%2 != 0 ) continue;
 				double sqr_coeff_cd = sqrt( (2*oc.l+1) * (2*od.l+1) );
 				//cout << "In jket: "<< jket << " with oc=<nlj|=" << oc.n << oc.l << oc.j2 << " and od=<nlj|="<< od.n << od.l << od.j2 << endl;
 			    	double me = 0;
@@ -973,6 +856,7 @@ Operator eeCoulomb(ModelSpace& modelspace)
 									{
 									    for (int mld=-od.l; mld<=od.l; mld++)
 									    {
+										//if ( mla+mlb+mlc+mld != 0 ) continue;
 										int Mlcd = mlc+mld;
 										double mlcd_clebsh = pow(-1,oc.l-od.l+Mlcd) * sqrt(2*Lcd+1) * ThreeJ(oc.l,od.l,Lcd, mlc,mld,-Mlcd);
 										//cout << "mlcd_clebsh=" << mlcd_clebsh << endl;

@@ -76,6 +76,7 @@ namespace imsrg_util
  int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval);
 
  Operator eeCoulomb(ModelSpace& modelspace);
+ double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z, vector<unsigned long> &cache, vector<unsigned long> &cache_list);
  Operator ElectronTwoBody(ModelSpace& modelspace);
  double CalculateCMInvR( double n1, double l1, double s1, double j1,
 			 double n2, double l2, double s2, double j2,

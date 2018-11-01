@@ -24,46 +24,46 @@ HartreeFock::HartreeFock(Operator& hbare)
     KE(Hbare.OneBody), energies(Hbare.OneBody.diag()),
     tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0)
 {
-   std::cout << "Entering HartreeFock." << endl;
+   //std::cout << "Entering HartreeFock." << endl;
    int norbits = modelspace->GetNumberOrbits();
 
    C             = arma::mat(norbits,norbits,arma::fill::eye);
    Vij           = arma::mat(norbits,norbits,arma::fill::zeros);
    V3ij          = arma::mat(norbits,norbits,arma::fill::zeros);
    F             = arma::mat(norbits,norbits);
-   std::cout << "Assigned matrices." << endl;
+   //std::cout << "Assigned matrices." << endl;
    for (int Tz=-1;Tz<=1;++Tz)
    {
-     std::cout << "Iterating over Tz; Tz=" << Tz << endl;
+     //std::cout << "Iterating over Tz; Tz=" << Tz << endl;
      for (int parity=0; parity<=1; ++parity)
      {
-       std::cout << "Iterating over parity, parity=" << parity << endl;
+       //std::cout << "Iterating over parity, parity=" << parity << endl;
        int nKetsMon = modelspace->MonopoleKets[Tz+1][parity].size();
-       std::cout << "retrieved nKetsMon" << endl;
+       //std::cout << "retrieved nKetsMon" << endl;
        Vmon[Tz+1][parity] = arma::mat(nKetsMon,nKetsMon);
-       std::cout << "Assigned Vmon[Tz+1][parity]." << endl;
+       //std::cout << "Assigned Vmon[Tz+1][parity]." << endl;
        Vmon_exch[Tz+1][parity] = arma::mat(nKetsMon,nKetsMon);
-       std::cout << "Assigned Vmon_exch[Tz+1][parity]." << endl;
+       //std::cout << "Assigned Vmon_exch[Tz+1][parity]." << endl;
      }
    }
    prev_energies = arma::vec(norbits,arma::fill::zeros);
    std::vector<double> occvec;
-   std::cout << "Pushing back occvec." << std::endl;
+   //std::cout << "Pushing back occvec." << std::endl;
    for (auto& h : modelspace->holes) occvec.push_back(modelspace->GetOrbit(h).occ);
-   std::cout << "making hole_orbs" << std::endl;
+   //std::cout << "making hole_orbs" << std::endl;
    holeorbs = arma::uvec(modelspace->holes);
-   std::cout << "making hole_occ" << std::endl;
+   //std::cout << "making hole_occ" << std::endl;
    hole_occ = arma::rowvec(occvec);
-   std::cout << "calling BuildMonopoleV()" << std::endl;
+   //std::cout << "calling BuildMonopoleV()" << std::endl;
    BuildMonopoleV();
-   std::cout << "Checking particle rank, should be ignored in atomic systems." << std::endl;
+   //std::cout << "Checking particle rank, should be ignored in atomic systems." << std::endl;
    if (hbare.GetParticleRank()>2)
    {
       BuildMonopoleV3();
    }
-   std::cout << "Updating Density Matrix." << std::endl;
+   //std::cout << "Updating Density Matrix." << std::endl;
    UpdateDensityMatrix();
-   std::cout << "Updating F()" << std::endl;
+   //std::cout << "Updating F()" << std::endl;
    UpdateF();
 
 }
@@ -242,51 +242,51 @@ void HartreeFock::Diagonalize()
 //*********************************************************************
 void HartreeFock::BuildMonopoleV()
 {
-   std::cout << "Entering BuildMonopoleV()." << std::endl;
+   //std::cout << "Entering BuildMonopoleV()." << std::endl;
    for (int Tz=-1; Tz<=1; ++Tz)
    {
-     std::cout << "Iterating over Tz=" << Tz << std::endl;
+     //std::cout << "Iterating over Tz=" << Tz << std::endl;
      for (int parity=0; parity<=1; ++parity)
      {
-	std::cout << "Iterating over parity=" << parity << std::endl;
+	//std::cout << "Iterating over parity=" << parity << std::endl;
         Vmon[Tz+1][parity].zeros();
         Vmon_exch[Tz+1][parity].zeros();
         for ( auto& itbra : modelspace->MonopoleKets[Tz+1][parity] )
         {
-	   std::cout << "Iterating over modelspace->MonopoleKets" << std::endl;
+	   //std::cout << "Iterating over modelspace->MonopoleKets" << std::endl;
            Ket & bra = modelspace->GetKet(itbra.first);
-	   std::cout << "Retrieved first bra." << std::endl;
+	   //std::cout << "Retrieved first bra." << std::endl;
            int a = bra.p;
            int b = bra.q;
-	   std::cout << "a=" << a << " b=" << b << std::endl;
+	   //std::cout << "a=" << a << " b=" << b << std::endl;
 	   if (a == -1 or b == -1) continue;
            Orbit & oa = modelspace->GetOrbit(a);
 	   //Orbit & oa = bra->op;
-	   std::cout << "Got first orbit, getting second; a=" << a << " b=" << b << std::endl;
+	   //std::cout << "Got first orbit, getting second; a=" << a << " b=" << b << std::endl;
 	   //Orbit & ob = bra->oq;
            Orbit & ob = modelspace->GetOrbit(b);
-	   std::cout << "Got both, beginning iteration over kets." << std::endl;
+	   //std::cout << "Got both, beginning iteration over kets." << std::endl;
            double norm = (oa.j2+1)*(ob.j2+1);
            for ( auto& itket : modelspace->MonopoleKets[Tz+1][parity] )
            {
-	      std::cout << "Iterating over MonopoleKets." << std::endl;
+	      //std::cout << "Iterating over MonopoleKets." << std::endl;
               if (itket.second < itbra.second) continue;
               Ket & ket = modelspace->GetKet(itket.first);
-	      std::cout << "Got ket, getting indecies." << std::endl;
+	      //std::cout << "Got ket, getting indecies." << std::endl;
               int c = ket.p;
               int d = ket.q;
-	      std::cout << "c=" << c << " d=" << d << std::endl;
-	      std::cout << "monopole at (" << a << "," << b << "," << c << "," << d << ")=" << Hbare.TwoBody.GetTBMEmonopole(a,b,c,d) << "*" << norm << std::endl;
-	      std::cout << "at Tz+1=" << Tz+1 << " parity=" << parity << " itbra.second=" << itbra.second << " itket.second=" << itket.second << std::endl;
+	      //std::cout << "c=" << c << " d=" << d << std::endl;
+	      //std::cout << "monopole at (" << a << "," << b << "," << c << "," << d << ")=" << Hbare.TwoBody.GetTBMEmonopole(a,b,c,d) << "*" << norm << std::endl;
+	      //std::cout << "at Tz+1=" << Tz+1 << " parity=" << parity << " itbra.second=" << itbra.second << " itket.second=" << itket.second << std::endl;
               Vmon[Tz+1][parity](itbra.second,itket.second)       = Hbare.TwoBody.GetTBMEmonopole(a,b,c,d)*norm;
-	      std::cout << "Set Vmon." << std::endl;
+	      //std::cout << "Set Vmon." << std::endl;
               Vmon_exch[Tz+1][parity](itbra.second,itket.second)  = Hbare.TwoBody.GetTBMEmonopole(a,b,d,c)*norm;
-	      std::cout << "Set Vmon_exch." << std::endl;
+	      //std::cout << "Set Vmon_exch." << std::endl;
            }
         }
-	std::cout << "Setting Vmon with symmatu." << std::endl;
+	//std::cout << "Setting Vmon with symmatu." << std::endl;
         Vmon[Tz+1][parity] = arma::symmatu(Vmon[Tz+1][parity]);
-	std::cout << "Setting Vmon_exch with symmatu." << std::endl;
+	//std::cout << "Setting Vmon_exch with symmatu." << std::endl;
         Vmon_exch[Tz+1][parity] = arma::symmatu(Vmon_exch[Tz+1][parity]);
     }
   }
