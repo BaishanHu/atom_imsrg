@@ -665,7 +665,7 @@ int RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *f
     return 0;
 }
 
-double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z, vector<unsigned long> &cache, vector<unsigned long> &cache_list)
+double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z) //, vector<unsigned long> &cache, vector<unsigned long> &cache_list)
 {
     double me = 0;
     double xmin[2] = {0,0};
@@ -673,8 +673,10 @@ double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, 
     int max_iter = 1e3;
     double max_err = 1e-2;
     vector<unsigned long>:: iterator it;
+    vector<unsigned long> cache;
+    vector<unsigned long> cache_list;
 
-    for (int L=max(abs(oa.j2-oc.j2)/2, abs(ob.j2-od.j2)/2); L<=min((oa.j2+oc.j2)/2, (ob.j2+od.j2)/2); L++)
+    for (int L=max(abs(oa.j2-oc.j2)*1./2, abs(ob.j2-od.j2)*1./2); L<=min((oa.j2+oc.j2)*1./2, (ob.j2+od.j2)*1./2); L++)
     {
 	struct RabRcd_params p_abcd= { oa.n,oa.l, ob.n,ob.l,
                                        oc.n,oc.l, od.n,od.l,
@@ -691,9 +693,9 @@ double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, 
             val = cache[it-cache_list.begin()+1];
         }
 
-	me += val * SixJ( oa.j2/2,ob.j2/2,J, oc.j2/2,od.j2/2,L ) * ThreeJ(oa.j2/2,L,oc.j2/2, -1./2,0,1./2) * ThreeJ(ob.j2/2,L,od.j2/2, -1./2,0,1./2);
+	me += val * SixJ( oa.j2*1./2,ob.j2*1./2,J, oc.j2*1./2,od.j2*1./2,L ) * ThreeJ(oa.j2*1./2,L,oc.j2*1./2, -1./2,0,1./2) * ThreeJ(ob.j2*1./2,L,od.j2*1./2, -1./2,0,1./2);
     }
-    return me*sqrt( (oa.j2+1) * (ob.j2+1) * (oc.j2+1) * (od.j2+1) )*pow(-1, oa.j2+ob.j2+J);
+    return me*sqrt( (oa.j2+1) * (ob.j2+1) * (oc.j2+1) * (od.j2+1) )*pow(-1, (oa.j2+ob.j2)*1./2+J);
 }
 
 
@@ -711,21 +713,29 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    //#pragma omp parallel for schedule(dynamic,1) // Throws an error on for ( int ch : .. .  claims it requires an = before :
    for ( int ch : modelspace.SortedTwoBodyChannels )
    {
+	cout << "In tbc..." << endl;
 	TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
         int nkets = tbc.GetNumberKets();
         if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
 	#pragma omp parallel for schedule(dynamic,1)
         for (int ibra = 0; ibra < nkets; ++ibra)
         {
+	    cout << "In ibra..." << endl;
             Ket & bra = tbc.GetKet(ibra);
             Orbit & o1 = modelspace.GetOrbit(bra.p);
             Orbit & o2 = modelspace.GetOrbit(bra.q);
 	    for (int jket = ibra; jket < nkets; jket++)
 	    {
+		cout << "In jket..." << endl;
 		Ket & ket = tbc.GetKet(jket);
 		Orbit & o3 = modelspace.GetOrbit(ket.p);
 		Orbit & o4 = modelspace.GetOrbit(ket.q);
-		double me = HBARC*(1./137)/(sqrt( (1+ket.delta_pq())*(1+bra.delta_pq()) )) * ( ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ(), cache,cache_list) - pow(-1,(o1.j2+o2.j2)/2 - tbc.J) * ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ(), cache,cache_list) );
+		double coeff = 1./sqrt( (1+ket.delta_pq()) * (1+bra.delta_pq()) );
+		double me = HBARC*(1./137) * coeff * ( ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ()) - pow(-1,(o1.j2+o2.j2)*1./2 - tbc.J) * ElectronTwoBodyME(o1,o2,o4,o3,tbc.J,modelspace.GetTargetZ() ));
+		//double me = coeff * ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ()) * HBARC/137.;
+		V12.TwoBody.SetTBME(ch, jket, ibra, me);
+		V12.TwoBody.SetTBME(ch, ibra, jket, me);
+
 		//me /= 
 	    } // jket 
      	} // ibra

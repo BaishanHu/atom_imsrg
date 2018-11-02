@@ -190,7 +190,7 @@ int main(int argc, char** argv)
     cout << "Onebodies added,";
   //  Operator New = CorrE2b( modelspace );
     // Operator Diff= Operator( modelspace);
-    Hbare += ElectronTwoBody( modelspace );
+    //Hbare += ElectronTwoBody( modelspace );
 /*    if (modelspace.GetTargetZ() > 1)
     {
 	cout << " adding twobody..." << endl;
@@ -222,24 +222,24 @@ int main(int argc, char** argv)
     if (modelspace.GetTargetZ()	> 1)
     {
 	cout << "Adding two-body correction." << endl;
-	//Hbare += ElectronTwoBody(modelspace);
-	Hbare += eeCoulomb(modelspace);
+	Hbare += ElectronTwoBody(modelspace);
+	//Hbare += eeCoulomb(modelspace);
 	//rw.
     }
   }
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
-/*  cout << "Diff TwoBody=" << endl;
-  for (int ch = 0; ch < Diff.nChannels; ch++) {
+  cout << "Diff TwoBody=" << endl;
+  for (int ch = 0; ch < Hbare.nChannels; ch++) {
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
-    Diff.PrintTwoBody(ch);
-    cout << endl;
+    //Diff.PrintTwoBody(ch);
+    //cout << endl;
     Hbare.PrintTwoBody(ch);
     cout << endl;
-    twoBody.PrintTwoBody(ch);
-    cout << endl;
+    //twoBody.PrintTwoBody(ch);
+    //cout << endl;
   } 
-*/
+
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);
   //Hbare += ElectronTwoBody(modelspace);
