@@ -678,6 +678,8 @@ double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, 
 
     for (int L=max(abs(oa.j2-oc.j2)*1./2, abs(ob.j2-od.j2)*1./2); L<=min((oa.j2+oc.j2)*1./2, (ob.j2+od.j2)*1./2); L++)
     {
+	if ((oa.l + L + oc.l)%2 != 0) continue;
+	if ((ob.l + L + od.l)%2 != 0) continue;
 	struct RabRcd_params p_abcd= { oa.n,oa.l, ob.n,ob.l,
                                        oc.n,oc.l, od.n,od.l,
                                        L, Z};
@@ -713,26 +715,25 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
    //#pragma omp parallel for schedule(dynamic,1) // Throws an error on for ( int ch : .. .  claims it requires an = before :
    for ( int ch : modelspace.SortedTwoBodyChannels )
    {
-	cout << "In tbc..." << endl;
+	//cout << "In tbc..." << endl;
 	TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
         int nkets = tbc.GetNumberKets();
         if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
 	#pragma omp parallel for schedule(dynamic,1)
         for (int ibra = 0; ibra < nkets; ++ibra)
         {
-	    cout << "In ibra..." << endl;
+	    //cout << "In ibra..." << endl;
             Ket & bra = tbc.GetKet(ibra);
             Orbit & o1 = modelspace.GetOrbit(bra.p);
             Orbit & o2 = modelspace.GetOrbit(bra.q);
 	    for (int jket = ibra; jket < nkets; jket++)
 	    {
-		cout << "In jket..." << endl;
+		//cout << "In jket..." << endl;
 		Ket & ket = tbc.GetKet(jket);
 		Orbit & o3 = modelspace.GetOrbit(ket.p);
 		Orbit & o4 = modelspace.GetOrbit(ket.q);
 		double coeff = 1./sqrt( (1+ket.delta_pq()) * (1+bra.delta_pq()) );
-		double me = HBARC*(1./137) * coeff * ( ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ()) - pow(-1,(o1.j2+o2.j2)*1./2 - tbc.J) * ElectronTwoBodyME(o1,o2,o4,o3,tbc.J,modelspace.GetTargetZ() ));
-		//double me = coeff * ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ()) * HBARC/137.;
+		double me = (2*tbc.J+1) * HBARC*(1./137) * coeff * ( ElectronTwoBodyME(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ()) - pow(-1,(o1.j2+o2.j2)*1./2 - tbc.J) * ElectronTwoBodyME(o1,o2,o4,o3,tbc.J,modelspace.GetTargetZ() ));
 		V12.TwoBody.SetTBME(ch, jket, ibra, me);
 		V12.TwoBody.SetTBME(ch, ibra, jket, me);
 

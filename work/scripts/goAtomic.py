@@ -115,7 +115,7 @@ export OMP_NUM_THREADS=%d
 batch_mode = True
 
 e_start=2
-e_stop =2
+e_stop =4
 e_iter =1
 
 l_start=0

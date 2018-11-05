@@ -205,25 +205,14 @@ int main(int argc, char** argv)
 	cout << "Added Twobody, moving on." << endl;
     } */
   } else {
-    //cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
-    //modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax)+40 );
-    //cout << "About to precalculate radial integrals." << endl;
-    //GenerateRadialIntegrals(modelspace,2*eMax*101011);
-    //cout << "FactorialList calculated." << endl;
-    //modelspace.PreCalculateMoshinsky( systemBasis );
-    //cout << "Precalculated Mosh, moving on." << endl;
-    //rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
-    //modelspace.GenerateOsToHydroCoeff(eMax);
-    //Hbare += NumericalE2b(modelspace);
-    //Hbare += CorrE2b_Hydrogen(modelspace);
     cout << "Adding Hydrogen Energies." << endl;
     Hbare += Energy_Op(modelspace);
     cout << "Onebody:" << endl << Hbare.OneBody << endl;
     if (modelspace.GetTargetZ()	> 1)
     {
 	cout << "Adding two-body correction." << endl;
-	Hbare += ElectronTwoBody(modelspace);
-	//Hbare += eeCoulomb(modelspace);
+	//Hbare += ElectronTwoBody(modelspace);
+	Hbare += eeCoulomb(modelspace);
 	//rw.
     }
   }
