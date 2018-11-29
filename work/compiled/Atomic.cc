@@ -211,9 +211,14 @@ int main(int argc, char** argv)
     if (modelspace.GetTargetZ()	> 1)
     {
 	cout << "Adding two-body correction." << endl;
-	//Hbare += ElectronTwoBody(modelspace);
-	Hbare += eeCoulomb(modelspace);
-	//rw.
+	Operator eeC = eeCoulomb(modelspace);
+	std:: stringstream fn_json;
+	std:: stringstream fn_me2j;
+	fn_json << "/global/scratch/dlivermore/atomicME_He4_basis_hydrogen_Nov14_emax12_lmax2.json";
+	fn_json << "/global/scratch/dlivermore/atomicME_He4_basis_hydrogen_Nov14_emax12_lmax2.me2j";
+	rw.WriteOperatorToJSON( fn_json.str(), eeC, eMax, 2*eMax, Lmax, 1. );
+	rw.Write_me2j( fn_me2j.str(), eeC, eMax, 2*eMax, Lmax);
+	Hbare += eeC;
     }
   }
 
@@ -223,8 +228,8 @@ int main(int argc, char** argv)
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     //Diff.PrintTwoBody(ch);
     //cout << endl;
-    Hbare.PrintTwoBody(ch);
-    cout << endl;
+    //Hbare.PrintTwoBody(ch);
+    //cout << endl;
     //twoBody.PrintTwoBody(ch);
     //cout << endl;
   } 
