@@ -197,7 +197,10 @@ int main(int argc, char** argv)
 	//Hbare += CorrE2b(modelspace);
 	//Operator twoBody = Operator(modelspace);
 	std::stringstream fn;
-	fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonicSep24_emax20_h1.me2j";
+	auto start = std::chrono::system_clock::now();
+	int day = start->tm_mday;
+	int mon = start->tm_mon;
+	fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonic" << mon << "_" << day << "_emax20_h1.me2j";
 	rw.ReadBareTBME_Darmstadt( fn.str(), twoBody, eMax, 2*eMax, -1 );
 	twoBody *= sqrt( double(hw) );
 	Hbare += twoBody;
@@ -211,7 +214,8 @@ int main(int argc, char** argv)
     if (modelspace.GetTargetZ()	> 1)
     {
 	cout << "Adding two-body correction." << endl;
-	Operator eeC = eeCoulomb(modelspace);
+	//Operator eeC = eeCoulomb(modelspace);
+	Operator eeC = ElectronTwoBody_original(modelspace);
 	std:: stringstream fn_json;
 	std:: stringstream fn_me2j;
 	fn_json << "/global/scratch/dlivermore/atomicME_He4_basis_hydrogen_Nov14_emax12_lmax2.json";

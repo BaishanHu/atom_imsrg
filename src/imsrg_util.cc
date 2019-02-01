@@ -17,6 +17,7 @@
 #include <gsl/gsl_sf_legendre.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_sf_coupling.h>
+#include <gsl/gsl_sf_hyperg.h>
 
 #include "cubature.h"
 #include "hcubature.c"
@@ -683,7 +684,157 @@ double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J)
   return me*sqrt( (oa.j2+1) * (ob.j2+1) * (oc.j2+1) * (od.j2+1) )*pow(-1, oa.j2+ob.j2+J);
 }
 
-double ElectronTwoBodyME_original(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z, vector<unsigned long> &cache, vector<unsigned long> &cache_list)
+double fact(int n)
+{
+	double val = 0;
+	try{
+		if (n < 0) throw n;
+		val = gsl_sf_fact(n);
+	} catch (int e) {
+		cout << "n<0 in factorial for n=" << n << endl;
+	}
+	return val;
+}
+
+double k_r(int n, int l)
+{
+	return sqrt( fact( n-l-1 ) * fact( n+l+1) );
+}
+
+double k_t(int l, int m)
+{
+	return sqrt( (2*l+1)*fact(l-m)/( 2*fact(l+m) ) );
+}
+
+double a_j(int n, int l, int j)
+{
+	return pow(-1, j) / ( fact(j+2*l+2)*fact(n-l-1-j)*fact(j) );
+}
+
+double b_f(int m, int n, int l)
+{
+	double sum = 0;
+	for (int i=0; i<=n+l; i++)
+	{
+		sum += fact(m+i-l-1)/ ( pow(2,m+i-1)*fact(i) );
+	}
+	return fact(n+l)*( fact(m-l-1) - sum );
+}
+
+double c_g(int m, int n, int g)
+{
+	return pow(-1,g) * fact( 2*(m-g) ) / ( pow(2,m) * fact(m-2*g-n) * fact(m-g) * fact(g) );
+}
+
+double d_i(int la, int ma, int lb, int mb, int i)
+{
+	int sigma = la + lb + i;
+	if (sigma%2 != 0) return 0;
+	int Mab = abs(ma + mb);
+	if (i<Mab) return 0;
+	double d = 2*sqrt( fact(i-Mab) / fact(i+Mab) ) * k_t(la, ma) * k_t(lb, mb);
+	double sum = 0;
+	int mu = (abs(ma+mb)+ma+mb)/2;
+	for (int h=0; h<=mu; h++)
+	{
+		int choose = gsl_sf_choose(mu, h)*pow(-1,h);
+		if (choose == 0) continue;
+		for (int j=0; j<= floor(0.5*(i-Mab)); j++)
+		{
+			double c_j = c_g( i, Mab, j);
+			for (int k=0; k<= floor(0.5*(lb-ma)); k++)
+			{
+				double c_k = c_g( la, ma, k );
+				for (int l=0; l<=floor(0.5*(lb-mb)); l++)
+				{
+					double c_l = c_g(lb, mb, l );
+					sum += c_j*c_k*c_l / ( sigma - 2*(mu+j+k+l-h) +1 );
+				}
+			}
+		}
+	} 
+	return d * sum;
+}
+
+double ee_brown_miller(	int na, int la, int ma,
+			int nb, int lb, int mb,
+			int nc, int lc, int mc,
+			int nd, int ld, int md,
+			double beta )
+{
+	int M = ma + mb + mc + md;
+	if (M != 0) return 0;
+	int L = la + lb + lc + ld;
+	if (L%2 != 0) return 0;
+	int nu = abs(ma + mb); // can also use abs(mc+md) should both be equal
+	int gamma = min(la+lb, lc+ld);
+
+	double Me = 2*beta*k_r(na, la)*k_r(nb, lb)*k_r(nc, lc)*k_r(nd, ld);
+	double sum = 0;
+	
+	for (int i=nu; i<=gamma; i++)
+	{
+		double d_nu = d_i(la,ma, lb,mb, i) * d_i(lc,mc, ld,md, i);
+		for (int a=0; a<=na-la-1; a++)
+		{
+			double a_a = a_j(na,la,a);
+			for (int b=0; b<=nb-lb-1; b++)
+			{
+				double a_b = a_j(nb, lb, b);
+				for (int c=0; c<=nc-lc-1; c++)
+				{
+					double a_c = a_j(nc, lc, c);
+					for (int d=0; d<=nd-ld-1; d++)
+					{
+						double a_d = a_j(nd, ld, d);
+						sum += d_nu*a_a*a_b*a_c*a_d*(b_f(la+lb+a+b+2, lc+ld+c+d+2, i) + b_f(lc+ld+c+d+2, la+lb+a+b+2, i) );
+					}
+				}
+			}
+		}
+	}
+	return sum;
+}
+
+double A_i(int n, int l)
+{
+	return pow(2,l)*sqrt( gsl_sf_fact(n+l)*gsl_sf_fact(n-l-1) ) / pow(n,2+l);
+}
+
+double C_i(int n, int l, int j)
+{
+	return pow(-2,j) / ( pow(n,j)*gsl_sf_fact(j)*gsl_sf_fact(2*l+j+1)*gsl_sf_fact(n-l-j-1) );
+}
+
+double R12_func(int n1, int n2, int n3, int n4, int l1, int l2, int l3, int l4, int L, int Z)
+{
+	double val = 0;
+	double A = Z*16*A_i(n1,l1)*A_i(n2,l2)*A_i(n3,l3)*A_i(n4,l4)/BOHR_RADIUS;
+	for (int j1=0; j1<=n1-l1-1; j1++)
+	{
+		double C1 = C_i(n1,l1,j1);
+		for (int j2=0; j2<=n2-l2-1; j2++)
+		{
+			double C2 = C_i(n2,l2,j2);
+			for (int j3=0; j3<=n3-l3-1; j3++)
+			{
+				double C3 = C_i(n3,l3,j3);
+				for (int j4=0; j3<=n4-l4-1; j4++)
+				{
+					double C4 = C_i(n4,l4,j4);
+					double T13 = pow(1./n1+1./n3,-3-j1-j3-l1-l3-L) * pow(1./n2+1./n4,-2-j2-j4-l2-l4+L) * gsl_sf_fact(2+j1+j3+l1+l3+L) * gsl_sf_fact(1+j2+j4+l2+l4-L);
+					double T24 = pow(1./n2+1./n4,-3-j2-j4-l2-j4-L) * pow(1./n2+1./n4,-2-j1-j3-l1-l3+L) * gsl_sf_fact(2+j2+j4+l2+l4+L) * gsl_sf_fact(1+j1+j3+l1+l3-L);
+					double F13 = pow(1./n2+1./n4,-5-l1-l2-l3-l4-j1-j2-j3-j4) * gsl_sf_hyperg_2F1(2+j1+j3+l1+l3-L,5+l1+l2+l3+l4+j1+j2+j3+j4,3+j1+j3+l1+l3-L,-n2*(n1+n3)*n4/( n1*(n2+n4)*n4));
+					double F24 = pow(1./n1+1./n3,-5-l1-l2-l3-l4-j1-j2-j3-j4) * gsl_sf_hyperg_2F1(2+j2+j4+l2+l4-L,5+l1+l2+l3+l4+j1+j2+j3+j4,3+j2+j4+l2+l4-L,-n1*(n2+n4)*n3/( n2*(n1+n3)*n4));
+					val += C1*C2*C3*C4*(T13+T24-gsl_sf_fact(4+l1+l2+l3+l4+j1+j2+j3+j4)*(F13+F24));
+				}
+			}
+		}
+	}
+	return A*val;
+}
+
+double ElectronTwoBodyME_original( Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z )
 {
     double me = 0;
     double xmin[2] = {0,0};
@@ -694,7 +845,7 @@ double ElectronTwoBodyME_original(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od
 
     for (int L=max(abs(oa.j2-oc.j2)/2, abs(ob.j2-od.j2)/2); L<=min((oa.j2+oc.j2)/2, (ob.j2+od.j2)/2); L++)
     {
-	struct RabRcd_params p_abcd= { oa.n,oa.l, ob.n,ob.l,
+	/*struct RabRcd_params p_abcd= { oa.n,oa.l, ob.n,ob.l,
                                        oc.n,oc.l, od.n,od.l,
                                        L, Z};
 	double val;
@@ -707,7 +858,8 @@ double ElectronTwoBodyME_original(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od
 	    hcubature(1, &RabRcd, &p_abcd, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val, &err);
         } else {
             val = cache[it-cache_list.begin()+1];
-        }
+        }*/
+	double val = R12_func( oa.n,ob.n,oc.n,od.n, oa.l,ob.l,oc.l,od.l, L, Z );
 
 	me += val * SixJ( oa.j2/2,ob.j2/2,J, oc.j2/2,od.j2/2,L ) * ThreeJ(oa.j2/2,L,oc.j2/2, -1./2,0,1./2) * ThreeJ(ob.j2/2,L,od.j2/2, -1./2,0,1./2);
     }
@@ -731,7 +883,7 @@ Operator ElectronTwoBody_original(ModelSpace& modelspace)
     TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
     int nkets = tbc.GetNumberKets();
     if (nkets == 0) continue; // SortedTwoBodies should only contain > 0 kets, so this should be redundant.
-#pragma omp parallel for schedule(dynamic,1)
+    #pragma omp parallel for schedule(dynamic,1)
     for (int ibra = 0; ibra < nkets; ++ibra)
     {
       Ket & bra = tbc.GetKet(ibra);
@@ -742,9 +894,12 @@ Operator ElectronTwoBody_original(ModelSpace& modelspace)
         Ket & ket = tbc.GetKet(jket);
         Orbit & o3 = modelspace.GetOrbit(ket.p);
         Orbit & o4 = modelspace.GetOrbit(ket.q);
-        double me = HBARC*(1./137) / (sqrt( (1+ket.delta_pq())*(1+bra.delta_pq()) )) *
-          ( ElectronTwoBodyME_original(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ(), cache,cache_list)
-            - pow(-1,(o1.j2+o2.j2)/2 - tbc.J) * ElectronTwoBodyME_original(o1,o2,o4,o3,tbc.J,modelspace.GetTargetZ(), cache,cache_list) );
+	double me_34 = ElectronTwoBodyME_original( o1, o2, o3, o4, tbc.J, modelspace.GetTargetZ() );
+	double me_43 = ElectronTwoBodyME_original( o1, o2, o4, o3, tbc.J, modelspace.GetTargetZ() );
+	
+        double me = HBARC*(1./137) / (sqrt( (1+ket.delta_pq())*(1+bra.delta_pq()) )) * (me_34 - pow(-1,o3.j2+o4.j2-tbc.J) * me_43);
+        //  ( ElectronTwoBodyME_original(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ(), cache,cache_list)
+        //    - pow(-1,(o1.j2+o2.j2)/2 - tbc.J) * ElectronTwoBodyME_original(o1,o2,o4,o3,tbc.J,modelspace.GetTargetZ(), cache,cache_list) );
         V12.TwoBody.SetTBME(ch, jket, ibra, me);
         V12.TwoBody.SetTBME(ch, ibra, jket, me);
         //me /=
@@ -1339,40 +1494,32 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
       }
     }
   }
-
-  for ( int ch : modelspace.SortedTwoBodyChannels )
+  #pragma omp parallel for
+  for(int a=0; a<nlmax; ++a)
   {
-    TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
-    int nkets = tbc.GetNumberKets();
-    if (nkets == 0) continue;
+    int na = n[a];
+    int la = l[a];
     #pragma omp parallel for
-    for (int ibra = 0; ibra < nkets; ++ibra)
+    for(int b = 0; b<nlmax; ++b)
     {
-      Ket & bra = tbc.GetKet(ibra);
-      Orbit & oa = modelspace.GetOrbit(bra.p);
-      Orbit & ob = modelspace.GetOrbit(bra.q);
-
-      int na = oa.n;
-      int la = oa.l;
-      int nb = ob.n;
-      int lb = ob.l;
-
-      for (int iket = 0; iket < ibra; ++iket)
+      int nb = n[b];
+      int lb = l[b];
+      #pragma omp parallel for
+      for(int c = 0; c<nlmax; ++c)
       {
-	Ket ket = tbc.GetKet(iket);
-	Orbit & oc = modelspace.GetOrbit(ket.p);
-	Orbit & od = modelspace.GetOrbit(ket.q);
-	
-	int nc = oc.n;
-	int lc = oc.l;
-	int nd = od.n;
-	int ld = od.l;
+        int nc = n[c];
+        int lc = l[c];
+	#pragma omp parallel for
+        for(int d = 0; d<nlmax; ++d)
+        {
+          int nd = n[d];
+          int ld = l[d];
 
-	int lmin = max( abs(la-lc),abs(lb-ld) );
-	int lmax = min( la+lc, lb+ld );
-
-	for (int L = lmin; L<=lmax; ++L)
-	{
+          int lmin_ = max(abs(la-lc),abs(lb-ld));
+          int lmax_ = min(la+lc,lb+ld);
+	  #pragma omp critical
+          for(int L=lmin_; L<=lmax_; ++L)
+          {
 	  struct RabRcd_params p = {na,la,nb,lb,nc,lc,nd,ld,L,Z};
 	  struct RabRcd_params p_a = {na,la,nb,lb,nd,ld,nc,lc,L,Z};
           hcubature(1, &RabRcd, &p, 2, xmin, xmax,
@@ -1383,7 +1530,7 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
               max_iter, 0, max_err, ERROR_INDIVIDUAL,
               &val_sym, &err_sym);
           Integral[{na,la,nb,lb,nd,ld,nc,ld,L}] = val_sym;
-
+	  }
 	}
       }
     }
