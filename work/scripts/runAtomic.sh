@@ -6,8 +6,8 @@ interactive=false
 NTHREADS=12
 WORKDIR=$PWD
 
-#exe=../compiled/Atomic
-exe=../compiled/writeAtomicTBME
+exe=../compiled/Atomic
+#exe=../compiled/writeAtomicTBME
 
 vnn=
 file2e1max=6
@@ -15,17 +15,17 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=20
-estop=20
-eiter=2
+estart=1
+estop=12
+eiter=1
 
 lstart=2
 lstop=2
 liter=1
 
-hwstart=1
-hwstop=1
-hwiter=5
+hwstart=40
+hwstop=140
+hwiter=10
 
 #for ((A=$start;A<=$stop;A++)); do
 for ((emax=$estart;emax<=$estop;emax=emax+eiter)); do
@@ -42,8 +42,8 @@ systemtype=atomic
 #hw=108.8
 valence_space=He4
 reference=He4
-systemBasis=hydrogen
-#systemBasis=harmonic
+#systemBasis=hydrogen
+systemBasis=harmonic
 smax=200
 #emax=4
 #Lmax=2
@@ -57,8 +57,8 @@ mode=batchmpi
 #mode=debug
 
 #jobname="method_${method}_ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${Lmax}"
-#jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_hw_${hw}"
-jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${lmax}"
+jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_hw_${hw}"
+#jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${lmax}"
 
 #Operators=KineticEnergy,InverseR,CorrE2b
 #Operators=KineticEnergy,InverseR,ElectronTwoBody

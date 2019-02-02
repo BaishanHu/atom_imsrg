@@ -1899,7 +1899,7 @@ Operator Energy_Op(ModelSpace& modelspace)
 	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J, modelspace.systemBasis); 
 	     
-	    //Ket ketp = Ket(od,oc);
+	    Ket ketp = Ket(od,oc);
 	    //double mat_el_asym = pow(-1,(od.j2+oc.j2)/2.0 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
 	    //mat_el -= mat_el_asym;
 	    //if (oc.n == od.n && oc.l == od.l && oc.j2 == od.j2)
@@ -1923,7 +1923,7 @@ Operator Energy_Op(ModelSpace& modelspace)
  }
 
  /* Copied from r1r2 calculation */
- // Evaluate <bra | 1/|r1-r2| | ket>, omitting the factor (hbar * omega) /(m * omega^2)
+ // Evaluate <bra | 1/|r1-r2| | ket>, including the factor (hbar * omega) /(m * omega^2)
 /// Returns the normalized, anti-symmetrized, J-coupled, two-body matrix element of \f$ \frac{m\omega^2}{\hbar \omega} \vec{r}_1\cdot\vec{r}_2 \f$.
 /// Calculational details are similar to Calculate_p1p2().
  double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis)
