@@ -6,8 +6,8 @@ interactive=false
 NTHREADS=12
 WORKDIR=$PWD
 
-exe=../compiled/Atomic
-#exe=../compiled/writeAtomicTBME
+exe=/home/dlivermore/ragnar_imsrg/work/compiled/Atomic
+#exe=/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME
 
 vnn=
 file2e1max=6
@@ -15,17 +15,17 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=1
+estart=12
 estop=12
-eiter=1
+eiter=2
 
-lstart=2
-lstop=2
+lstart=0
+lstop=0
 liter=1
 
-hwstart=40
-hwstop=140
-hwiter=10
+hwstart=1
+hwstop=1
+hwiter=5
 
 #for ((A=$start;A<=$stop;A++)); do
 for ((emax=$estart;emax<=$estop;emax=emax+eiter)); do
@@ -42,8 +42,8 @@ systemtype=atomic
 #hw=108.8
 valence_space=He4
 reference=He4
-#systemBasis=hydrogen
-systemBasis=harmonic
+systemBasis=hydrogen
+#systemBasis=harmonic
 smax=200
 #emax=4
 #Lmax=2
@@ -57,8 +57,8 @@ mode=batchmpi
 #mode=debug
 
 #jobname="method_${method}_ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${Lmax}"
-jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_hw_${hw}"
-#jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${lmax}"
+#jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_hw_${hw}"
+jobname="ref_${reference}_basis_${systemBasis}_emax_${emax}_lmax_${lmax}"
 
 #Operators=KineticEnergy,InverseR,CorrE2b
 #Operators=KineticEnergy,InverseR,ElectronTwoBody
@@ -74,16 +74,30 @@ command="${exe} ${all_the_flags}"
 echo command is $command
 
 if [ $interactive = 'true' ]; then
-cd $WORKDIR 
+cd $WORKDIR
 export OMP_NUM_THREADS=${NTHREADS}
 $command
 else
 echo jobname is ${jobname}
-qsub -N ${jobname} -q $mode -d $PWD -l walltime=192:00:00 -l nodes=1:ppn=${NTHREADS} -l vmem=60gb -m ae -M davidedwardlivermore@gmail.com -j oe -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"` << END
+echo "running"
+
+#PBS -N ${jobname}
+#PBS -q cougar
+#PBS -d /home/dlivermore/ragnar_imsrg/work/scripts/
+#PBS -l walltime=516:00:00
+#PBS -l nodes=1:ppn=32
+#PBS -l vmem=251gb
+#PBS -m abe
+#PBS -M dlivermore@triumf.ca
+#PBS -j oe
+###PBS -e pbslog/${jobname}.e.`date +"%g%m%d%H%M"`
+###PBS -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
+#PBS -e pbslog/
+#PBS -o pbslog/
+
 cd $WORKDIR
 export OMP_NUM_THREADS=${NTHREADS}
 $command
-END
 fi
 
 done

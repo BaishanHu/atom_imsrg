@@ -9,7 +9,7 @@ def get_filenames(run_number):
 		try:
 			for file in os.listdir("pbslog"):
 				if file.endswith(run_number):
-					filenames.append("pbslog/"+file)
+					filenames.append("imsrg_log/"+file)
 		except Exception, e:
 			print "Threw exception in get_filenames:"
 			print e

@@ -7,6 +7,8 @@
 #include <armadillo>
 #include <map>
 #include <deque>
+#include <vector>
+#include <array>
 
 class HartreeFock
 {
@@ -19,8 +21,8 @@ class HartreeFock
    arma::mat Vij;           ///< 1 body piece of 2 body potential
    arma::mat V3ij;          ///< 1 body piece of 3 body potential
    arma::mat F;             ///< Fock matrix
-   array< array< arma::mat,2>,3> Vmon;          ///< Monopole 2-body interaction
-   array< array< arma::mat,2>,3> Vmon_exch;          ///< Monopole 2-body interaction
+   std::array< array< arma::mat,2>,3> Vmon;          ///< Monopole 2-body interaction
+   std::array< array< arma::mat,2>,3> Vmon_exch;          ///< Monopole 2-body interaction
    arma::uvec holeorbs;     ///< list of hole orbits for generating density matrix
    arma::rowvec hole_occ; /// occupations of hole orbits
    arma::vec energies;      ///< vector of single particle energies

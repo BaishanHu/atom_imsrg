@@ -5,6 +5,7 @@
 #include <omp.h>
 #include "IMSRG.hh"
 #include "Parameters.hh"
+//#include <cmath>
 
 using namespace imsrg_util;
 
@@ -93,7 +94,8 @@ int main(int argc, char** argv)
 
   string SystemType = "atomic";
   if (Lmax > eMax) Lmax = eMax;
-  cout << "About to construct modelspace eMax="<< eMax << " Lmax=" << Lmax << " SystemType=" << SystemType << " Valence_Space=" << valence_space << " reference=" << reference << " systemBasis=" << systemBasis << endl;
+  cout << "About to construct modelspace eMax="<< eMax << " Lmax=" << Lmax << " SystemType=" << SystemType << " Valence_Space=" << valence_space << " reference=" << reference << " systemBasis=" << 
+systemBasis << endl;
   if (eMax == 0) eMax = 4;
   if (reference == "default") reference = "He2";
   //if (valence_space == "016")
@@ -166,7 +168,7 @@ int main(int argc, char** argv)
 //  }
   //cout << "Modelspace has this many tbc: " << modelspace.nTwoBodyChannels << endl;
   //rw.ReadBareTBME_Darmstadt( inputtbme, Hbare, file2e1max, file2e2max, file2lmax);
-  //Operator Diff = Operator(modelspace);
+//  Operator Diff = Operator(modelspace);
   Operator twoBody = Operator(modelspace);
   if (systemBasis == "harmonic") {
     cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << 4*(2*eMax + 1*Lmax) << endl;
@@ -187,41 +189,44 @@ int main(int argc, char** argv)
     //cout << "Adding HO energies..." << endl;
     //Hbare += HarmonicOneBody(modelspace);
     cout << "Onebodies added,";
-    //Operator New = CorrE2b( modelspace );
+  //  Operator New = CorrE2b( modelspace );
     // Operator Diff= Operator( modelspace);
-    if (modelspace.GetTargetZ() > 1)
+    //Hbare += ElectronTwoBody( modelspace );
+/*    if (modelspace.GetTargetZ() > 1)
     {
 	cout << " adding twobody..." << endl;
 	//Hbare += CorrE2b(modelspace);
 	//Operator twoBody = Operator(modelspace);
 	std::stringstream fn;
-	fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_He4_basis_harmonicOct1_emax12_hw1.me2j";
+	auto start = std::chrono::system_clock::now();
+	int day = start->tm_mday;
+	int mon = start->tm_mon;
+	fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonic" << mon << "_" << day << "_emax20_h1.me2j";
 	rw.ReadBareTBME_Darmstadt( fn.str(), twoBody, eMax, 2*eMax, -1 );
 	twoBody *= sqrt( double(hw) );
 	Hbare += twoBody;
-	//Diff = New - twoBody;
+//	Diff = New - twoBody;
 	cout << "Added Twobody, moving on." << endl;
-    }
+    } */
+  } else if (systemBasis = "slater") {
+    cout << "Slater-type orbits" << endl;
+    Hbare += SlaterOneBody(modelspace);
   } else {
-    //cout << "About to precalculate factorials for m=2*(2*emax + lmax)=" << 2*(2*eMax + 1*Lmax) << endl;
-    //modelspace.GenerateFactorialList( 2*(2*eMax + 1*Lmax)+40 );
-    //cout << "About to precalculate radial integrals." << endl;
-    //GenerateRadialIntegrals(modelspace,2*eMax*101011);
-    //cout << "FactorialList calculated." << endl;
-    //modelspace.PreCalculateMoshinsky( systemBasis );
-    //cout << "Precalculated Mosh, moving on." << endl;
-    //rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
-    //modelspace.GenerateOsToHydroCoeff(eMax);
-    //Hbare += NumericalE2b(modelspace);
-    //Hbare += CorrE2b_Hydrogen(modelspace);
     cout << "Adding Hydrogen Energies." << endl;
     Hbare += Energy_Op(modelspace);
     cout << "Onebody:" << endl << Hbare.OneBody << endl;
     if (modelspace.GetTargetZ()	> 1)
     {
 	cout << "Adding two-body correction." << endl;
-	//Hbare += ElectronTwoBody(modelspace);
-	Hbare += eeCoulomb(modelspace);
+	//Operator eeC = eeCoulomb(modelspace);
+	Operator eeC = ElectronTwoBody_original(modelspace);
+	std:: stringstream fn_json;
+	std:: stringstream fn_me2j;
+	fn_json << "/global/scratch/dlivermore/atomicME_He4_basis_hydrogen_Nov14_emax12_lmax2.json";
+	fn_json << "/global/scratch/dlivermore/atomicME_He4_basis_hydrogen_Nov14_emax12_lmax2.me2j";
+	rw.WriteOperatorToJSON( fn_json.str(), eeC, eMax, 2*eMax, Lmax, 1. );
+	rw.Write_me2j( fn_me2j.str(), eeC, eMax, 2*eMax, Lmax);
+	Hbare += eeC;
     }
   }
 
@@ -231,9 +236,9 @@ int main(int argc, char** argv)
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     //Diff.PrintTwoBody(ch);
     //cout << endl;
-    Hbare.PrintTwoBody(ch);
-    cout << endl;
-    //twobody.PrintTwoBody(ch);
+    //Hbare.PrintTwoBody(ch);
+    //cout << endl;
+    //twoBody.PrintTwoBody(ch);
     //cout << endl;
   } 
 
@@ -490,7 +495,7 @@ int main(int argc, char** argv)
     {
       for (auto c : modelspace.core)
       {
-         if ( (find( modelspace.holes.begin(), modelspace.holes.end(), c) == modelspace.holes.end()) or (abs(1-modelspace.holes[c])>1e-6))
+         if ( (find( modelspace.holes.begin(), modelspace.holes.end(), c) == modelspace.holes.end()) or (fabs(1-modelspace.holes[c])>1e-6))
          {
            renormal_order = true;
            break;

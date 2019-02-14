@@ -60,7 +60,7 @@ namespace imsrg_util
  unsigned long long int getNineJkey(double j1, double j2, double J12, double j3, double j4, double J34, double J13, double J24, double J);
  void PrecalculateRad_fromList( vector<unsigned int>& rad_list, ModelSpace& modelspace);
  double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace);
-
+ Operator SlaterOneBody(Modelspace& modelspace);
 
  Operator Isospin2_Op(ModelSpace& modelspace);
  Operator AllowedFermi_Op(ModelSpace& modelspace);
@@ -75,8 +75,29 @@ namespace imsrg_util
  double hydrogenWF(double x, double theta, int n, int l, int m, int Z, int A);
  int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval);
 
+ double ee_brown_miller( int na, int la, int ma, int nb, int lb, int mb, int nc, int lc, int mc, int nd, int ld, int md, double beta );
+ double d_i(int la, int ma, int lb, int mb, int i);
+ double c_g(int m, int n, int g);
+ double b_f(int m, int n, int l);
+ double a_j(int n, int l, int j);
+ double k_t(int l, int m);
+ double k_r(int n, int l);
+
+ Operator eeCoulomb_original(ModelSpace& modelspace);
+ // to get the speed up:
+ //
  Operator eeCoulomb(ModelSpace& modelspace);
+ void PrecalculationCoulomb(ModelSpace& modelspace);
+ map<array<int,9>,double> Integral;
+ map<array<int,6>,double> SixJs;
+ map<array<int,3>,double> ThreeJs;
+
+ double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z);
+ double A_i(int n, int l);
+ double C_i(int n, int l, int j);
+ double R12_func(int n1, int n2, int n3, int n4, int l1, int l2, int l3, int l4, int L, int Z);
  Operator ElectronTwoBody(ModelSpace& modelspace);
+ Operator ElectronTwoBody_original(ModelSpace& modelspace);
  double CalculateCMInvR( double n1, double l1, double s1, double j1,
 			 double n2, double l2, double s2, double j2,
 			 double n3, double l3, double s3, double j3,
@@ -124,7 +145,7 @@ namespace imsrg_util
  {
    return v1;
  }
- 
+
  template <typename T, typename... Args>
  T VectorUnion(T& v1, T& v2, Args... args)
  {
@@ -140,3 +161,4 @@ namespace imsrg_util
 
 
 #endif
+
