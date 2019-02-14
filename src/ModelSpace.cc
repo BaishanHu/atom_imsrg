@@ -1004,11 +1004,11 @@ void ModelSpace::SetupKets(string Sys)
    {
      for (int q=p;q<norbits;q++)
      {
-	if (Sys == "atomic")
+	if (Sys == "atomic" || Sys == "slater")
 	{
 	   //index = Index2(p,q);
 	   index = Kets.size();
-	   cout << "Grabbing ket with p=" << p << " q=" << q << " at indexMap[p]= " << indexMap[p] << " and indexMap[q]=" << indexMap[q] << "and setting to index=" << index << endl;
+	   //cout << "Grabbing ket with p=" << p << " q=" << q << " at indexMap[p]= " << indexMap[p] << " and indexMap[q]=" << indexMap[q] << "and setting to index=" << index << endl;
 	   //Kets.emplace_back(Ket(GetOrbit(p),GetOrbit(q)));
 	   Orbit& o1 = GetOrbit(p);
 	   Orbit& o2 = GetOrbit(q);
@@ -1765,7 +1765,6 @@ void ModelSpace::PrecalculateNineJ( vector<unsigned long long int>& ninejList )
 	   case 8:
 		break;
    	}
-
 	unsigned long long int key =   klist[0];
 	unsigned long long int factor = 100;
 	for (int i=1; i<9; ++i)
@@ -1859,4 +1858,3 @@ double ModelSpace::GetNineJ(double j1, double j2, double J12, double j3, double 
    return ninej;
 
 }
-
