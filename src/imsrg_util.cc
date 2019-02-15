@@ -338,6 +338,31 @@ double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace)
     return rad;
 }
 
+Operator SlaterOneBody(ModelSpace& modelspace)
+{
+        Operator op(modelspace);
+        double t_start = omp_get_wtime();
+        int norbits = modelspace.GetNumberOrbits();
+        double z = modelspace.GetHbarOmega();
+        #pragma omp parallel for
+        for (int i=0; i<norbits; i++)
+        {
+                Orbit oi = modelspace.GetOrbit(i);
+                for (int j=0; j<=i; j++)
+                {
+                        Orbit oj = modelspace.GetOrbit(j);
+                        if (oi.l != oj.l) continue; // Orthogonal in l!
+                        double T1 = pow(z,2)*pow(HBARC,2)/M_ELECTRON * (oi.n*oi.n + oj.n*(oj.n-1)-oi.n*(2*oj.n+1)) * gsl_sf_fact(oi.n+oj.n)/sqrt(oi.n*oj.n*gsl_sf_fact(2*oi.n-1)*gsl_sf_fact(2*oj.n-1));
+                        double T2 = pow(z,2)*pow(HBARC,2)/M_ELECTRON * oj.l*(oj.l+1) * gsl_sf_fact(oi.n+oj.n-2)/sqrt( oi.n*oj.n*gsl_sf_fact(2*oj.n-1)*gsl_sf_fact(2*oi.n-1) );
+                        double V  = HBARC*(1./137)*modelspace.GetTargetZ()*z*gsl_sf_gamma(oi.n+oj.n-1)/sqrt( oi.n*oj.n*gsl_sf_fact(2*oi.n-1)*gsl_sf_fact(2*oj.n-1) );
+                        op.OneBody(i,j) = T1+T2+V;
+                        op.OneBody(j,i) = T1+T2+V;
+                }
+        }
+        op.profiler.timer["SlaterOneBody"] += omp_get_wtime() - t_start;
+        return op;
+}
+
 Operator HarmonicOneBody(ModelSpace& modelspace)
 {
     Operator op(modelspace);
@@ -668,7 +693,7 @@ int RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *f
 
     return 0;
 }
-
+/*
 double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J)
 {
   double me = 0.0;
@@ -682,7 +707,7 @@ double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J)
       ThreeJs[{oa.j2,L,oc.j2}] * ThreeJs[{ob.j2,L,od.j2}];
   }
   return me*sqrt( (oa.j2+1) * (ob.j2+1) * (oc.j2+1) * (od.j2+1) )*pow(-1, oa.j2+ob.j2+J);
-}
+} */
 
 double fact(int n)
 {
@@ -940,8 +965,8 @@ Operator ElectronTwoBody(ModelSpace& modelspace)
         Orbit & o3 = modelspace.GetOrbit(ket.p);
         Orbit & o4 = modelspace.GetOrbit(ket.q);
         double me = HBARC*(1./137) / (sqrt( (1+ket.delta_pq())*(1+bra.delta_pq()) )) *
-          ( ElectronTwoBodyME(o1,o2,o3,o4,tbc.J)
-            - pow(-1,(o1.j2+o2.j2)/2 - tbc.J) * ElectronTwoBodyME(o1,o2,o4,o3,tbc.J) );
+          ( ElectronTwoBodyME_original(o1,o2,o3,o4,tbc.J,modelspace.GetTargetZ())
+            - pow(-1,(o1.j2+o2.j2)/2 - tbc.J) * ElectronTwoBodyME_original(o1,o2,o4,o3,tbc.J,modelspace.GetTargetZ()) );
         V12.TwoBody.SetTBME(ch, jket, ibra, me);
         V12.TwoBody.SetTBME(ch, ibra, jket, me);
       } // jket
@@ -1241,7 +1266,7 @@ Operator eeCoulomb(ModelSpace& modelspace)
 {
   double t_start = omp_get_wtime();
   cout << "Entering eeCoulomb; precalculating." << endl;
-  PrecalculationCoulomb(modelspace);
+  //PrecalculationCoulomb(modelspace);
   int nchan = modelspace.GetNumberTwoBodyChannels();
   Operator V12(modelspace);
   V12.SetHermitian();
@@ -1364,8 +1389,8 @@ Operator eeCoulomb(ModelSpace& modelspace)
 
                                   lp_3j *= ThreeJ(oa.l,lp,oc.l, 0,0,0) * ThreeJ(ob.l,lp,od.l, 0,0,0);
                                   lp_3j_inv *= ThreeJ(oa.l,lp,od.l, 0,0,0) * ThreeJ(ob.l,lp,oc.l, 0,0,0);
-                                  double val_sym = Integral[{oa.n, oa.l, ob.n, ob.l, oc.n, oc.l, od.n, od.l, lp}];
-                                  double val_asym = Integral[{oa.n, oa.l, ob.n, ob.l, od.n, od.l, oc.n, oc.l, lp}];
+                                  double val_sym = 0; //Integral[{oa.n, oa.l, ob.n, ob.l, oc.n, oc.l, od.n, od.l, lp}];
+                                  double val_asym = 0; //Integral[{oa.n, oa.l, ob.n, ob.l, od.n, od.l, oc.n, oc.l, lp}];
                                   double val = val_sym*lp_3j - pow(-1, oc.j2*1./2+od.j2*1./2-tbc.J)*val_asym*lp_3j_inv;
 
                                   val *= mlab_clebsh*mlcd_clebsh;
@@ -1398,7 +1423,7 @@ Operator eeCoulomb(ModelSpace& modelspace)
   cout << "Leaving ElectronTwoBody." << endl;
   return V12;
 }
-
+/*
 void PrecalculationCoulomb(ModelSpace& modelspace)
 {
   int emax = modelspace.GetEmax();
@@ -1538,7 +1563,7 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
   cout << "time for storing radial integrals: " <<
     omp_get_wtime() - t_start << " sec" << endl;
 
-}
+} */
 
 
 

@@ -25,7 +25,7 @@ PYTHONFLAGS = -I/usr/include/python2.7 -lboost_python #-lpython
 
 THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; elif [ `hostname|grep oak` ]; then echo oak; else echo other; fi)
 
-ALL = libIMSRG.so imsrg++
+ALL =  libIMSRG.so imsrg++
 LIBS = -lopenblas -lgsl -lm -lz -lhdf5_cpp -lhdf5 -fext-numeric-literals -I ~/jsoncpp/dist -fPIC
 
 ifeq ($(HDF5),on)

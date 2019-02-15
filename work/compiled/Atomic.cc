@@ -207,11 +207,14 @@ int main(int argc, char** argv)
 //	Diff = New - twoBody;
 	cout << "Added Twobody, moving on." << endl;
     } */
+  //} else if (systemBasis == "slater") {
+  //	Hbare += SlaterOneBody(modelspace);
   } else {
-    cout << "Adding Hydrogen Energies." << endl;
-    Hbare += Energy_Op(modelspace);
+    cout << "Adding slater Energies." << endl;
+    //Hbare += Energy_Op(modelspace);
+    Hbare += SlaterOneBody(modelspace);
     cout << "Onebody:" << endl << Hbare.OneBody << endl;
-    if (modelspace.GetTargetZ()	> 1)
+    /*if (modelspace.GetTargetZ()	> 1)
     {
 	cout << "Adding two-body correction." << endl;
 	//Operator eeC = eeCoulomb(modelspace);
@@ -223,7 +226,7 @@ int main(int argc, char** argv)
 	rw.WriteOperatorToJSON( fn_json.str(), eeC, eMax, 2*eMax, Lmax, 1. );
 	rw.Write_me2j( fn_me2j.str(), eeC, eMax, 2*eMax, Lmax);
 	Hbare += eeC;
-    }
+    }*/
   }
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;

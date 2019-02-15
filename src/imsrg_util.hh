@@ -88,9 +88,11 @@ namespace imsrg_util
  //
  Operator eeCoulomb(ModelSpace& modelspace);
  void PrecalculationCoulomb(ModelSpace& modelspace);
- map<array<int,9>,double> Integral;
- map<array<int,6>,double> SixJs;
- map<array<int,3>,double> ThreeJs;
+ //map<array<int,9>,double> Integral;
+ //map<array<int,6>,double> SixJs;
+ //map<array<int,3>,double> ThreeJs;
+
+ Operator SlaterOneBody(ModelSpace& modelspace);
 
  double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z);
  double A_i(int n, int l);

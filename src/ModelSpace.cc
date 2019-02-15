@@ -1004,7 +1004,7 @@ void ModelSpace::SetupKets(string Sys)
    {
      for (int q=p;q<norbits;q++)
      {
-	if (Sys == "atomic")
+	if (Sys == "atomic" || Sys == "slater")
 	{
 	   //index = Index2(p,q);
 	   index = Kets.size();
