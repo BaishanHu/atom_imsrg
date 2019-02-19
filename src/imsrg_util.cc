@@ -338,13 +338,23 @@ double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace)
     return rad;
 }
 
+double fact_int(int n, double alpha)
+{
+	return gsl_sf_fact(n)/pow(alpha,n+1);
+}
+
+double N_slater(int n, double zeta)
+{
+	return pow(2*zeta,n)*sqrt(2*zeta/gsl_sf_fact(2*n));
+}
+
 Operator SlaterOneBody(ModelSpace& modelspace)
 {
         Operator op(modelspace);
         double t_start = omp_get_wtime();
         int norbits = modelspace.GetNumberOrbits();
-        double z = modelspace.GetHbarOmega();
-        #pragma omp parallel for
+        double z = modelspace.GetHbarOmega()/10;
+        //#pragma omp parallel for
         for (int i=0; i<norbits; i++)
         {
                 Orbit oi = modelspace.GetOrbit(i);
@@ -352,11 +362,13 @@ Operator SlaterOneBody(ModelSpace& modelspace)
                 {
                         Orbit oj = modelspace.GetOrbit(j);
                         if (oi.l != oj.l) continue; // Orthogonal in l!
-                        double T1 = pow(z,2)*pow(HBARC,2)/M_ELECTRON * (oi.n*oi.n + oj.n*(oj.n-1)-oi.n*(2*oj.n+1)) * gsl_sf_fact(oi.n+oj.n)/sqrt(oi.n*oj.n*gsl_sf_fact(2*oi.n-1)*gsl_sf_fact(2*oj.n-1));
-                        double T2 = pow(z,2)*pow(HBARC,2)/M_ELECTRON * oj.l*(oj.l+1) * gsl_sf_fact(oi.n+oj.n-2)/sqrt( oi.n*oj.n*gsl_sf_fact(2*oj.n-1)*gsl_sf_fact(2*oi.n-1) );
-                        double V  = HBARC*(1./137)*modelspace.GetTargetZ()*z*gsl_sf_gamma(oi.n+oj.n-1)/sqrt( oi.n*oj.n*gsl_sf_fact(2*oi.n-1)*gsl_sf_fact(2*oj.n-1) );
-                        op.OneBody(i,j) = T1+T2+V;
-                        op.OneBody(j,i) = T1+T2+V;
+                        double T = N_slater(oi.n,z)*N_slater(oj.n,z)*pow(HBARC,2)*0.5/511000*( (oi.l*(oi.l+1)-oi.n*(oi.n-1))*fact_int(oi.n+oj.n-2,2*z) + 2*z*oi.n*fact_int(oi.n+oj.n-1,2*z) - z*z*fact_int(oi.n+oj.n,2*z) );
+			double V = N_slater(oi.n,z)*N_slater(oj.n,z)*HBARC*(1./137)*modelspace.GetTargetZ()*(fact_int(oi.n+oj.n-1,2*z));
+			cout << "T = " << T << endl;
+			cout << "V = " << V << endl;
+			cout << "Writing " << T-V << " for oi.n=" << oi.n << " oj.n=" << oj.n << " oi.l=" << oi.l << " oj.l=" << oj.l << endl;
+                        op.OneBody(i,j) = T - V;
+                        op.OneBody(j,i) = T - V;
                 }
         }
         op.profiler.timer["SlaterOneBody"] += omp_get_wtime() - t_start;

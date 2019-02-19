@@ -18,6 +18,7 @@ from time import time,sleep
 from datetime import datetime
 import argparse
 import csv
+import random
 
 csv_fn = "data_log.csv"
 
@@ -114,17 +115,17 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 batch_mode = True
 
-e_start=2
-e_stop =2
+e_start=1
+e_stop =1
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=5
-hwstop =20
-hwiter =5
+hwstart=29
+hwstop =29
+hwiter =9
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
@@ -154,7 +155,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 						   ARGS['reference'],ARGS['Operators'],lmax,ARGS['file2e1max'],ARGS['file2e2max'],ARGS['file2lmax'],
 						   '',ARGS['systemBasis'],'Atomic') """
 
-			logname = jobname + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
+			logname = jobname +"{:.3}".format(13*random.random()+random.random()) + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
 			cmd = ' '.join([exe] + ['%s=%s'%(x,ARGS[x]) for x in ARGS])
 			if batch_mode==True:
 				print "Submitting to cluster..."
