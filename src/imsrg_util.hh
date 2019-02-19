@@ -92,6 +92,8 @@ namespace imsrg_util
  //map<array<int,6>,double> SixJs;
  //map<array<int,3>,double> ThreeJs;
 
+ Operator SlaterOneBody(ModelSpace& modelspace);
+
  double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z);
  double A_i(int n, int l);
  double C_i(int n, int l, int j);

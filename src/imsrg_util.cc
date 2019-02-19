@@ -338,6 +338,7 @@ double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace)
     return rad;
 }
 
+<<<<<<< HEAD
 Operator SlaterOneBody(ModelSpace& modelspace)
 {
 	cout << "Entering SlaterOneBody." << endl;
@@ -361,6 +362,39 @@ Operator SlaterOneBody(ModelSpace& modelspace)
                         double V  = HBARC*(1./137)*modelspace.GetTargetZ()*z*gsl_sf_gamma(oi.n+oj.n-1)/sqrt( oi.n*oj.n*gsl_sf_fact(2*oi.n-1)*gsl_sf_fact(2*oj.n-1) );
                         op.OneBody(i,j) = T1+T2+V;
                         op.OneBody(j,i) = T1+T2+V;
+=======
+double fact_int(int n, double alpha)
+{
+	return gsl_sf_fact(n)/pow(alpha,n+1);
+}
+
+double N_slater(int n, double zeta)
+{
+	return pow(2*zeta,n)*sqrt(2*zeta/gsl_sf_fact(2*n));
+}
+
+Operator SlaterOneBody(ModelSpace& modelspace)
+{
+        Operator op(modelspace);
+        double t_start = omp_get_wtime();
+        int norbits = modelspace.GetNumberOrbits();
+        double z = modelspace.GetHbarOmega()/10;
+        //#pragma omp parallel for
+        for (int i=0; i<norbits; i++)
+        {
+                Orbit oi = modelspace.GetOrbit(i);
+                for (int j=0; j<=i; j++)
+                {
+                        Orbit oj = modelspace.GetOrbit(j);
+                        if (oi.l != oj.l) continue; // Orthogonal in l!
+                        double T = N_slater(oi.n,z)*N_slater(oj.n,z)*pow(HBARC,2)*0.5/511000*( (oi.l*(oi.l+1)-oi.n*(oi.n-1))*fact_int(oi.n+oj.n-2,2*z) + 2*z*oi.n*fact_int(oi.n+oj.n-1,2*z) - z*z*fact_int(oi.n+oj.n,2*z) );
+			double V = N_slater(oi.n,z)*N_slater(oj.n,z)*HBARC*(1./137)*modelspace.GetTargetZ()*(fact_int(oi.n+oj.n-1,2*z));
+			cout << "T = " << T << endl;
+			cout << "V = " << V << endl;
+			cout << "Writing " << T-V << " for oi.n=" << oi.n << " oj.n=" << oj.n << " oi.l=" << oi.l << " oj.l=" << oj.l << endl;
+                        op.OneBody(i,j) = T - V;
+                        op.OneBody(j,i) = T - V;
+>>>>>>> 22b56e3550359082a0844aa648aaffeed20e98c6
                 }
         }
         op.profiler.timer["SlaterOneBody"] += omp_get_wtime() - t_start;
@@ -696,8 +730,12 @@ int RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *f
 
     return 0;
 }
+<<<<<<< HEAD
 
 /* // Fucks up generator because of circular shitstrom
+=======
+/*
+>>>>>>> 22b56e3550359082a0844aa648aaffeed20e98c6
 double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J)
 {
   double me = 0.0;
@@ -1272,7 +1310,7 @@ Operator eeCoulomb(ModelSpace& modelspace)
 {
   double t_start = omp_get_wtime();
   cout << "Entering eeCoulomb; precalculating." << endl;
-  PrecalculationCoulomb(modelspace);
+  //PrecalculationCoulomb(modelspace);
   int nchan = modelspace.GetNumberTwoBodyChannels();
   Operator V12(modelspace);
   V12.SetHermitian();
@@ -1395,8 +1433,8 @@ Operator eeCoulomb(ModelSpace& modelspace)
 
                                   lp_3j *= ThreeJ(oa.l,lp,oc.l, 0,0,0) * ThreeJ(ob.l,lp,od.l, 0,0,0);
                                   lp_3j_inv *= ThreeJ(oa.l,lp,od.l, 0,0,0) * ThreeJ(ob.l,lp,oc.l, 0,0,0);
-                                  double val_sym = Integral[{oa.n, oa.l, ob.n, ob.l, oc.n, oc.l, od.n, od.l, lp}];
-                                  double val_asym = Integral[{oa.n, oa.l, ob.n, ob.l, od.n, od.l, oc.n, oc.l, lp}];
+                                  double val_sym = 0; //Integral[{oa.n, oa.l, ob.n, ob.l, oc.n, oc.l, od.n, od.l, lp}];
+                                  double val_asym = 0; //Integral[{oa.n, oa.l, ob.n, ob.l, od.n, od.l, oc.n, oc.l, lp}];
                                   double val = val_sym*lp_3j - pow(-1, oc.j2*1./2+od.j2*1./2-tbc.J)*val_asym*lp_3j_inv;
 
                                   val *= mlab_clebsh*mlcd_clebsh;
@@ -1428,8 +1466,12 @@ Operator eeCoulomb(ModelSpace& modelspace)
   V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
   cout << "Leaving ElectronTwoBody." << endl;
   return V12;
+<<<<<<< HEAD
 } */
 
+=======
+}
+>>>>>>> 22b56e3550359082a0844aa648aaffeed20e98c6
 /*
 void PrecalculationCoulomb(ModelSpace& modelspace)
 {

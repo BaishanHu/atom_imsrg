@@ -18,6 +18,7 @@ from time import time,sleep
 from datetime import datetime
 import argparse
 import csv
+import random
 
 csv_fn = "data_log.csv"
 
@@ -35,7 +36,7 @@ elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS =
 ### The code uses OpenMP and benefits from up to at least 24 threads
 NTHREADS=32
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
-exe = '/global/home/dlivermore/imsrg/work/compiled/Atomic'
+exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
 batch_mode=False
@@ -114,17 +115,17 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 batch_mode = True
 
-e_start=2
-e_stop =4
+e_start=1
+e_stop =1
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=1
-hwstop =1
-hwiter =1
+hwstart=29
+hwstop =29
+hwiter =9
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
@@ -133,8 +134,8 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['lmax'] = str(lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'He4'
-			ARGS['reference'] 	= 'He4'
+			ARGS['valence_space'] 	= 'H1'
+			ARGS['reference'] 	= 'H1'
 			ARGS['systemBasis']	= 'hydrogen'
 			#ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '500'
@@ -154,7 +155,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 						   ARGS['reference'],ARGS['Operators'],lmax,ARGS['file2e1max'],ARGS['file2e2max'],ARGS['file2lmax'],
 						   '',ARGS['systemBasis'],'Atomic') """
 
-			logname = jobname + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
+			logname = jobname +"{:.3}".format(13*random.random()+random.random()) + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
 			cmd = ' '.join([exe] + ['%s=%s'%(x,ARGS[x]) for x in ARGS])
 			if batch_mode==True:
 				print "Submitting to cluster..."
