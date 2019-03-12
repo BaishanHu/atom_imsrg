@@ -44,7 +44,7 @@ def get_info_from_filename(filename):
 
 def get_energy(filename):
 	fn = open(filename, 'r')
-	try:
+ 	try:
 		try:
 			for line in fn:
 				if "Core Energy" in line:

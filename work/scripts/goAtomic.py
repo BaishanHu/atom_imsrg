@@ -34,9 +34,10 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=32
+NTHREADS=12
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
-exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
+#exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
+exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
 batch_mode=False
@@ -92,21 +93,21 @@ ARGS['method'] = 'magnus'
 #ARGS['ode_tolerance'] = '1e-5'
 
 ###
-ARGS['Operators'] = ''
+ARGS['Operators'] = '' #'Trel_Op,InverseR,KineticEnergy,TCM_Op'
 
 ### Create the 'script' that we need for execution
 FILECONTENT = """#!/bin/bash
 #PBS -N %s
-#PBS -q oak
+#PBS -q batchmpi
 #PBS -d %s
-#PBS -l walltime=512:00:00
+#PBS -l walltime=192:00:00
 #PBS -l nodes=1:ppn=%d
-#PBS -l vmem=251gb
-#PBS -m ae
+#PBS -l vmem=60gb
+#PBS -m abe
 #PBS -M %s
 #PBS -j oe
-#PBS -o imsrg_log/%s.o
-#PBS -e imsrg_log/%s.e
+#PBS -o pbslog/%s.o
+#PBS -e pbslog/%s.e
 cd $PBS_O_WORKDIR
 export OMP_NUM_THREADS=%d
 %s
@@ -115,17 +116,17 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 batch_mode = True
 
-e_start=1
-e_stop =1
+e_start=6
+e_stop =8
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=29
-hwstop =29
-hwiter =9
+hwstart=10
+hwstop =70
+hwiter =20
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
@@ -134,10 +135,10 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['lmax'] = str(lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'H1'
-			ARGS['reference'] 	= 'H1'
-			ARGS['systemBasis']	= 'hydrogen'
-			#ARGS['systemBasis']	= 'harmonic'
+			ARGS['valence_space'] 	= 'He4'
+			ARGS['reference'] 	= 'He4'
+			#ARGS['systemBasis']	= 'hydrogen'
+			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '500'
 			ARGS['method']		= 'magnus'
 			ARGS['basis']		= 'HF'

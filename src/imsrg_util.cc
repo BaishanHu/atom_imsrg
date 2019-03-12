@@ -338,31 +338,6 @@ double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace)
     return rad;
 }
 
-<<<<<<< HEAD
-Operator SlaterOneBody(ModelSpace& modelspace)
-{
-	cout << "Entering SlaterOneBody." << endl;
-        Operator op(modelspace);
-        double t_start = omp_get_wtime();
-        int norbits = modelspace.GetNumberOrbits();
-        double z = modelspace.GetHbarOmega();
-	double ELECTRON_MASS = 511000;
-        #pragma omp parallel for
-        for (int i=0; i<norbits; i++)
-        {
-		cout << "Getting orbit at i=" << i << endl;
-                Orbit oi = modelspace.GetOrbit(i);
-                for (int j=0; j<=i; j++)
-                {
-			cout << "Getting orbit at j=" << j << endl;
-                        Orbit oj = modelspace.GetOrbit(j);
-                        if (oi.l != oj.l) continue; // Orthogonal in l!
-                        double T1 = pow(z,2)*pow(HBARC,2)/ELECTRON_MASS * (oi.n*oi.n + oj.n*(oj.n-1)-oi.n*(2*oj.n+1)) * gsl_sf_fact(oi.n+oj.n)/sqrt(oi.n*oj.n*gsl_sf_fact(2*oi.n-1)*gsl_sf_fact(2*oj.n-1));
-                        double T2 = pow(z,2)*pow(HBARC,2)/ELECTRON_MASS * oj.l*(oj.l+1) * gsl_sf_fact(oi.n+oj.n-2)/sqrt( oi.n*oj.n*gsl_sf_fact(2*oj.n-1)*gsl_sf_fact(2*oi.n-1) );
-                        double V  = HBARC*(1./137)*modelspace.GetTargetZ()*z*gsl_sf_gamma(oi.n+oj.n-1)/sqrt( oi.n*oj.n*gsl_sf_fact(2*oi.n-1)*gsl_sf_fact(2*oj.n-1) );
-                        op.OneBody(i,j) = T1+T2+V;
-                        op.OneBody(j,i) = T1+T2+V;
-=======
 double fact_int(int n, double alpha)
 {
 	return gsl_sf_fact(n)/pow(alpha,n+1);
@@ -394,11 +369,18 @@ Operator SlaterOneBody(ModelSpace& modelspace)
 			cout << "Writing " << T-V << " for oi.n=" << oi.n << " oj.n=" << oj.n << " oi.l=" << oi.l << " oj.l=" << oj.l << endl;
                         op.OneBody(i,j) = T - V;
                         op.OneBody(j,i) = T - V;
->>>>>>> 22b56e3550359082a0844aa648aaffeed20e98c6
                 }
         }
         op.profiler.timer["SlaterOneBody"] += omp_get_wtime() - t_start;
         return op;
+}
+
+Operator MccoyOneBody(ModelSpace& modelspace)
+{
+	Operator op(modelspace);
+	double t_start = omp_get_wtime();
+	double Ha = 27.114; // 1 Hartree
+	
 }
 
 Operator HarmonicOneBody(ModelSpace& modelspace)
@@ -436,7 +418,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
      {
 	Orbit& oj = modelspace.GetOrbit(j);
 	if ( oi.l != oj.l ) continue; // From spherical harmonics orthogonality; \delta_j1j2 ?
-	double temp1 = getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace)*(-HBARC / (137.035999139) * modelspace.GetTargetZ()); //  -Z\hbarc\alpha + L\dotS ?
+	double temp1 = getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace)*(-HBARC / (137.035999139) * modelspace.GetTargetZ()); //  -Z\hbarc\alpha
 	InvR.OneBody(i,j) = temp1;
 	InvR.OneBody(j,i) = temp1;
      }
@@ -444,6 +426,7 @@ Operator InverseR_Op(ModelSpace& modelspace)
    // 1/137 comes from fine struct const {alpha} = e^2/(4pi{epsilon}{hbar}c) ~= 1/137
    // Therefore e^2/(4pi{epsilon}) = {hbar}{c}{alpha}; b from R^L_ab = b^L * ~R^L_ab; b = oscillator length (Suhonen 3.43,6.41); L is the degree of r^L
    double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega() ); // 511 from electron mass in eV
+   // double b = 1./sqrt( modelspace.GetHbarOmega() );
    InvR *= 1./b ;
    InvR.profiler.timer["InverseR_Op"] += omp_get_wtime() - t_start;
    return InvR  ;
@@ -570,7 +553,7 @@ Operator KineticEnergy_Op(ModelSpace& modelspace)
    #pragma omp master
    T.profiler.timer["KineticEnergy_Op"] += omp_get_wtime() - t_start;
    cout << "Exiting KineticEnergy_Op..." << endl;
-   return T;
+   return T ;
 }
 
 struct RabRcd_params {  int na; int la; int nb; int lb;
@@ -730,12 +713,7 @@ int RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *f
 
     return 0;
 }
-<<<<<<< HEAD
-
-/* // Fucks up generator because of circular shitstrom
-=======
 /*
->>>>>>> 22b56e3550359082a0844aa648aaffeed20e98c6
 double ElectronTwoBodyME(Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J)
 {
   double me = 0.0;
@@ -904,10 +882,10 @@ double R12_func(int n1, int n2, int n3, int n4, int l1, int l2, int l3, int l4, 
 double ElectronTwoBodyME_original( Orbit & oa, Orbit & ob, Orbit & oc, Orbit & od, int J, int Z )
 {
     double me = 0;
-    //double xmin[2] = {0,0};
-    //double xmax[2] = {1,1};
-    //int max_iter = 1e3;
-    //double max_err = 1e-2;
+    double xmin[2] = {0,0};
+    double xmax[2] = {1,1};
+    int max_iter = 1e3;
+    double max_err = 1e-2;
     vector<unsigned long>:: iterator it;
 
     for (int L=max(abs(oa.j2-oc.j2)/2, abs(ob.j2-od.j2)/2); L<=min((oa.j2+oc.j2)/2, (ob.j2+od.j2)/2); L++)
@@ -1218,8 +1196,7 @@ Operator eeCoulomb_original(ModelSpace& modelspace)
                                                                                             it = find(cache_list.begin(), cache_list.end(), cache_val);
 											    if (it == cache_list.end()) // didn't find in list
 											    {
-										    	    	hcubature(1, &RabRcd, &p_abcd, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_sym, 
-&err_sym);
+										    	    	hcubature(1, &RabRcd, &p_abcd, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_sym, &err_sym);
 											    } else {
 												val_sym = cache[it-cache_list.begin()+1];
 											    }
@@ -1244,8 +1221,7 @@ Operator eeCoulomb_original(ModelSpace& modelspace)
                                                                                             it = find(cache_list.begin(), cache_list.end(), cache_val);
                                                                                             if (it == cache_list.end()) // didn't find in list
                                                                                             {
-                                                                                        	hcubature(1, &RabRcd, &p_abdc, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_asym, 
-&err_asym);
+                                                                                        	hcubature(1, &RabRcd, &p_abdc, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val_asym, &err_asym);
                                                                                             } else {
                                                                                                 val_asym = cache[it-cache_list.begin()+1];
                                                                                             } // if(it == ...
@@ -1305,7 +1281,7 @@ Operator eeCoulomb_original(ModelSpace& modelspace)
     cout << "Leaving ElectronTwoBody." << endl;
     return V12;
 }
-/*
+
 Operator eeCoulomb(ModelSpace& modelspace)
 {
   double t_start = omp_get_wtime();
@@ -1466,12 +1442,7 @@ Operator eeCoulomb(ModelSpace& modelspace)
   V12.profiler.timer["ElectronTwoBody"] += omp_get_wtime() - t_start;
   cout << "Leaving ElectronTwoBody." << endl;
   return V12;
-<<<<<<< HEAD
-} */
-
-=======
 }
->>>>>>> 22b56e3550359082a0844aa648aaffeed20e98c6
 /*
 void PrecalculationCoulomb(ModelSpace& modelspace)
 {
@@ -1500,7 +1471,6 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
         {
           int Jmin = max(abs(j1-j2)/2, abs(j3-j4)/2);
           int Jmax = min((j1+j2)/2, (j3+j4)/2);
-
           int Lmin = max(abs(j1-j3)/2, abs(j2-j4)/2);
           int Lmax = min((j1+j3)/2, (j2+j4)/2);
           for (int L = Lmin; L<=Lmax; ++L)
@@ -1514,7 +1484,6 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
       }
     }
   }
-
   // storing Radial integrals for coulomb int.
   double t_start = omp_get_wtime();
   int Z = modelspace.GetTargetZ();
@@ -1537,12 +1506,10 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
   {
     int na = n[a];
     int la = l[a];
-
     for(int b = 0; b<nlmax; ++b)
     {
       int nb = n[b];
       int lb = l[b];
-
       for(int c = 0; c<nlmax; ++c)
       {
         int nc = n[c];
@@ -1551,10 +1518,8 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
         {
           int nd = n[d];
           int ld = l[d];
-
           int lmin_ = max(abs(la-lc),abs(lb-ld));
           int lmax_ = min(la+lc,lb+ld);
-
           for(int L=lmin_; L<=lmax_; ++L)
           {
             //struct RabRcd_params p = {na,la,nb,lb,nc,lc,nd,ld,L,Z};
@@ -1588,7 +1553,6 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
         {
           int nd = n[d];
           int ld = l[d];
-
           int lmin_ = max(abs(la-lc),abs(lb-ld));
           int lmax_ = min(la+lc,lb+ld);
 	  #pragma omp critical
@@ -1611,7 +1575,6 @@ void PrecalculationCoulomb(ModelSpace& modelspace)
   }
   cout << "time for storing radial integrals: " <<
     omp_get_wtime() - t_start << " sec" << endl;
-
 } */
 
 
@@ -1625,14 +1588,14 @@ double CalculateCMInvR( double n1, double l1, double s1, double j1,
     //cout << "Entering CalculateCMInvR" << endl;
     // Declare limits here, easier to read/modify
     int Lambda_lower = abs(l1 - l2);
-    //int Lambdap_lower = abs(l3 - l4);
+    int Lambdap_lower = abs(l3 - l4);
     int Lambda_upper = abs(l1 + l2);
-    //int Lambdap_upper = abs(l3 + l4);
+    int Lambdap_upper = abs(l3 + l4);
 
     int S_lower = 0;
-    //int Sp_lower = 0;
+    int Sp_lower = 0;
     int S_upper = 1;
-    //int Sp_upper = 1;
+    int Sp_upper = 1;
 
     // Conservation of Energy terms
     int p12 = 2*n1 + 2*n2 + l1 + l2;
@@ -1851,11 +1814,12 @@ Operator Energy_Op(ModelSpace& modelspace)
    int E2max = modelspace.GetE2max();
    double hw = modelspace.GetHbarOmega();
    int A = modelspace.GetTargetMass();
+   int Z = modelspace.GetTargetZ();
    Operator TcmOp = Operator(modelspace);
    TcmOp.SetHermitian();
    double Mu = A; // to avoid /0
    if (modelspace.GetSystemType() == "nuclear") Mu = A; // Can clean this up later
-   else if (modelspace.GetSystemType() == "atomic") Mu = A*(1836); // scale of nucleon to electron masses, this Doesn't make sense
+   else if (modelspace.GetSystemType() == "atomic") Mu = A;//*(1836); // scale of nucleon to electron masses, this Doesn't make sense
    // One body piece = p**2/(2mA)
    int norb = modelspace.GetNumberOrbits();
    for (int i=0; i<norb; ++i)
@@ -2384,19 +2348,19 @@ Operator Energy_Op(ModelSpace& modelspace)
 	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J, modelspace.systemBasis);
 
-	    //Ket ketp = Ket(od,oc);
-	    //double mat_el_asym = pow(-1,(od.j2+oc.j2)/2.0 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
-	    //mat_el -= mat_el_asym;
-	    //if (oc.n == od.n && oc.l == od.l && oc.j2 == od.j2)
-            //{
-            // 	mat_el /= sqrt(2);
-            //}
-	    //Orbit oa = modelspace.GetOrbit(ket.p);
-	    //Orbit ob = modelspace.GetOrbit(ket.q);
-	    //if (oa.n == ob.n && oa.l == ob.l && oa.j2 == ob.j2)
-            //{
-            // 	mat_el /= sqrt(2);
-            //}
+	    Ket ketp = Ket(od,oc);
+	    double mat_el_asym = pow(-1,(od.j2+oc.j2)/2.0 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
+	    mat_el -= mat_el_asym;
+	    if (oc.n == od.n && oc.l == od.l && oc.j2 == od.j2)
+            {
+             	mat_el /= sqrt(2);
+            }
+	    Orbit oa = modelspace.GetOrbit(ket.p);
+	    Orbit ob = modelspace.GetOrbit(ket.q);
+	    if (oa.n == ob.n && oa.l == ob.l && oa.j2 == ob.j2)
+            {
+             	mat_el /= sqrt(2);
+            }
 	    //if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
             E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
@@ -2408,8 +2372,7 @@ Operator Energy_Op(ModelSpace& modelspace)
  }
 
  /* Copied from r1r2 calculation */
- // Evaluate <bra | 1/|r1-r2| | ket>, omitting the factor (hbar * omega) /(m * omega^2)
-/// Returns the normalized, anti-symmetrized, J-coupled, two-body matrix element of \f$ \frac{m\omega^2}{\hbar \omega} \vec{r}_1\cdot\vec{r}_2 \f$.
+ // Evaluate <bra | 1/|r1-r2| | ket>, omitting the factors of hw, etc.
 /// Calculational details are similar to Calculate_p1p2().
  double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis)
  {
@@ -2439,11 +2402,6 @@ Operator Energy_Op(ModelSpace& modelspace)
    //if (abs(fab-fcd)%2 >0) return 0; // p1*p2 only connects kets with delta N = 0,1
    //if (abs(fab-fcd)>2) return 0; // p1*p2 only connects kets with delta N = 0,1
 
-   double delta_ab = 1;
-   double delta_cd = 1;
-   if (na == nb && la == lb && ja == jb) delta_ab *= 1.0/sqrt(2);
-   if (nc == nd	&& lc == ld && jc == jd) delta_cd *= 1.0/sqrt(2);
-
    double sa,sb,sc,sd;
    sa=sb=sc=sd=0.5;
 
@@ -2459,12 +2417,8 @@ Operator Energy_Op(ModelSpace& modelspace)
        double njab = NormNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
        //if (njab < 0) cout << "njab=" << njab << " la=" << la << " sa=" << sa << " ja=" << ja << " lb=" << lb << " sb=" << sb << " jb=" << jb << " Lab=" << Lab << " Sab=" << Sab << " J=" << J << endl;
        if (njab == 0 or abs(njab) < 1e-8) continue;
-       int Scd = Sab; // Thisn't should iterate over all possible Scd because of cancellations later
-       int Lcd = Lab; // Thisn't should iterate over all possible Lcd
-       //for (int Lcd=abs(lc-ld); Lcd<=lc+ld; ++Lcd)
-       //{
-       //for (int Scd=0; Scd<=1; ++Scd)
-       //{
+       int Scd = Sab;
+       int Lcd = Lab; 
        if ( abs(Lcd-Scd)>J or Lcd+Scd<J) continue;
        double njcd = NormNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
        //if (njcd < 0) cout << "njcd=" << njcd << " lc=" << lc << " sa=" << sc << " jc=" << jc << " ld=" << ld << " sd=" << sd << " jd=" << jd << " Lcd=" << Lcd << " Scd=" << Scd << " J=" << J << endl;
@@ -2487,8 +2441,6 @@ Operator Energy_Op(ModelSpace& modelspace)
               double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
               if (abs(mosh_ab)<1e-8) continue;
 
-              //for (int N_cd=max(0,N_ab-1); N_cd<=N_ab+1; ++N_cd) // N_cd = CoM n for c,d
-              //{
 		int N_cd = N_ab; // Orthogonality; A. Brown 2005 pg 186
                 int n_cd = (fcd - 2*N_cd-Lam_cd-lam_cd)/2; // n_cd is determined by energy conservation
                 if (n_cd < 0) continue;
@@ -2497,17 +2449,13 @@ Operator Energy_Op(ModelSpace& modelspace)
                 double mosh_cd = modelspace.GetMoshinsky(N_cd,Lam_cd,n_cd,lam_cd,nc,lc,nd,ld,Lcd);
                 if (abs(mosh_cd)<1e-8) continue;
 
-                //double rad = RadialIntegral(n_ab, lam_ab, n_cd, lam_cd, -1, modelspace);
 		double rad_sym = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
-		//double rad_asym= getRadialIntegral(n_ab, lam_ab,
-		//if (rad_sym < 0) cout << "Rad=" << rad_sym << " for n_ab=" << n_ab << " lam_ab=" << lam_ab << " n_cd=" << n_cd << " lam_cd=" << lam_cd << endl;
 		if (abs(rad_sym) < 1e-8) continue;
 
-		double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega() ); // 511 from electron mass in eV
-
-		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym * delta_ab * delta_cd * sqrt(2*lam_ab+1) / b * (HBARC / (137.035999139)); // + lam_ab*(lam_ab + 1) );
-
-              //} // N_cd
+		double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega() ); // 511 from electron mass in eV, same units as InverseR_Op
+		// double b = 1./sqrt( modelspace.GetHbarOmega() );
+		// delta_ab/cd taken care of by CorrE2b
+		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym * sqrt(2*lam_ab+1) / b * (HBARC / (137.035999139)); // Eqn 17.33 in Alex Brown 2005
            } // lam_ab
          } // Lam_ab
        } // N_ab
@@ -2752,14 +2700,14 @@ int f(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval) 
         (void)(fval);
         struct my_f_params * params = (struct my_f_params *)fdata;
         int lim = 1;
-        //float a = BOHR_RADIUS; // Bohr Radius
+        float a = BOHR_RADIUS; // Bohr Radius
         double x3 = x[0]/(1-x[0]);
         double x4 = x[2]/(1-x[2]);
         double theta3 = x[1];
         double theta4 = x[3];
         int Z = (params->Z);
 	int A = (params->A);
-        //double del = 1e-9;
+        double del = 1e-9;
         double PI = 3.141592;
 
         // First function
@@ -3023,10 +2971,10 @@ Operator NumericalE2b(ModelSpace& modelspace)
    double sumb = 0;
    double sumc = 0;
    double sumd = 0;
-   //bool trunca = false;
+   bool trunca = false;
    bool truncb = false;
    bool truncc = false;
-   //bool truncd = false;
+   bool truncd = false;
    int nchan = modelspace.GetNumberTwoBodyChannels();
    //modelspace.PreCalculateMoshinsky();
    static map<unsigned long int,double> Mat_El_List;
@@ -3300,7 +3248,7 @@ Operator NumericalE2b(ModelSpace& modelspace)
 						    //cout << "N=" << N_cd << " Lam=" << Lam_cd << " n=" << n_cd << " lam=" << lam_cd << " n1=" << Nc << " l1=" << lc << " n2=" << Nd << " l2=" << ld << " L=" << Lcd << endl;
 						    //unsigned long long int moshkey2 = getMoshkey( N_cd,Lam_cd, n_cd,lam_cd, Nc,lc, Nd,ld, Lcd );
 						    //#pragma omp critical
-						    //double mosh_cd = modelspace.GetMoshinsky( N_cd,Lam_cd, n_cd,lam_cd, Nc,lc, Nd,ld, Lcd);
+						    double mosh_cd = modelspace.GetMoshinsky( N_cd,Lam_cd, n_cd,lam_cd, Nc,lc, Nd,ld, Lcd);
 					            if ( abs(mosh_ab) < tol ) {
 							 //cout << "Mosh_ab too small, mosh_ab=" << mosh_ab << endl;
 							 continue;
@@ -3479,7 +3427,7 @@ Operator NumericalE2b(ModelSpace& modelspace)
 	    double result = 0;
 	    //cout << "About to start big loop." << endl;
 	    suma = 0;
-	    //trunca = false;
+	    trunca = false;
 	    #pragma omp parallel for  // should check out generateMoshinsky to see how it is done.
 	    for (int Na = 0; Na <= nmax; Na++) // 46 because integral returns NaN for n > 46
 	    {
@@ -3496,7 +3444,7 @@ Operator NumericalE2b(ModelSpace& modelspace)
 		}
 		suma += (2*Na + bra.op->l + 3/2)*pow(Dna,2);
 		if ( (suma > pow(modelspace.GetTargetZ(),1)/pow(bra.op->n,2) *0.5 ) ) {
-		    //trunca = true;
+		    trunca = true;
 		    continue; // truncation boolean?
 		}
 		sumb = 0;
@@ -3540,7 +3488,7 @@ Operator NumericalE2b(ModelSpace& modelspace)
 			    continue; // truncation boolean?
 			}
 			sumd = 0;
-			//truncd = false;
+			truncd = false;
 			for (int Nd = 0; Nd <= nmax; Nd++) // 46 because integral returns NaN for n > 46
 			{
 			    int id = 1000*Nd + 10*ket.oq->n + ket.oq->l;
@@ -3553,7 +3501,7 @@ Operator NumericalE2b(ModelSpace& modelspace)
 			    }
 			    sumd += (2*Nd + ket.oq->l + 3/2)*pow(Dnd,2);
 			    if ( (sumd > pow(modelspace.GetTargetZ(),2)/pow(ket.oq->n,2) *0.5 ) ) {
-				//truncd = true;
+				truncd = true;
 				continue; // truncation boolean?
 			    }
 

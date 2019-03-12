@@ -183,12 +183,15 @@ systemBasis << endl;
     cout << "Adding InvR to Hbare." << endl;
     Hbare += InverseR_Op(modelspace);
     cout << "Added InvR; adding KE." << endl;
-    cout << "Invr=" << endl << Hbare.OneBody << endl;
+    //cout << "Invr=" << endl << Hbare.OneBody << endl;
     Hbare += KineticEnergy_Op(modelspace);
-    cout << "Added KE..." << endl;
+    cout << "Added one-body KE..." << endl;
+    //Hbare -= TCM_Op(modelspace);
+    //cout << "Added TCM KE..." << endl;
     //cout << "Adding HO energies..." << endl;
     //Hbare += HarmonicOneBody(modelspace);
     cout << "Onebodies added,";
+    Hbare += CorrE2b(modelspace);
   //  Operator New = CorrE2b( modelspace );
     // Operator Diff= Operator( modelspace);
     //Hbare += ElectronTwoBody( modelspace );
@@ -199,18 +202,18 @@ systemBasis << endl;
 	//Operator twoBody = Operator(modelspace);
 	std::stringstream fn;
 	auto start = std::chrono::system_clock::now();
-	int day = start->tm_mday;
+	int day = start->tm_mday; // ONly makes sense if I run this code on the same day as I save results.
 	int mon = start->tm_mon;
-	fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonic" << mon << "_" << day << "_emax20_h1.me2j";
-	rw.ReadBareTBME_Darmstadt( fn.str(), twoBody, eMax, 2*eMax, -1 );
-	twoBody *= sqrt( double(hw) );
-	Hbare += twoBody;
+	//fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonic" << mon << "_" << day << "_emax20_h1.me2j";
+	//fn << "/home/dlivermore/ragnar_imsrg/work/scripts/atomicME_He4_basis_harmonicAug30_emax2_hw1.me2j";
+	//rw.ReadBareTBME_Darmstadt( fn.str(), twoBody, eMax, 2*eMax, -1 );
+	//twoBody *= sqrt( double(hw) );
+	//Hbare += twoBody;
 //	Diff = New - twoBody;
 	cout << "Added Twobody, moving on." << endl;
     } */
-  } else if (systemBasis = "slater") {
-    cout << "Slater-type orbits" << endl;
-    Hbare += SlaterOneBody(modelspace);
+  //} else if (systemBasis == "slater") {
+  //	Hbare += SlaterOneBody(modelspace);
   } else {
     cout << "Adding slater Energies." << endl;
     //Hbare += Energy_Op(modelspace);
@@ -233,15 +236,15 @@ systemBasis << endl;
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
   cout << "Diff TwoBody=" << endl;
-  for (int ch = 0; ch < Hbare.nChannels; ch++) {
-    cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
+  //for (int ch = 0; ch < Hbare.nChannels; ch++) {
+    //cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     //Diff.PrintTwoBody(ch);
     //cout << endl;
     //Hbare.PrintTwoBody(ch);
     //cout << endl;
     //twoBody.PrintTwoBody(ch);
     //cout << endl;
-  } 
+  //} 
 
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);
@@ -287,6 +290,7 @@ systemBasis << endl;
       else if (opname == "Rn2")          ops.emplace_back( Rn2_corrected_Op(modelspace,modelspace.GetTargetMass(),modelspace.GetTargetZ()) );
       else if (opname == "Rm2")          ops.emplace_back( Rm2_corrected_Op(modelspace,modelspace.GetTargetMass(),modelspace.GetTargetZ()) );
       else if (opname == "TCM_Op")     	 ops.emplace_back( TCM_Op(modelspace) );
+      else if (opname == "Trel_Op")	 ops.emplace_back( Trel_Op(modelspace) );
       else if (opname == "KineticEnergy")ops.emplace_back( KineticEnergy_Op(modelspace) );
       else if (opname == "InverseR")     ops.emplace_back( InverseR_Op(modelspace) );
       else if (opname == "ElectronTwoBody") ops.emplace_back( ElectronTwoBody(modelspace) );
