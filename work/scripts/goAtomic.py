@@ -116,16 +116,16 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 batch_mode = True
 
-e_start=6
-e_stop =8
-e_iter =2
+e_start=10
+e_stop =10
+e_iter =4
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=10
-hwstop =70
+hwstart=40
+hwstop =100
 hwiter =20
 
 ### Loops!

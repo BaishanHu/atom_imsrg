@@ -2323,6 +2323,11 @@ Operator Energy_Op(ModelSpace& modelspace)
 
  }
 
+ int k_fact(int n, int l, int j2)
+ {
+	return ( (2*n+l)*(2*n+l+3) - j2 +3 );
+ }
+
  /* Copied from other operator */
  Operator CorrE2b(ModelSpace& modelspace)
  {
@@ -2340,24 +2345,30 @@ Operator Energy_Op(ModelSpace& modelspace)
       for (int ibra=0;ibra<nkets;++ibra)
       {
          Ket & bra = tbc.GetKet(ibra);
+	 Orbit oa = modelspace.GetOrbit(bra.p);
+         Orbit ob = modelspace.GetOrbit(bra.q);
          for (int iket=ibra;iket<nkets;++iket)
          {
             Ket & ket = tbc.GetKet(iket);
 	    Orbit oc = modelspace.GetOrbit(ket.p);
 	    Orbit od = modelspace.GetOrbit(ket.q);
 	    if (E.TwoBody.GetTBME(ch,ch,bra,ket) != 0 or E.TwoBody.GetTBME(ch,ch,ket,bra) != 0) continue;
+
+	    if ( oa.l+ob.l!=oc.l+od.l &&  oa.l+ob.l!=oc.l+od.l+1 && oa.l+ob.l!=oc.l+od.l-1 ) continue; // Total angular momentum ought to be conserved, I think.
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J, modelspace.systemBasis);
 
 	    Ket ketp = Ket(od,oc);
-	    double mat_el_asym = pow(-1,(od.j2+oc.j2)/2.0 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
+	    double mat_el_asym = pow(-1,(oc.j2+od.j2)/2 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
 	    mat_el -= mat_el_asym;
-	    if (oc.n == od.n && oc.l == od.l && oc.j2 == od.j2)
+	    int ka = k_fact( oa.n, oa.l, oa.j2 );
+	    int kb = k_fact( ob.n, ob.l, ob.j2 );
+	    int kc = k_fact( oc.n, oc.l, oc.j2 );
+	    int kd = k_fact( od.n, od.l, od.j2 );
+	    if (ka == kb)
             {
              	mat_el /= sqrt(2);
             }
-	    Orbit oa = modelspace.GetOrbit(ket.p);
-	    Orbit ob = modelspace.GetOrbit(ket.q);
-	    if (oa.n == ob.n && oa.l == ob.l && oa.j2 == ob.j2)
+	    if (kc == kd)
             {
              	mat_el /= sqrt(2);
             }
@@ -2372,7 +2383,7 @@ Operator Energy_Op(ModelSpace& modelspace)
  }
 
  /* Copied from r1r2 calculation */
- // Evaluate <bra | 1/|r1-r2| | ket>, omitting the factors of hw, etc.
+ // Evaluate <bra | 1/|r1-r2| | ket>, including the factors of hw, etc.
 /// Calculational details are similar to Calculate_p1p2().
  double Corr_Invr(ModelSpace& modelspace, Ket & bra, Ket & ket, int J, string systemBasis)
  {
@@ -2452,10 +2463,10 @@ Operator Energy_Op(ModelSpace& modelspace)
 		double rad_sym = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
 		if (abs(rad_sym) < 1e-8) continue;
 
-		double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega() ); // 511 from electron mass in eV, same units as InverseR_Op
+		double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega()/2 ); // 511 from electron mass in eV, same units as InverseR_Op
 		// double b = 1./sqrt( modelspace.GetHbarOmega() );
 		// delta_ab/cd taken care of by CorrE2b
-		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym * sqrt(2*lam_ab+1) / b * (HBARC / (137.035999139)); // Eqn 17.33 in Alex Brown 2005
+		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym / b * (HBARC / (137.035999139)); // Eqn 17.36 in Alex Brown 2005
            } // lam_ab
          } // Lam_ab
        } // N_ab
