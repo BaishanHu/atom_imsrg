@@ -115,16 +115,16 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 batch_mode = True
 
-e_start=1
-e_stop =1
+e_start=4
+e_stop =4
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=29
-hwstop =29
+hwstart=50
+hwstop =50
 hwiter =9
 
 ### Loops!
@@ -134,10 +134,10 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['lmax'] = str(lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'H1'
-			ARGS['reference'] 	= 'H1'
-			ARGS['systemBasis']	= 'hydrogen'
-			#ARGS['systemBasis']	= 'harmonic'
+			ARGS['valence_space'] 	= 'He4'
+			ARGS['reference'] 	= 'He4'
+			#ARGS['systemBasis']	= 'hydrogen'
+			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '500'
 			ARGS['method']		= 'magnus'
 			ARGS['basis']		= 'HF'

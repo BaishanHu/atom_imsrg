@@ -191,22 +191,23 @@ int main(int argc, char** argv)
   //  Operator New = CorrE2b( modelspace );
     // Operator Diff= Operator( modelspace);
     //Hbare += ElectronTwoBody( modelspace );
-/*    if (modelspace.GetTargetZ() > 1)
-    {
+//    if (modelspace.GetTargetZ() > 1)
+    //{
 	cout << " adding twobody..." << endl;
 	//Hbare += CorrE2b(modelspace);
 	//Operator twoBody = Operator(modelspace);
 	std::stringstream fn;
 	auto start = std::chrono::system_clock::now();
-	int day = start->tm_mday;
-	int mon = start->tm_mon;
-	fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonic" << mon << "_" << day << "_emax20_h1.me2j";
+	//int day = start->tm_mday;
+	//int mon = start->tm_mon;
+	//fn << "/global/scratch/dlivermore/atomicME_H1_basis_harmonic" << mon << "_" << day << "_emax20_h1.me2j";
+	fn << "/global/scratch/dlivermore/atomicME_He4_basis_harmonicAug30_emax20_hw1.me2j";
 	rw.ReadBareTBME_Darmstadt( fn.str(), twoBody, eMax, 2*eMax, -1 );
 	twoBody *= sqrt( double(hw) );
 	Hbare += twoBody;
 //	Diff = New - twoBody;
 	cout << "Added Twobody, moving on." << endl;
-    } */
+    //} */
   //} else if (systemBasis == "slater") {
   //	Hbare += SlaterOneBody(modelspace);
   } else {
@@ -231,15 +232,15 @@ int main(int argc, char** argv)
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
   cout << "Diff TwoBody=" << endl;
-  for (int ch = 0; ch < Hbare.nChannels; ch++) {
-    cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
+  //for (int ch = 0; ch < Hbare.nChannels; ch++) {
+    //cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     //Diff.PrintTwoBody(ch);
     //cout << endl;
     //Hbare.PrintTwoBody(ch);
     //cout << endl;
     //twoBody.PrintTwoBody(ch);
     //cout << endl;
-  } 
+  //} 
 
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);

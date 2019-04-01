@@ -1819,7 +1819,7 @@ Operator Energy_Op(ModelSpace& modelspace)
    TcmOp.SetHermitian();
    double Mu = A; // to avoid /0
    if (modelspace.GetSystemType() == "nuclear") Mu = A; // Can clean this up later
-   else if (modelspace.GetSystemType() == "atomic") Mu = A*(1836); // scale of nucleon to electron masses, this Doesn't make sense
+   else if (modelspace.GetSystemType() == "atomic") Mu = A; //*(1836); // scale of nucleon to electron masses, this Doesn't make sense
    // One body piece = p**2/(2mA)
    int norb = modelspace.GetNumberOrbits();
    for (int i=0; i<norb; ++i)
