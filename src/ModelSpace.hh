@@ -209,6 +209,8 @@ class ModelSpace
    void SetHbarOmega(double hw) {hbar_omega = hw;};
    void SetTargetMass(int A) {target_mass = A;};
    void SetTargetZ(int Z) {target_Z = Z;};
+   void SetAref(int A) {Aref = A;};
+   void SetZref(int Z) {Zref = Z;};
    double GetHbarOmega() const {return hbar_omega;};
    int GetTargetMass() const {return target_mass;};
    int GetTargetZ() const {return target_Z;};
@@ -251,7 +253,7 @@ class ModelSpace
    inline int phase(int x) {return (x%2)==0 ? 1 : -1;};
    inline int phase(double x) {return phase(int(x));};
 
-   inline int Index1(int n, int l, int j2, int tz2) const {return(2*n+l)*(2*n+l+3) + 1-j2 + (tz2+1)/2 ;};
+   inline int Index1(int n, int l, int j2, int tz2) const {return ( (2*n+l)*(2*n+l+3) - j2 + 1) / 2;}; // (tz2+1)/2 ;};
    inline int Index2(int p, int q) const {return q*(q+1)/2 + p;};
    inline int Index_atomic(int n, int l, int j2) const {return pow(n-1,2)+l+(j2-1)/2;}
 

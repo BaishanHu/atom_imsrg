@@ -78,19 +78,24 @@ ARGS['file2lmax'] = 6
 
 ### Generator for core decoupling, can be atan, white, imaginary-time.  (atan is default)
 #ARGS['core_generator'] = 'imaginary-time' 
+#ARGS['core_generator'] = 'white'
+ARGS['core_generator'] = 'atan'
 
 ### Generator for valence deoupling, can be shell-model, shell-model-atan, shell-model-npnh, shell-model-imaginary-time (shell-model-atan is default)
 #ARGS['valence_generator'] = 'shell-model-imaginary-time' 
+#ARGS['valence_generator'] = ARGS['core_generator']
+ARGS['valence_generator'] = 'shell-model-atan'
 
 ### Solution method
 ARGS['method'] = 'magnus'
+#ARGS['method'] = 'magnus_modified_euler'
 #ARGS['method'] = 'brueckner'
 #ARGS['method'] = 'flow'
 #ARGS['method'] = 'HF'
 #ARGS['method'] = 'MP3'
 
 ### Tolerance for ODE solver if using flow solution method
-#ARGS['ode_tolerance'] = '1e-5'
+ARGS['ode_tolerance'] = '1e-5'
 
 ###
 ARGS['Operators'] = '' #'Trel_Op,InverseR,KineticEnergy,TCM_Op'
@@ -116,31 +121,31 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 batch_mode = True
 
-e_start=10
-e_stop =10
+e_start=4
+e_stop =4
 e_iter =4
 
-l_start=0
-l_stop =0
+l_start=1
+l_stop =1
 l_iter =1
 
-hwstart=40
-hwstop =100
-hwiter =20
+hwstart=400
+hwstop =400
+hwiter =400
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
-	for lmax in range(l_start,l_stop+1,l_iter):
+	for Lmax in range(l_start,l_stop+1,l_iter):
 		for hw in range(hwstart,hwstop+1,hwiter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
-			ARGS['lmax'] = str(lmax)
+			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'He4'
-			ARGS['reference'] 	= 'He4'
+			ARGS['valence_space'] 	= 'Ne20'
+			ARGS['reference'] 	= 'Ne20'
 			#ARGS['systemBasis']	= 'hydrogen'
 			ARGS['systemBasis']	= 'harmonic'
-			ARGS['smax']		= '500'
-			ARGS['method']		= 'magnus'
+			ARGS['smax']		= '200'
+			#ARGS['method']		= 'magnus' # Method declared earlier
 			ARGS['basis']		= 'HF'
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'

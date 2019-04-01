@@ -23,7 +23,6 @@ void Generator::AddToEta(Operator * H_s, Operator * Eta_s)
    H = H_s;
    Eta = Eta_s;
    modelspace = H->GetModelSpace();
-
         if (generator_type == "wegner")           ConstructGenerator_Wegner(); // never tested, probably doesn't work.
    else if (generator_type == "white")            ConstructGenerator_White();
    else if (generator_type == "atan")             ConstructGenerator_Atan();

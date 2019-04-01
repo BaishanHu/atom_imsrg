@@ -94,10 +94,9 @@ int main(int argc, char** argv)
 
   string SystemType = "atomic";
   if (Lmax > eMax) Lmax = eMax;
-  cout << "About to construct modelspace eMax="<< eMax << " Lmax=" << Lmax << " SystemType=" << SystemType << " Valence_Space=" << valence_space << " reference=" << reference << " systemBasis=" << 
-systemBasis << endl;
+  cout << "About to construct modelspace eMax="<< eMax << " Lmax=" << Lmax << " SystemType=" << SystemType << " Valence_Space=" << valence_space << " reference=" << reference << " systemBasis=" << systemBasis << endl;
   if (eMax == 0) eMax = 4;
-  if (reference == "default") reference = "He2";
+  if (reference == "default") reference = "He4";
   //if (valence_space == "016")
   ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, Lmax, SystemType, systemBasis);
   cout << "Default modelspace constructed, setting SystemType." << endl;
@@ -105,7 +104,7 @@ systemBasis << endl;
   modelspace.SetSystemBasis(systemBasis);
 
   cout << "modelspace initialized." << endl;
-  cout << "Emax is "<< modelspace.GetEmax() << endl;
+  cout << "Emax is "<< modelspace.GetEmax() << " Zref=" << modelspace.GetZref() << " Aref=" << modelspace.GetAref() << " TargetZ=" << modelspace.GetTargetZ() << " TargetA=" << modelspace.GetTargetMass() << endl;
 
   if (nsteps < 0)
     nsteps = modelspace.valence.size()>0 ? 2 : 1;
@@ -122,9 +121,9 @@ systemBasis << endl;
   if (lmax3>0)
      modelspace.SetLmax3(lmax3);
 
-  //for (auto& orb : modelspace.Orbits) {
-  //  cout << "orb.index=" << orb.index << " orb.n=" << orb.n << " orb.l=" << orb.l << " orb.j2=" << orb.j2 << " orb.occ=" << orb.occ << endl;
-  //}
+  for (auto& orb : modelspace.Orbits) {
+    cout << "orb.index=" << orb.index << " orb.n=" << orb.n << " orb.l=" << orb.l << " orb.j2=" << orb.j2 << " orb.occ=" << orb.occ << endl;
+  }
 
   cout << "Setting particle_rank." << endl;
   int particle_rank = input3bme=="none" ? 2 : 3;
@@ -171,10 +170,10 @@ systemBasis << endl;
 //  Operator Diff = Operator(modelspace);
   Operator twoBody = Operator(modelspace);
   if (systemBasis == "harmonic") {
-    cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << 4*(2*eMax + 1*Lmax) << endl;
+    cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << min(4*(2*eMax + 1*Lmax),170) << endl;
     modelspace.GenerateFactorialList( min(4*(2*eMax + 1*Lmax),170) );
-    cout << "About to precalculate radial integrals." << endl;
-    GenerateRadialIntegrals(modelspace, eMax*1010000 + (eMax+Lmax)*202); // Should handle most/all integrals
+    //cout << "About to precalculate radial integrals." << endl;
+    //GenerateRadialIntegrals(modelspace, eMax*1010000 + min(eMax,max(Lmax,0))*101); // Should handle most/all integrals
     cout << "FactorialList calculated." << endl;
     //rw.ReadOperatorFromJSON( inputtbme, Hbare, eMax, 2*eMax, Lmax, 1 );
     cout << "Read in interaction, moving to precalculating moshinsky." << endl;
@@ -236,15 +235,15 @@ systemBasis << endl;
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
   cout << "Diff TwoBody=" << endl;
-  //for (int ch = 0; ch < Hbare.nChannels; ch++) {
-    //cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
+  for (int ch = 0; ch < Hbare.nChannels; ch++) {
+    cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     //Diff.PrintTwoBody(ch);
-    //cout << endl;
-    //Hbare.PrintTwoBody(ch);
-    //cout << endl;
+    cout << endl;
+    Hbare.PrintTwoBody(ch);
+    cout << endl;
     //twoBody.PrintTwoBody(ch);
     //cout << endl;
-  //} 
+  } 
 
   //cout << "Adding ElectronTwoBody to Hbare." << endl;
   //Hbare += CorrE2b(modelspace);
@@ -260,14 +259,28 @@ systemBasis << endl;
   {
     Hbare += BetaCM * HCM_Op(modelspace);
   }
-  //Hbare.OneBody.print();
+  cout << "Before HF." << endl;
+  cout << "One-body elements:" << endl;
+  Hbare.OneBody.print();
+  cout << "Two-body J=0:" << endl;
+  Hbare.PrintTwoBody(0);
+
   cout << "About to create hf(Hbare)" << endl;
   HartreeFock hf(Hbare);
+  hf.freeze_occupations = false;
   cout << "done Converting Hbare to HF basis" << endl;
   hf.Solve();
   cout << "EHF = " << hf.EHF << endl;
 
-//  Hbare -= BetaCM * 1.5*hw;
+  Hbare -= BetaCM * 1.5*hw;
+  cout << "Hbare 0b:"<< Hbare.ZeroBody << endl;
+
+  cout << "In Atomic, about to normal order Hbare." << endl;
+  if (basis == "HF" and method !="HF")
+    Hbare = hf.GetNormalOrderedH();
+  else if (basis == "oscillator")
+    Hbare = Hbare.DoNormalOrdering();
+  cout << "Hbare should be normal ordered." << endl;
 
   if (method != "HF")
   {
@@ -278,6 +291,13 @@ systemBasis << endl;
     cout << "EMP3 = " << EMP3 << endl; 
     cout << "To 3rd order, E = " << Hbare.ZeroBody+EMP2+EMP3 << endl;
   }
+
+  cout << "After HF." << endl;
+  cout << "One-body elements:" << endl;
+  Hbare.OneBody.print();
+  cout << "Two-body J=0:" << endl;
+  Hbare.PrintTwoBody(0);
+
   cout << "About to calculate all of the operators." << endl;
   // Calculate all the desired operators
   for (auto& opname : opnames)
@@ -392,12 +412,12 @@ systemBasis << endl;
     //cout << opnames[i] << " has TwoBody matrix (before diag):" << endl;
     //cout << ops[i].TwoBody << endl;
   }
-  cout << "In Atomic, about to normal order Hbare." << endl;
+/*  cout << "In Atomic, about to normal order Hbare." << endl;
   if (basis == "HF" and method !="HF")
     Hbare = hf.GetNormalOrderedH();
   else if (basis == "oscillator")
     Hbare = Hbare.DoNormalOrdering();
-  cout << "Hbare should be normal ordered." << endl;
+  cout << "Hbare should be normal ordered." << endl; */
   
 
   for (auto& op : ops)
@@ -468,6 +488,12 @@ systemBasis << endl;
   imsrgsolver.SetSmax(smax);
   cout << "About to Solve imsrg." << endl;
   imsrgsolver.Solve();
+
+  cout << "After IM-SRG." << endl;
+  cout << "One-body elements:" << endl;
+  Hbare.OneBody.print();
+  cout << "Two-body J=0:" << endl;
+  Hbare.PrintTwoBody(0);
 
 
   // Transform all the operators

@@ -418,7 +418,9 @@ Operator InverseR_Op(ModelSpace& modelspace)
      {
 	Orbit& oj = modelspace.GetOrbit(j);
 	if ( oi.l != oj.l ) continue; // From spherical harmonics orthogonality; \delta_j1j2 ?
-	double temp1 = getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace)*(-HBARC / (137.035999139) * modelspace.GetTargetZ()); //  -Z\hbarc\alpha
+	//double temp1 = getRadialIntegral(oi.n, oi.l, oj.n, oj.l, modelspace)*(-HBARC / (137.035999139) * modelspace.GetTargetZ()); //  -Z\hbarc\alpha
+	double temp1 = RadialIntegral(oi.n,oi.l, oj.n, oj.l, -1, modelspace)*(-HBARC / (137.035999139) * modelspace.GetTargetZ());
+	if (temp1 == 0) cout << "Writing 0 at " << oi.n << oi.l << oj.n << oj.l << endl;
 	InvR.OneBody(i,j) = temp1;
 	InvR.OneBody(j,i) = temp1;
      }
@@ -2337,7 +2339,7 @@ Operator Energy_Op(ModelSpace& modelspace)
 
    int nchan = modelspace.GetNumberTwoBodyChannels();
    modelspace.PreCalculateMoshinsky();
-   #pragma omp parallel for schedule(dynamic,1)
+   #pragma omp parallel for
    for (int ch=0; ch<nchan; ++ch)
    {
       TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
@@ -2357,21 +2359,9 @@ Operator Energy_Op(ModelSpace& modelspace)
 	    if ( oa.l+ob.l!=oc.l+od.l &&  oa.l+ob.l!=oc.l+od.l+1 && oa.l+ob.l!=oc.l+od.l-1 ) continue; // Total angular momentum ought to be conserved, I think.
             double mat_el = Corr_Invr(modelspace,bra,ket,tbc.J, modelspace.systemBasis);
 
-	    Ket ketp = Ket(od,oc);
-	    double mat_el_asym = pow(-1,(oc.j2+od.j2)/2 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
-	    mat_el -= mat_el_asym;
-	    int ka = k_fact( oa.n, oa.l, oa.j2 );
-	    int kb = k_fact( ob.n, ob.l, ob.j2 );
-	    int kc = k_fact( oc.n, oc.l, oc.j2 );
-	    int kd = k_fact( od.n, od.l, od.j2 );
-	    if (ka == kb)
-            {
-             	mat_el /= sqrt(2);
-            }
-	    if (kc == kd)
-            {
-             	mat_el /= sqrt(2);
-            }
+	    //Ket ketp = Ket(od,oc);
+	    //double mat_el_asym = pow(-1,(oc.j2+od.j2)/2 - tbc.J) * Corr_Invr(modelspace,bra,ketp,tbc.J,modelspace.systemBasis);
+	    //mat_el -= mat_el_asym;
 	    //if (abs(mat_el) >= 10) cout << "abs(mat_el) = " << mat_el << " at ibra=" << ibra << " iket=" << iket << " in ch=" << ch << endl;
             E.TwoBody.SetTBME(ch,ch,ibra,iket,mat_el);
             E.TwoBody.SetTBME(ch,ch,iket,ibra,mat_el);
@@ -2417,6 +2407,9 @@ Operator Energy_Op(ModelSpace& modelspace)
    sa=sb=sc=sd=0.5;
 
    double invr=0;
+   double tol=1e-6;
+
+   double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega()/2 ); // 511 from electron mass in eV, same units as InverseR_Op
 
    // First, transform to LS coupling using 9j coefficients
    for (int Lab=abs(la-lb); Lab<= la+lb; ++Lab)
@@ -2427,21 +2420,29 @@ Operator Energy_Op(ModelSpace& modelspace)
 
        double njab = NormNineJ(la,sa,ja, lb,sb,jb, Lab,Sab,J);
        //if (njab < 0) cout << "njab=" << njab << " la=" << la << " sa=" << sa << " ja=" << ja << " lb=" << lb << " sb=" << sb << " jb=" << jb << " Lab=" << Lab << " Sab=" << Sab << " J=" << J << endl;
-       if (njab == 0 or abs(njab) < 1e-8) continue;
+       if (abs(njab) <= tol) continue;
        int Scd = Sab;
        int Lcd = Lab; 
        if ( abs(Lcd-Scd)>J or Lcd+Scd<J) continue;
        double njcd = NormNineJ(lc,sc,jc, ld,sd,jd, Lcd,Scd,J);
        //if (njcd < 0) cout << "njcd=" << njcd << " lc=" << lc << " sa=" << sc << " jc=" << jc << " ld=" << ld << " sd=" << sd << " jd=" << jd << " Lcd=" << Lcd << " Scd=" << Scd << " J=" << J << endl;
-       if (njcd == 0 or abs(njcd) < 1e-8) continue;
+       if (abs(njcd) <= tol) continue;
 
        // Next, transform to rel / com coordinates with Moshinsky tranformation
        for (int N_ab=0; N_ab<=fab/2; ++N_ab)  // N_ab = CoM n for a,b
        {
-         for (int Lam_ab=0; Lam_ab<= fab-2*N_ab; ++Lam_ab) // Lam_ab = CoM l for a,b
+	// int L_lim = 0;
+	// if (modelspace.Lmax <0) L_lim = fab-2*N_ab;
+	// else L_lim = min(modelspace.Lmax,fab-2*N_ab);
+         for (int Lam_ab=0; Lam_ab<=fab-2*N_ab; ++Lam_ab) // Lam_ab = CoM l for a,b
+	// for (int Lam_ab=0; Lam_ab<=L_lim; ++Lam_ab) // Lam_ab = CoM l for a,b
          {
            int Lam_cd = Lam_ab; // Orthogonality in final term
-           for (int lam_ab=(fab-2*N_ab-Lam_ab)%2; lam_ab<= (fab-2*N_ab-Lam_ab); lam_ab+=2) // lam_ab = relative l for a,b
+ 	  // int l_lim = 0;
+	  // if (modelspace.Lmax<0) l_lim = (fab-2*N_ab-Lam_ab)%2;
+	  // else l_lim = min(modelspace.Lmax, (fab-2*N_ab-Lam_ab)%2);
+           for (int lam_ab=(fab-2*N_ab-Lam_ab)%2; lam_ab<= fab-2*N_ab-Lam_ab; lam_ab+=2) // lam_ab = relative l for a,b; %2 necessary? no, but faster
+	  // for (int lam_ab=l_lim%2; lam_ab <= l_lim; lam_ab+= 2) // I think this needs to be more complicated
            {
               if (Lab<abs(Lam_ab-lam_ab) or Lab>(Lam_ab+lam_ab) ) continue;
 
@@ -2450,23 +2451,21 @@ Operator Energy_Op(ModelSpace& modelspace)
 	      if (n_ab < 0) continue;
 
               double mosh_ab = modelspace.GetMoshinsky(N_ab,Lam_ab,n_ab,lam_ab,na,la,nb,lb,Lab);
-              if (abs(mosh_ab)<1e-8) continue;
+              if (abs(mosh_ab)<=tol) continue;
 
 		int N_cd = N_ab; // Orthogonality; A. Brown 2005 pg 186
                 int n_cd = (fcd - 2*N_cd-Lam_cd-lam_cd)/2; // n_cd is determined by energy conservation
                 if (n_cd < 0) continue;
-                //if  (n_ab != n_cd and N_ab != N_cd) continue;
-
                 double mosh_cd = modelspace.GetMoshinsky(N_cd,Lam_cd,n_cd,lam_cd,nc,lc,nd,ld,Lcd);
-                if (abs(mosh_cd)<1e-8) continue;
+                if (abs(mosh_cd)<=tol) continue;
+		
 
-		double rad_sym = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
-		if (abs(rad_sym) < 1e-8) continue;
+		// double rad_sym = getRadialIntegral(n_ab, lam_ab, n_cd, lam_cd, modelspace);
+		double rad_sym = RadialIntegral(n_ab,lam_ab, n_cd,lam_cd, -1, modelspace);
+		if (abs(rad_sym) <= tol) continue;
 
-		double b = HBARC/sqrt( 511000 * modelspace.GetHbarOmega()/2 ); // 511 from electron mass in eV, same units as InverseR_Op
-		// double b = 1./sqrt( modelspace.GetHbarOmega() );
-		// delta_ab/cd taken care of by CorrE2b
-		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym / b * (HBARC / (137.035999139)); // Eqn 17.36 in Alex Brown 2005
+		// invr += njab * njcd * mosh_ab * mosh_cd * rad_sym ; // Eqn 17.36 in Alex Brown 2005
+		invr += njab * njcd * mosh_ab * mosh_cd * rad_sym * ( 1 + pow(-1, lam_cd+Scd)); // Symmetry term from R. Stroberg
            } // lam_ab
          } // Lam_ab
        } // N_ab
@@ -2474,7 +2473,7 @@ Operator Energy_Op(ModelSpace& modelspace)
      } // Sab
    } // Lab
    // if (invr < 0) cout << "Invr=" << invr << " oa.index=" << oa.index << " ob.index=" << ob.index << " oc.index=" << oc.index << " od.index=" << od.index << endl;
-   return invr ;
+   return invr / b * (HBARC / (137.035999139)) * 1./sqrt(1+ket.delta_pq()) * 1./sqrt(1+bra.delta_pq());
 }
 
 void PrecalculateRad_fromList( vector<unsigned int>& rad_list, ModelSpace& modelspace)
