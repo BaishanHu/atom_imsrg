@@ -386,6 +386,8 @@ void ModelSpace::Init(int emax, string reference, string valence, int Lmax, stri
 //  int Aref,Zref;
   cout << "Building ModelSpace..." << endl;
   GetAZfromString(reference,Aref,Zref);
+  cout << "Modelspace built, Zref=" << Zref << " Aref=" << Aref << endl;
+  cout << "Zref=" << GetZref() << " Aref=" << GetAref() << endl;
   if (SystemType == "nuclear"){
 	map<index_t,double> hole_list = GetOrbitsAZ(Aref,Zref);
 	Init(emax,hole_list,valence,Lmax, SystemType, systemBasis);}
@@ -413,20 +415,22 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, string valence, i
   
     if ( itval != ValenceSpaces.end() ) // we've got a valence space
     {
+       cout << "we've got a valence space" << endl;
        string core_string = itval->second[0];
        GetAZfromString(core_string,Ac,Zc);
        valence_list = String2Index(vector<string>(itval->second.begin()+1,itval->second.end()));
     }
     else  // no valence space. we've got a single-reference.
     {
+       cout << "no valence space. we've got a single-reference." << endl;
        GetAZfromString(valence,Ac,Zc);
     }
   
     //core_map = GetOrbitsAZ(Ac,Zc);
     //for (auto& it_core : core_map) core_list.push_back(it_core.first);
     cout << "Getting core_list..." << endl;
-    if (systemBasis == "atomic") for (auto& it_core : GetOrbitsE(Zc,systemBasis) ) core_list.push_back(it_core.first);
     if (systemBasis == "nuclear") for (auto& it_core : GetOrbitsAZ(Ac,Zc) ) core_list.push_back(it_core.first);
+    else for (auto& it_core : GetOrbitsE(Zc,systemBasis) ) core_list.push_back(it_core.first);
   }
 
   target_mass = Aref;
@@ -516,26 +520,27 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
         {
 	    for (int l=N; l>=0; l-=2)
             {
-           	//if (l>Lmax) continue;
+           	//if (l>Lmax  && Lmax>=0) continue; // ignore Lmax if Lmax <0; that way I can disable this.
            	int n = (N-l)/2;
 	   	for (int j2=2*l+1; j2>=2*l-1 and j2>0; j2-=2)
        		{
           	    for (int tz : {-1, 1} )
          	    {
-			if (SystemType == "atomic" && tz != -1) continue;
+			if (tz != +1) continue;
             	    	double occ = 0;
             	    	int cvq = 2;
-            	    	int indx; // = Index1(n,l,j2,tz);
-			if (SystemType == "atomic")
-			    indx = Index_atomic(n,l,j2);
-			else
-			    indx = Index1(n,l,j2,tz);
-			indexMap[indx] = counter;
-			indx = indexMap[indx];
-			counter++;
+            	    	int indx = Index1(n,l,j2,tz);
+			//if (SystemType == "atomic")
+			//    indx = Index_atomic(n,l,j2);
+			//else
+			//    indx = Index1(n,l,j2,+1);
+			//indexMap[indx] = counter;
+			//indx = indexMap[indx];
+			//counter++;
                     	if (hole_list.find(indx) != hole_list.end()) occ = hole_list[indx];
                     	if ( find(core_list.begin(), core_list.end(), indx) != core_list.end() ) cvq=0; // core orbit
                     	if ( find(valence_list.begin(), valence_list.end(), indx) != valence_list.end() ) cvq=1; // valence orbit
+			cout << "Adding HO Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << tz << " occ=" << occ << " indx=" << indx << endl;
             	    	AddOrbit(n,l,j2,tz,occ,cvq,indx);
 			real_norbits++;
          	    }
@@ -573,21 +578,23 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    	Orbits.resize(norbits);
    	cout << "Resized Orbits; Orbits.size()=" << Orbits.size() << endl;
    }
+   //cout << "Zref=" << GetZref() << " Aref=" << GetAref() << endl;
    Aref = 0;
    Zref = 0;
    for (auto& h : holes)
    {
      Orbit& oh = GetOrbit(h);
+     //cout << "oh.n=" << oh.n << " oh.l=" << oh.l << " oh.j2=" << oh.j2 << "oh.tz=" << oh.tz2 << " oh.index=" << oh.index << endl;
      Aref += (oh.j2+1)*oh.occ;
-     if (oh.tz2 < 0) Zref += (oh.j2+1)*oh.occ;
+     if (oh.tz2 > 0) Zref += (oh.j2+1)*oh.occ;
    }
-   cout << "Setting up kets." << endl;
+   //cout << "Setting up kets; Zref=" << GetZref() << " Aref=" << GetAref() << endl;
    if (systemBasis != ""){
       SetupKets(systemBasis);
    } else {
       SetupKets("nuclear");
    }
-   cout << "Set up kets." << endl;
+   //cout << "Set up kets; Zref=" << GetZref() << " Aref=" << GetAref() << endl;
 }
 
 
@@ -626,6 +633,7 @@ string ModelSpace::Index2String( index_t ind)
 
 void ModelSpace::GetAZfromString(string str,int& A, int& Z) // TODO: accept different formats, e.g. 22Na vs Na22
 {
+  cout << "GetAZfromString:" << str << endl;
   vector<string> periodic_table = {"n","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar",
                         "K","Ca","Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn","Ga","Ge","As","Se","Br","Kr",
                         "Rb","Sr","Y","Zr","Nb","Mo","Tc","Ru","Rh","Pd","Ag","Cd","In","Sn","Sb","Te","I","Xe",
@@ -646,6 +654,7 @@ void ModelSpace::GetAZfromString(string str,int& A, int& Z) // TODO: accept diff
     Z =-1;
    cout << "ModelSpace::GetAZfromString :  Trouble parsing " << str << endl;
   }
+  cout << "Leaving GetAZ; Z=" << Z << " A=" << A << endl;
 }
 
 // Returns the mapped orbit back to the function in the event that the system is atomic.
@@ -705,16 +714,16 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
     map<index_t,double> holesE;
     cout << "In GetOrbitsE for Z=" << Z << " systemBasis=" << systemBase << endl;
     int count = 0;
-    if (systemBase == "hydrogen")
-    {
-    	for (int N=1; N<=Emax; ++N)
+    /*if (systemBase == "atomic")
+    //{
+    	for (int N=0; N<=Emax; ++N)
     	{
 	    //cout << "Gettin' ready!" << endl;
 	    for (int l=0; l < N and l <= Lmax; l++)
 	    {
 	    	for (int j2=abs(2*l-1); j2 <= 2*l +1; j2+=2)
 	    	{
-		    int n = N; //(N-l)/2;
+		    int n = (N-l)/2;
 		    int indx = Index_atomic(n,l,j2);
 		    //cout << "N=" << N << " j2=" << j2 << " l=" << l << " n=" << n << " Index_atomic=" << indx << endl;
 		    if (z < Z)
@@ -722,13 +731,13 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
 		    	int dz = min(Z-z, j2+1);
 		    	cout << "dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << endl;
 		    	//indexMap[indx] = indexMap.size()-1;
-		    	if (systemBase == "harmonic")
+		    	if (systemBasis == "harmonic")
 		    	{
 			    cout << "indexMap[count]=" << indexMap[count] << endl;
 			    holesE[indexMap[count]] = dz/(j2+1.0); // indexMap[Index1(n,l,j2,-1)] ?
 			    cout << "holesE[indexMap[count]]=" <<  holesE[indexMap[count]] << endl;
 		 	}
-		    	if (systemBase == "hydrogen")
+		    	if (systemBasis == "hydrogen")
 		    	{
 			    cout << "for some reason systemBasis=" << systemBase << endl;
 			    holesE[indx] = dz/(j2+1.0); // indx/2 ?
@@ -740,29 +749,34 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
 	    } // for (l=0
 	    if (z == Z) return holesE; // We're all done here.
     	} // for (N=
-    } else {
+      } else { */
 	for (int N=0; N<=Emax; ++N)
 	{
     	    for (int g=2*N+1;g>=-2*N;g-=4)
     	    {
       	    	int j2 = abs(g);
             	int l = g<0 ? (j2+1)/2 : (j2-1)/2;
+		//if (l > Lmax && Lmax > 0) continue;
             	int n = (N-l)/2;
 		//cout << "l=" << l << endl;
 
             	if (z < Z)
             	{
         	    int dz = min(Z-z,j2+1);
-        	    int indx = Index1(n,l,j2,-1);
-        	    //if (SystemType == "atomic"){
-        	    //  indx = indexMap[indx];}
-        	    holesE[indx] = dz/(j2+1.0);
+        	    int indx = Index1(n,l,j2,+1);
+        	    //holesE[count] = dz/(j2+1.0);
+		    holesE[indx] = dz/(j2+1.);
+		    cout << "n=" << n << " l=" << l << " j2=" << j2 << " dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << " indx=" << indx << endl;
+		    //cout << "indexMap[count]=" << indexMap[count] << endl;
+                    //holesE[indexMap[count]] = dz/(j2+1.0); // indexMap[Index1(n,l,j2,-1)] ?
+                    //cout << "holesE[indexMap[count]]=" <<  holesE[indexMap[count]] << endl;
         	    z += dz;
-      	    	}
-	    }
-    	}
+		    count++;
+      	    	} // if(z<Z)
+	    } // for (int g=2
+    	} // for (int N=0
 	if (z == Z) return holesE;
-    }
+    // } 
     cout << "Didn't set ModelSpace big enough to fill Z=" << Z << " with emax = " << Emax << endl;
     return holesE;
 }
@@ -990,7 +1004,7 @@ int ModelSpace::GetTwoBodyChannelIndex(int j, int p, int t)
 
 void ModelSpace::SetupKets(string Sys)
 {
-   cout << "Entering SetupKets()" << endl;
+   cout << "Entering SetupKets(): Zref=" << GetZref() << endl;
    int index = 0;
    //if (SystemType == "nuclear")
    //{
@@ -1008,7 +1022,7 @@ void ModelSpace::SetupKets(string Sys)
 	{
 	   //index = Index2(p,q);
 	   index = Kets.size();
-	   cout << "Grabbing ket with p=" << p << " q=" << q << " at indexMap[p]= " << indexMap[p] << " and indexMap[q]=" << indexMap[q] << "and setting to index=" << index << endl;
+	   //cout << "Grabbing ket with p=" << p << " q=" << q << " at indexMap[p]= " << indexMap[p] << " and indexMap[q]=" << indexMap[q] << "and setting to index=" << index << endl;
 	   //Kets.emplace_back(Ket(GetOrbit(p),GetOrbit(q)));
 	   Orbit& o1 = GetOrbit(p);
 	   Orbit& o2 = GetOrbit(q);
@@ -1765,7 +1779,6 @@ void ModelSpace::PrecalculateNineJ( vector<unsigned long long int>& ninejList )
 	   case 8:
 		break;
    	}
-
 	unsigned long long int key =   klist[0];
 	unsigned long long int factor = 100;
 	for (int i=1; i<9; ++i)
@@ -1859,4 +1872,3 @@ double ModelSpace::GetNineJ(double j1, double j2, double J12, double j3, double 
    return ninej;
 
 }
-

@@ -147,7 +147,6 @@ void IMSRGSolver::UpdateEta()
 
 void IMSRGSolver::Solve_magnus_euler()
 {
-   //cout << "Entering Solve_magnus_euler." << endl;
    istep = 0;
    generator.Update(&FlowingOps[0],&Eta);
 

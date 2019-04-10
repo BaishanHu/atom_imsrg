@@ -3,10 +3,10 @@
 # decide if we should run in the current shell or submit to the cluster
 # interactive=true means run in the current shell.
 interactive=false
-NTHREADS=32
+NTHREADS=12
 WORKDIR=$PWD
 
-exe=/
+exe=/home/dlivermore/ragnar_imsrg/work/compiled/Atomic
 #exe=/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME
 
 vnn=
@@ -15,16 +15,16 @@ file2e2max=12
 file2lmax=6
 v3n=none
 
-estart=2
-estop=2
+estart=10
+estop=10
 eiter=2
 
-lstart=2
-lstop=2
+lstart=0
+lstop=0
 liter=1
 
-hwstart=1
-hwstop=1
+hwstart=110
+hwstop=110
 hwiter=5
 
 #for ((A=$start;A<=$stop;A++)); do
@@ -36,10 +36,11 @@ for ((hw=$hwstart; hw<=$hwstop; hw=hw+hwiter)); do
 #state=10
 systemtype=atomic
 # 1.0 Hartree ~= 27.21138505(60) eV (according to Wikipedia)
-#hw=27.21138505 # Only matters in HO
+#hw=27.21138505 # Only matters in HO/Slater
 #hw=40.817077575 # 1.5*H
 #hw=13.605692525 # 0.5*H
 #hw=108.8
+#hw = 1
 valence_space=He4
 reference=He4
 #systemBasis=hydrogen
@@ -74,7 +75,8 @@ command="${exe} ${all_the_flags}"
 echo command is $command
 
 if [ $interactive = 'true' ]; then
-cd $WORKDIR 
+echo "Running interactive"
+cd $WORKDIR
 export OMP_NUM_THREADS=${NTHREADS}
 $command
 else
@@ -82,22 +84,23 @@ echo jobname is ${jobname}
 echo "running"
 
 #PBS -N ${jobname}
-#PBS -q oak
-#PBS -d /global/home/dlivermore/imsrg/work/scripts
-#PBS -l walltime=516:00:00
-#PBS -l nodes=1:ppn=32
-#PBS -l vmem=251gb
+#PBS -q batchmpi
+#PBS -d /home/dlivermore/ragnar_imsrg/work/scripts/
+#PBS -l walltime=196:00:00
+#PBS -l nodes=1:ppn=12
+#PBS -l vmem=60gb
 #PBS -m abe
 #PBS -M dlivermore@triumf.ca
 #PBS -j oe
-###PBS -e pbslog/${jobname}.e.`date +"%g%m%d%H%M"`
-###PBS -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
+#PBS -e pbslog/${jobname}.e.`date +"%g%m%d%H%M"`
+#PBS -o pbslog/${jobname}.o.`date +"%g%m%d%H%M"`
 #PBS -e pbslog/
 #PBS -o pbslog/
 
 cd $WORKDIR
 export OMP_NUM_THREADS=${NTHREADS}
-$command
+qsub ${jobname}
+#$command
 fi
 
 done

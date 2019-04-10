@@ -34,9 +34,10 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=32
+NTHREADS=24
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
 exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
+#exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
 batch_mode=False
@@ -77,36 +78,41 @@ ARGS['file2lmax'] = 6
 
 ### Generator for core decoupling, can be atan, white, imaginary-time.  (atan is default)
 #ARGS['core_generator'] = 'imaginary-time' 
+#ARGS['core_generator'] = 'white'
+ARGS['core_generator'] = 'atan'
 
 ### Generator for valence deoupling, can be shell-model, shell-model-atan, shell-model-npnh, shell-model-imaginary-time (shell-model-atan is default)
 #ARGS['valence_generator'] = 'shell-model-imaginary-time' 
+#ARGS['valence_generator'] = ARGS['core_generator']
+ARGS['valence_generator'] = 'shell-model-atan'
 
 ### Solution method
 ARGS['method'] = 'magnus'
+#ARGS['method'] = 'magnus_modified_euler'
 #ARGS['method'] = 'brueckner'
 #ARGS['method'] = 'flow'
 #ARGS['method'] = 'HF'
 #ARGS['method'] = 'MP3'
 
 ### Tolerance for ODE solver if using flow solution method
-#ARGS['ode_tolerance'] = '1e-5'
+ARGS['ode_tolerance'] = '1e-5'
 
 ###
-ARGS['Operators'] = ''
+ARGS['Operators'] = '' #'Trel_Op,InverseR,KineticEnergy,TCM_Op'
 
 ### Create the 'script' that we need for execution
 FILECONTENT = """#!/bin/bash
 #PBS -N %s
 #PBS -q oak
 #PBS -d %s
-#PBS -l walltime=512:00:00
+#PBS -l walltime=192:00:00
 #PBS -l nodes=1:ppn=%d
-#PBS -l vmem=251gb
-#PBS -m ae
+#PBS -l vmem=60gb
+#PBS -m abe
 #PBS -M %s
 #PBS -j oe
-#PBS -o imsrg_log/%s.o
-#PBS -e imsrg_log/%s.e
+#PBS -o pbslog/%s.o
+#PBS -e pbslog/%s.e
 cd $PBS_O_WORKDIR
 export OMP_NUM_THREADS=%d
 %s
@@ -115,31 +121,31 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 batch_mode = True
 
-e_start=4
-e_stop =4
+e_start=2
+e_stop =2
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=50
-hwstop =50
-hwiter =9
+hwstart=1
+hwstop =10
+hwiter =1
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
-	for lmax in range(l_start,l_stop+1,l_iter):
+	for Lmax in range(l_start,l_stop+1,l_iter):
 		for hw in range(hwstart,hwstop+1,hwiter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
-			ARGS['lmax'] = str(lmax)
+			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
 			ARGS['valence_space'] 	= 'He4'
 			ARGS['reference'] 	= 'He4'
 			#ARGS['systemBasis']	= 'hydrogen'
 			ARGS['systemBasis']	= 'harmonic'
-			ARGS['smax']		= '500'
-			ARGS['method']		= 'magnus'
+			ARGS['smax']		= '200'
+			#ARGS['method']		= 'magnus'
 			ARGS['basis']		= 'HF'
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'
@@ -155,7 +161,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 						   ARGS['reference'],ARGS['Operators'],lmax,ARGS['file2e1max'],ARGS['file2e2max'],ARGS['file2lmax'],
 						   '',ARGS['systemBasis'],'Atomic') """
 
-			logname = jobname +"{:.3}".format(13*random.random()+random.random()) + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
+			logname = jobname +"_{:.3}".format(13*random.random()+random.random()) + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
 			cmd = ' '.join([exe] + ['%s=%s'%(x,ARGS[x]) for x in ARGS])
 			if batch_mode==True:
 				print "Submitting to cluster..."

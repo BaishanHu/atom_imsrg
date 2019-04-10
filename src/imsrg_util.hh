@@ -31,6 +31,9 @@ namespace imsrg_util
  Operator Trel_Op(ModelSpace& modelspace);
  Operator TCM_Op(ModelSpace& modelspace);
  Operator HCM_Op(ModelSpace& modelspace);
+
+ Operator CSOneBody(ModelSpace& modelspace);
+ Operator CSTwoBody(ModelSpace& modelspace);
  Operator HarmonicOneBody(ModelSpace& modelspace);
  Operator InverseR_Op(ModelSpace& modelspace);
  Operator KineticEnergy_Op(ModelSpace& modelspace);
@@ -60,7 +63,7 @@ namespace imsrg_util
  unsigned long long int getNineJkey(double j1, double j2, double J12, double j3, double j4, double J34, double J13, double J24, double J);
  void PrecalculateRad_fromList( vector<unsigned int>& rad_list, ModelSpace& modelspace);
  double getRadialIntegral(int n1, int l1, int n2, int l2, ModelSpace& modelspace);
-
+ Operator SlaterOneBody(ModelSpace& modelspace);
 
  Operator Isospin2_Op(ModelSpace& modelspace);
  Operator AllowedFermi_Op(ModelSpace& modelspace);
