@@ -526,7 +526,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
        		{
           	    for (int tz : {-1, 1} )
          	    {
-			if (tz != +1) continue;
+			if (tz != -1) continue;
             	    	double occ = 0;
             	    	int cvq = 2;
             	    	int indx = Index1(n,l,j2,tz);
@@ -586,7 +586,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      Orbit& oh = GetOrbit(h);
      //cout << "oh.n=" << oh.n << " oh.l=" << oh.l << " oh.j2=" << oh.j2 << "oh.tz=" << oh.tz2 << " oh.index=" << oh.index << endl;
      Aref += (oh.j2+1)*oh.occ;
-     if (oh.tz2 > 0) Zref += (oh.j2+1)*oh.occ;
+     if (oh.tz2 < 0) Zref += (oh.j2+1)*oh.occ;
    }
    //cout << "Setting up kets; Zref=" << GetZref() << " Aref=" << GetAref() << endl;
    if (systemBasis != ""){
@@ -763,7 +763,7 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
             	if (z < Z)
             	{
         	    int dz = min(Z-z,j2+1);
-        	    int indx = Index1(n,l,j2,+1);
+        	    int indx = Index1(n,l,j2,-1);
         	    //holesE[count] = dz/(j2+1.0);
 		    holesE[indx] = dz/(j2+1.);
 		    cout << "n=" << n << " l=" << l << " j2=" << j2 << " dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << " indx=" << indx << endl;

@@ -52,7 +52,7 @@ endif
 
 ifeq ($(THEHOST),oak)
 #  FLAGS += -DOLD_BOOST
-#  FLAGS += -DOPENBLAS_NOUSEOMP=1
+  FLAGS += -DOPENBLAS_NOUSEOMP=1
   NEWLIBS := $(filter-out -lopenblas,$(LIBS))
   LIBS = $(NEWLIBS) -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
  ifneq ($(PYTHON),off)

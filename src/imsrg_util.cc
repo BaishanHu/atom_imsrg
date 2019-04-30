@@ -379,12 +379,12 @@ Operator CSOneBody(ModelSpace& modelspace)
 {
 	Operator op(modelspace);
 	double t_start = omp_get_wtime();
-	double Ha = 27.21138602; // 1 Hartree; should this be ~hw?
-	double b = modelspace.GetHbarOmega()*1./10.;
+	double Ha = 1; // 27.21138602; // 1 Hartree; should this be ~hw?
+	double b = modelspace.GetHbarOmega();
 	int Z = modelspace.GetTargetZ();
 	int norbits = modelspace.GetNumberOrbits();
 
-	//#pragma omp parallel for
+	#pragma omp parallel for
 	for (int i=0; i<norbits; i++)
 	{
 		Orbit oi = modelspace.GetOrbit(i);
@@ -392,13 +392,13 @@ Operator CSOneBody(ModelSpace& modelspace)
 		{
 			Orbit oj = modelspace.GetOrbit(j);
 			// oi.l == oj.l
-			if (oi.l != oj.l) continue;
+			if (oi.l != oj.l || oi.j2 != oj.j2) continue;
 			op.OneBody(i,j) = 0;
 			double d2_dr2 = 0;
 			double rd_dr = 0;
 			double L2 = 0;
 			double V = 0;
-			if (oi.l == oj.l)
+			if (oi.l == oj.l) 
 			{
 				int l = oi.l;
 				int np= oi.n;
@@ -414,31 +414,24 @@ Operator CSOneBody(ModelSpace& modelspace)
 				} else {
                                         double num = (4*np+2*l+6);
                                         double den = (2*l+3);
-                                        d2_dr2 = -num/den * sqrt( ( gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2))/(gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2) ) );
+                                        d2_dr2 = -num/den * sqrt( ( gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2))/(gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2) ) );
 				} // d^2/dr^2 term
-
-				if (np >= n+2 || np <= n-2) // rd/dr term; unnessariy since the reduce ME is only d^2 and 1/r^2
-				{
-					rd_dr += 0; // Being verbose incase I need to refactor, I recan recall wtf I'm doing.
-				} else if (np == n+1) {
-					rd_dr += 0.5 * sqrt( (n+1)*(n+2*l+3) );
-				} else if (np == n) {
-					rd_dr += -0.5;
-				} else if (np == n-1) {
-					rd_dr += -0.5 * sqrt( n*(n+2*l+2) );
-				} // rd/dr term
 
 				if (np >= n) // 1/r term
 				{
-					V = sqrt( (gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2))/ ( gsl_sf_fact(n) * gsl_sf_fact(np+2*l+2) ) ) / (l+1);
+					V = sqrt( (gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2))/ ( gsl_sf_fact(n) * gsl_sf_fact(np+2*l+2) ) ) / (l+1.);
 				} else {
-					V = sqrt( (gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2))/ ( gsl_sf_fact(np) * gsl_sf_fact(n+2*l+2) ) ) / (l+1);
+					V = sqrt( (gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2))/ ( gsl_sf_fact(np) * gsl_sf_fact(n+2*l+2) ) ) / (l+1.);
 				} // 1/r term
-
-				// d2_dr2 = d2_dr2;
-				// V = V;
-
-				op.OneBody(i,j) =  (-0.5*d2_dr2 - V*Z) * sqrt(2*l+1);
+				
+				// Factors of b from Change of variables
+				d2_dr2 = Ha* (-0.5*d2_dr2)*(b*b); 
+				V = Ha* ( -Z*V)*b;
+				double me = (d2_dr2 + V);
+				// me = me *sqrt(2*l+1); 
+				//cout << "Writing T=" << d2_dr2 << " to <" << oi.n << oi.l << oi.j2 << "|O|" << oj.n << oj.l << oj.j2 << ">" << endl;
+				//cout << "V=" << V << endl;
+				op.OneBody(i,j) = me;
 				op.OneBody(j,i) = op.OneBody(i,j);
 				// op.OneBody(i,j) = ( HBARC*HBARC/(M_ELECTRON) * 0.5*(d2_dr2 + L2*l*(l+1)) - V*Z*HBARC*(1./137) ) * sqrt(2*l+1);
 			} // oi.l == oj.l
@@ -480,12 +473,12 @@ int cs_RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double
 
     int lp = (params->lp);
 
-    double b = (params->b);
+    double b = 1./(params->b);
 
     double r1 = x[0]/(1-x[0]);
     double r2 = x[1]/(1-x[1]);
 
-    double rmin = min(r1,r2); // Factor of 1./b accounted for in CSTwoBody.
+    double rmin = min(r1,r2);
     double rmax = max(r1,r2);
 
     double Ra = cs_Rnl(r1,na,la,b);
@@ -498,21 +491,53 @@ int cs_RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double
     return 0;
 }
 
+double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
+{
+        double xmin[2] = {0,0};
+        double xmax[2] = {1,1};
+        int max_iter = 1e4;
+        double max_err = 1e-4;
+
+	double me = 0;
+        double asym_me = 0;
+        int Lmin = max( abs(o1.j2-o3.j2), abs(o2.j2-o4.j2) )*1./2;
+        int Lmax = min( o1.j2+o3.j2, o2.j2+o4.j2 )*1./2;
+        for (int L = Lmin; L<= Lmax; L++)
+        {
+        	if ( (o1.l+o3.l+L)%2 !=0 || (o2.l+o4.l+L)%2 != 0) continue;
+                double temp = SixJ( o1.j2*1./2.,o2.j2*1./2.,J, o4.j2*1./2,o3.j2*1./2,L );
+                if (temp == 0)
+                {
+                	// cout << "SixJs Returned Zero! L=" << L << " J=" << J << endl;
+                        // cout << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l <<$
+                        continue;
+                }
+                temp *= ThreeJ( o1.j2*1./2,L,o3.j2*1./2, -0.5,0,0.5) * ThreeJ( o2.j2*1./2,L,o4.j2*1./2, -0.5,0,0.5);
+                if (temp == 0)
+                {
+                	cout << "ThreeJs returned zero!" << endl;
+                        continue;
+                }
+
+                struct cs_RabRcd_params int_params = { o1.n,o1.l, o2.n,o2.l, o3.n,o3.l, o4.n,o4.l, L, b};
+                double val;
+                double err;
+                hcubature(1, &cs_RabRcd, &int_params, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val, &err);
+	
+		me += temp*val;
+	}
+	return me;
+}
 
 Operator CSTwoBody(ModelSpace& modelspace)
 {
 	Operator op(modelspace);
 	double t_start = omp_get_wtime();
 	int nchan = modelspace.GetNumberTwoBodyChannels();
-	double b = modelspace.GetHbarOmega()*1./10.; // Divide by 10 because I am lazy and I don't want yo rewrite my python submitter to accept float
+	double b = modelspace.GetHbarOmega();
 	double Ha = 1; // 27.21138602;
 
-	double xmin[2] = {0,0};
-	double xmax[2] = {1,1};
-	int max_iter = 1e4;
-	double max_err = 1e-4;
-
-	// #pragma omp parallel for
+	#pragma omp parallel for
 	for (int ch = 0; ch <= nchan; ch++)
 	{
 		TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
@@ -529,53 +554,23 @@ Operator CSTwoBody(ModelSpace& modelspace)
 				Orbit & o1 = modelspace.GetOrbit(bra.p);
 				Orbit & o2 = modelspace.GetOrbit(bra.q);
 				double me = 0;
-				int Lmin = max( abs(o1.j2-o3.j2), abs(o2.j2-o4.j2) )*1./2;
-				int Lmax = min( o1.j2+o3.j2, o2.j2+o4.j2 )*1./2;
-				for (int L = Lmin; L<= Lmax; L++)
+				double asym_me = 0;
+
+				float d12 = 0.;
+                                float d34 = 0.;
+                                if ( o1.index == o2.index ) d12 = 1.;
+                                if ( o3.index == o4.index ) d34 = 1.;
+				
+				me = csTwoBodyME(o1, o2, o3, o4, tbc.J, b);
+				if ( o3.index != o4.index )
 				{
-					if ( (o1.l+o3.l+L)%2 !=0 || (o2.l+o4.l+L)%2 != 0) continue;
-					double temp = SixJ( o1.j2*1./2,o2.j2*1./2,tbc.J, o4.j2*1./2,o3.j2*1./2,L );
-					if (temp == 0) continue;
-					temp *= ThreeJ( o1.j2*1./2,L,o3.j2*1./2, -0.5,0,0.5) * ThreeJ( o2.j2*1./2,L,o4.j2*1./2, -0.5,0,0.5);
-					if (temp == 0)
-					{
-						cout << "ThreeJs returned zero!" << endl;
-						continue;
-					}
-
-					struct cs_RabRcd_params int_params = { o1.n,o1.l, o2.n,o2.l, o3.n,o3.l, o4.n,o4.l, L, b};
-					double val;
-					double err;
-					hcubature(1, &cs_RabRcd, &int_params, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val, &err);
-					
-
-					double as_val;
-					//if (o1.n == o)
-					//{
-					//	cout << "Diagonal element, no need to integrate." << endl;
-					//	// as_val = val;
-					//	me += temp * val * 2;
-					//} else {
-						struct cs_RabRcd_params as_int_params = { o1.n,o1.l, o2.n,o2.l, o4.n,o4.l, o3.n,o3.l, L, b};
-						double as_err;
-						hcubature(1, &cs_RabRcd, &as_int_params, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &as_val, &as_err);
-						me += temp * ( val - pow(-1, o3.j2*1./2+o4.j2*1./2-tbc.J)*as_val );
-					//}
-					
-					if (val == 0 && as_val == 0)
-					{
-						cout << "Value returned is zero!" << endl;
-						continue;
-					}
-					if (abs(val) > 100 or abs(as_val) > 100)
-					{
-						cout << "Got silly val or as_val for L=" << L << endl;
-						cout << "val=" << val << endl;
-						cout << "as_val=" << as_val << endl;
-					}
-				} // for (int L...
-				double tbme = b * Ha * me * sqrt( (o1.j2+1)*(o2.j2+1)*(o3.j2+1)*(o4.j2+1) ) * pow(-1, (o1.j2+o2.j2)*1./2+tbc.J) * 1./sqrt(1+ket.delta_pq()) * 1./sqrt(1+bra.delta_pq());
-				if (me < 0 || abs(me) > 100) cout << "Setting me to=" << tbme << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;
+					asym_me = csTwoBodyME(o1, o2, o4, o3, tbc.J, b);
+				} else {
+					asym_me = me;
+				}
+				me = (me - pow(-1,(o3.j2+o4.j2)*1./2.-tbc.J)*asym_me);
+				double tbme = Ha * me * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o2.j2)*1./2+tbc.J) * 1./sqrt( (1.+d12)*(1.+d34) );
+				// cout << "Setting tbme to=" << tbme << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;
 				op.TwoBody.SetTBME(ch, iket, jbra, tbme);
 				op.TwoBody.SetTBME(ch, jbra, iket, tbme);
 			} // for (int jbra
@@ -583,6 +578,143 @@ Operator CSTwoBody(ModelSpace& modelspace)
 	} // for (int ch...
 	op.profiler.timer["CoulombSturmianTwoBody"] += omp_get_wtime() - t_start;
 	return op;
+}
+
+Operator CSRadius(ModelSpace& modelspace)
+{
+	Operator op(modelspace);
+        double t_start = omp_get_wtime();
+        double Ha = 1; // 27.21138602; // 1 Hartree; should this be ~hw?
+        double b = modelspace.GetHbarOmega();
+        int Z = modelspace.GetTargetZ();
+        int norbits = modelspace.GetNumberOrbits();
+
+        #pragma omp parallel for
+        for (int i=0; i<norbits; i++)
+        {
+                Orbit oi = modelspace.GetOrbit(i);
+                for (int j=0; j<=i; j++)
+                {
+                        Orbit oj = modelspace.GetOrbit(j);
+                        // oi.l == oj.l
+                        if (oi.l != oj.l || oi.j2 != oj.j2) continue;
+                        op.OneBody(i,j) = 0;
+			double R = 0;
+                        if (oi.l == oj.l)
+                        {
+                                int l = oi.l;
+                                int np= oi.n;
+                                int n = oj.n;
+				if (np >= n+2 || np <= n-2) {
+					R = 0;
+				} else if (np == n+1) {
+					R = -0.5*sqrt( (n+1)*(n+2*l+3) );
+				} else if (np == n) {
+					R = n+l+1.5;
+				} else if (np == n-1) {
+					R = -0.5*sqrt( (n)*(n+2*l+2) );
+				} else { // Shouldn't get here anyway.
+					R = 0;
+				}
+			}
+			op.OneBody(i,j) = R*1./b;
+			op.OneBody(j,i) = op.OneBody(i,j);
+		}
+	}
+	op.profiler.timer["CoulombRadius"] += omp_get_wtime() - t_start;
+	return op;
+}
+
+Operator CSRadiusSquared(ModelSpace& modelspace)
+{
+        Operator op(modelspace);
+        double t_start = omp_get_wtime();
+        double Ha = 1; // 27.21138602; // 1 Hartree; should this be ~hw?
+        double b = modelspace.GetHbarOmega();
+        int Z = modelspace.GetTargetZ();
+        int norbits = modelspace.GetNumberOrbits();
+
+        #pragma omp parallel for
+        for (int i=0; i<norbits; i++)
+        {
+                Orbit oi = modelspace.GetOrbit(i);
+                for (int j=0; j<=i; j++)
+                {
+                        Orbit oj = modelspace.GetOrbit(j);
+                        // oi.l == oj.l
+                        if (oi.l != oj.l || oi.j2 != oj.j2) continue;
+                        op.OneBody(i,j) = 0;
+                        double R2 = 0;
+                        if (oi.l == oj.l)
+                        {
+                                int l = oi.l;
+                                int np= oi.n;
+                                int n = oj.n;
+                                if (np >= n+3 || np <= n-3) { 
+                                        R2 = 0;
+                                } else if (np == n+2) {
+                                        R2 = +0.25*sqrt( (n+1)*(n+2)*(n+2*l+3)*(n+2*l+4) );
+                                } else if (np == n+1) {
+                                        R2 = -(n+l+2)*sqrt( (n+1)*(n+2*l+3) );
+                                } else if (np == n) {
+                                        R2 = (n+l+1.5)*(n+l+2) + 0.5*n*(n+2*l+2);
+                                } else if (np == n-1) {
+                                        R2 = -(n+l+1)*sqrt( (n)*(n+2*l+2) );
+                                } else if (np == n-2) {
+					R2 = +0.25*sqrt( (n-1)*(n)*(n+2*l+1)*(n+2*l+2) );
+				} else {
+					R2 = 0;
+				}
+                        }
+                        op.OneBody(i,j)	= R2*1./b;
+                        op.OneBody(j,i)	= op.OneBody(i,j);
+                }
+        }
+        op.profiler.timer["CoulombRadiusSquared"] += omp_get_wtime() - t_start;
+	return op;
+}
+
+Operator HarmonicRadius(ModelSpace& modelspace)
+{
+	Operator op(modelspace);
+	op.SetHermitian();
+	double t_start = omp_get_wtime();
+	int norbits = modelspace.GetNumberOrbits();
+	#pragma omp parallel for
+	for (int i=0; i<norbits; i++)
+	{
+		Orbit oi = modelspace.GetOrbit(i);
+		for (int j=0; j<=i; j++)
+		{
+			Orbit oj = modelspace.GetOrbit(j);
+			if (oj.l != oi.l || oj.j2 != oi.j2) continue;
+			op.OneBody(i,j) = RadialIntegral(oi.n,oi.l, oj.n, oj.l, 1, modelspace);
+		}
+	}
+	op.profiler.timer["HarmonicRadius"] += omp_get_wtime() - t_start;
+	return op;
+}
+
+Operator HarmonicRadiusSquared(ModelSpace& modelspace)
+{
+        Operator op(modelspace);
+        op.SetHermitian();
+        double t_start = omp_get_wtime();
+        int norbits = modelspace.GetNumberOrbits();
+        #pragma omp parallel for
+        for (int i=0; i<norbits; i++)
+        {
+                Orbit oi = modelspace.GetOrbit(i);
+                for (int j=0; j<=i; j++)
+                {
+                        Orbit oj = modelspace.GetOrbit(j);
+                        if (oj.l != oi.l || oj.j2 != oi.j2) continue;
+                        op.OneBody(i,j) = RadialIntegral(oi.n,oi.l, oj.n, oj.l, 2, modelspace);
+                }
+        }
+        op.profiler.timer["HarmonicRadius"] += omp_get_wtime() - t_start;
+        return op;
+
 }
 
 Operator HarmonicOneBody(ModelSpace& modelspace)

@@ -738,11 +738,11 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
        	 //cout << "twoj=" << twoj << " l=" << l << " n=" <<  n << " modelspace->GetOrbitIndex(n,l,twoj,-1)=" << modelspace->GetOrbitIndex(n,l,twoj,-1) << endl;
          //cout << "SystemType=" << modelspace->GetSystemType() << " systemBasis=" << modelspace->GetSystemBasis() << endl;
          if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "harmonic" ) {
-                orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1)/2 );
+                orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
          } else if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "hydrogen" ) {
                 orbits_remap.push_back( modelspace->Index_atomic(n, l, twoj) );
          } else {
-                orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+                orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,+1) );
          }
       }
     }
@@ -816,7 +816,7 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
 		//cout << "Wrote tbme! about to set tbme_pp=" << tbme_pp << endl;
 		//cout << "norm_factor=" << norm_factor << endl;
 		if ( modelspace->GetSystemType() != "atomic" ) {
-                    Hbare.TwoBody.SetTBME(J,parity,1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
+                    Hbare.TwoBody.SetTBME(J,parity,+1,a+1,b+1,c+1,d+1,tbme_nn*norm_factor);
                     Hbare.TwoBody.Set_pn_TBME_from_iso(J,1,0,a,b,c,d,tbme_10*norm_factor);
 		}
              }
@@ -1453,6 +1453,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
 
   if (emax < 0)  emax = modelspace->GetEmax();
   if (lmax < 0)  lmax = emax;
+  if (Emax < 0)  Emax = 2*emax;
 
   for (int e=0; e<=min(emax,modelspace->GetEmax()); ++e)
   {
@@ -1464,14 +1465,14 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
       int twojMax = 2*l+1;
       for (int twoj=twojMin; twoj<=twojMax; twoj+=2)
       {
-	 cout << "twoj=" << twoj << " l=" << l << " n=" <<  n << " modelspace->GetOrbitIndex(n,l,twoj,-1)=" << modelspace->GetOrbitIndex(n,l,twoj,-1) << endl;
-	 cout << "SystemType=" << modelspace->GetSystemType() << " systemBasis=" << modelspace->GetSystemBasis() << endl;
+	 //cout << "twoj=" << twoj << " l=" << l << " n=" <<  n << " modelspace->GetOrbitIndex(n,l,twoj,-1)=" << modelspace->GetOrbitIndex(n,l,twoj,-1) << endl;
+	 //cout << "SystemType=" << modelspace->GetSystemType() << " systemBasis=" << modelspace->GetSystemBasis() << endl;
 	 if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "harmonic" ) {
-         	orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1)/2 );
+         	orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
 	 } else if ( modelspace->GetSystemType() == "atomic" && modelspace->GetSystemBasis() == "hydrogen" ) {
 	  	orbits_remap.push_back( modelspace->Index_atomic(n, l, twoj) );
 	 } else {
-		orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,-1) );
+		orbits_remap.push_back( modelspace->GetOrbitIndex(n,l,twoj,+1) );
 	 }
       }
     }
@@ -1540,7 +1541,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
              // Matrix elements are written in the file with (T,Tz) = (0,0) (1,1) (1,0) (1,-1)
              tbme_pp = Hbare.TwoBody.GetTBME(J,parity,-1,a,b,c,d);        // unnormalized
 	     if (modelspace->GetSystemType() != "atomic") {
-             	tbme_nn = Hbare.TwoBody.GetTBME(J,parity,1,a+1,b+1,c+1,d+1); // unnormalized
+             	tbme_nn = Hbare.TwoBody.GetTBME(J,parity,+1,a+1,b+1,c+1,d+1); // unnormalized
              	tbme_10 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,1,0,a,b,c,d); // normalized
              	tbme_00 = Hbare.TwoBody.Get_iso_TBME_from_pn(J,0,0,a,b,c,d); // normalized
 	     }

@@ -10,7 +10,7 @@ def get_filenames(run_number):
 			for file in os.listdir("pbslog"):
 				if file.endswith(run_number+".log.o"):
 					#filenames.append("imsrg_log/"+file)
-					filenames.append("pbslog/"+file)
+					filenames.append("pbslog/"+file) # On Both Oak and cougar
 		except Exception, e:
 			print "Threw exception in get_filenames:"
 			print e
@@ -22,15 +22,17 @@ def get_filenames(run_number):
 # ref_He4_basis_harmonic_emax_8_hw_40.o.1808271017
 
 def get_info_from_filename(filename):
-	temp = ""
-	for char in filename:
-		if char != ".":
-			temp += char
-		else:
-			break
+	temp = filename
+	#for char in filename:
+	#	if char != ".":
+	#		temp += char
+	#	else:
+	#		break
+	if ".log.o" in filename:
+		temp = temp.replace('.log.o','')
 	fn = temp.split('_')
 	emax = 0
-	hw = 0
+	hw = 0.
 	element = ""
 	for word in fn:
 		if "ref" in word:
@@ -47,6 +49,8 @@ def get_energy(filename):
 	fn = open(filename, 'r')
 	imsrg_energy = None
 	hf_energy = None
+	hf_has_converged = True
+	real_time = None
  	try:
 		try:
 			for line in fn:
@@ -56,8 +60,13 @@ def get_energy(filename):
 				if "EHF" in line:
 					temp = line.split()
 					hf_energy = temp[len(temp)-1]
-				if imsrg_energy is not None and hf_energy is not None:
-					return imsrg_energy, hf_energy
+				if "!!!! Warning: Hartree-Fock calculation didn't converge" in line:
+					hf_has_converged = False
+				if "real:" in line:
+					temp = line.split()
+					real_time = temp[len(temp)-1]
+				if imsrg_energy is not None and hf_energy is not None and real_time is not None:
+					return imsrg_energy, hf_energy, hf_has_converged, real_time
 		except Exception, e:
 			print "Threw exception in get_energy."
 			print e
@@ -76,12 +85,12 @@ def main(run_number):
 	try:
 		try:
 			run_writer = csv.writer( csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL )
-			run_writer.writerow(["Element","Emax","hw","IM-SRG Energy (eV)", "HF Energy (eV)"])
+			run_writer.writerow(["Element","Emax","hw","IM-SRG Energy (eV)", "HF Energy (eV)", "HF Converged?", "Compute Time (s)"])
 			for filename in filenames:
 				emax,hw,element = get_info_from_filename(filename)
-				imsrg_energy, hf_energy = get_energy(filename)
+				imsrg_energy, hf_energy, hf_has_converged, real_time = get_energy(filename)
 				if imsrg_energy is not None and hf_energy is not None:
-					run_writer.writerow([element,emax,hw,imsrg_energy,hf_energy])
+					run_writer.writerow([element,emax,hw,imsrg_energy,hf_energy,hf_has_converged,real_time])
 				else:
 					print "Got None energy for emax=%d, hw=%d" % ( int(emax), int(hw) )
 		except Exception, e:

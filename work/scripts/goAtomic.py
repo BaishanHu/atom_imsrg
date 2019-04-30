@@ -19,6 +19,7 @@ from datetime import datetime
 import argparse
 import csv
 import random
+import numpy as np
 
 csv_fn = "data_log.csv"
 
@@ -119,24 +120,26 @@ export OMP_NUM_THREADS=%d
 """
 
 ### Loop parameters
-batch_mode = True
+#batch_mode = True
 
-e_start=2
-e_stop =2
+e_start=4
+e_stop =4
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=1
-hwstop =10
+hwstart=3
+hwstop =3
 hwiter =1
+hwN    =1
+hw_vec = np.linspace(hwstart, hwstop, hwN)
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
 	for Lmax in range(l_start,l_stop+1,l_iter):
-		for hw in range(hwstart,hwstop+1,hwiter):
+		for hw in hw_vec:
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
@@ -149,7 +152,8 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['basis']		= 'HF'
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'
-			ARGS['2bme']		= ''
+			#ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
+			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax16_hw1_Apr25_2019.me2j'
 			if ARGS['systemBasis'] == 'hydrogen':
 				jobname		= "ref_{0}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax)
 			elif ARGS['systemBasis'] == 'harmonic':

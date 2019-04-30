@@ -23,7 +23,7 @@
 HartreeFock::HartreeFock(Operator& hbare)
   : Hbare(hbare), modelspace(hbare.GetModelSpace()), 
     KE(Hbare.OneBody), energies(Hbare.OneBody.diag()),
-    tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0), freeze_occupations(true)
+    tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0), freeze_occupations(true), learning_rate(0.95)
 {
    int norbits = modelspace->GetNumberOrbits();
 
@@ -65,7 +65,7 @@ HartreeFock::HartreeFock(Operator& hbare)
 void HartreeFock::Solve()
 {
    iterations = 0; // counter so we don't go on forever
-   int maxiter = 100;
+   int maxiter = 1000;
 
    for (iterations=0; iterations<maxiter; ++iterations)
    {
@@ -74,7 +74,7 @@ void HartreeFock::Solve()
       if (not freeze_occupations) FillLowestOrbits(); // if we don't freeze the occupations, then calculate the new ones.
       UpdateDensityMatrix();  // Update the 1 body density matrix, used in UpdateF()
       UpdateF();              // Update the Fock matrix
-
+      //if (iterations%100 == 0) learning_rate *= 0.9; // reduce learning rate to force convergence
       if ( CheckConvergence() ) break;
    }
    CalcEHF();
@@ -83,6 +83,8 @@ void HartreeFock::Solve()
    if (iterations < maxiter)
    {
       std::cout << "HF converged after " << iterations << " iterations. " << std::endl;
+      std::cout << "Density matrix:" << endl;
+      std::cout << rho << endl;
    }
    else
    {
@@ -130,8 +132,8 @@ void HartreeFock::CalcEHF()
       }
    }
    EHF = e1hf + e2hf + e3hf;
-   cout << "Rho:" << endl;
-   cout << rho << endl;
+   //cout << "Rho:" << endl;
+   //cout << rho << endl;
 }
 
 //**************************************************************************************
@@ -352,7 +354,19 @@ void HartreeFock::Vmon3UnHash(uint64_t key, int& a, int& b, int& c, int& d, int&
 void HartreeFock::UpdateDensityMatrix()
 {
   arma::mat tmp = C.cols(holeorbs);
-  rho = (tmp.each_row() % hole_occ) * tmp.t();
+  arma::mat rho_n =  (tmp.each_row() % hole_occ) * tmp.t();
+  
+  if ( arma::size(rho) != arma::size(arma::mat(0,0)) ) // Check if rho exists yet before scaling.
+  {
+    rho_n = rho_n *1.* (1.0-1.0*learning_rate);
+    arma::mat rho_nm1 = learning_rate *1.* rho;
+    rho = rho_n + rho_nm1;
+  } else {
+    rho = rho_n;
+  }
+
+  //cout << "Rho:" << endl;
+  //cout << rho << endl;
 }
 
 
@@ -373,19 +387,14 @@ void HartreeFock::FillLowestOrbits()
   //int placedN = 0;
   std::vector<index_t> holeorbs_tmp; 
   std::vector<double> hole_occ_tmp;
-  //cout << "In FillLowest:TargetZ=" << targetZ << endl;
   for (auto i : sorted_indices)
   {
 
     Orbit& oi = modelspace->GetOrbit(i);
-    //cout << "Getting orbit at i=" << i <<" with index=" << oi.index << endl;
-    if (oi.tz2 > 0 and (placedZ<targetZ))
+    if (oi.tz2 < 0 and (placedZ<targetZ))
     {
-      //cout << "Pushin holeorbs..." << endl;
       holeorbs_tmp.push_back(i);
-      //cout << "Pushing hole_occ: " << std::min(1.0,double(targetZ-placedZ)/(oi.j2+1) ) << endl;
       hole_occ_tmp.push_back( std::min(1.0,double(targetZ-placedZ)/(oi.j2+1) ) );
-      //cout << "Updating placedZ:" << std::min(placedZ+oi.j2+1,targetZ) << endl;
       placedZ = std::min(placedZ+oi.j2+1,targetZ);
     }
     //else if (oi.tz2 > 0 and (placedN<targetN))
