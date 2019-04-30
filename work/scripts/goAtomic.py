@@ -122,16 +122,16 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 #batch_mode = True
 
-e_start=4
-e_stop =4
+e_start=2
+e_stop =2
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=3
-hwstop =3
+hwstart=2
+hwstop =2
 hwiter =1
 hwN    =1
 hw_vec = np.linspace(hwstart, hwstop, hwN)

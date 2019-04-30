@@ -451,7 +451,7 @@ struct cs_RabRcd_params { int na; int la;
 
 double cs_Rnl(double r, int n, int l, double b)
 {
-	double norm = sqrt( 2./b *gsl_sf_fact(n)/gsl_sf_fact(n+2*l+2) );
+	double norm = sqrt( pow(2./b,3) *gsl_sf_fact(n)/gsl_sf_fact(n+2*l+2) );
 	return norm * pow(2.*r/b, l+1) * exp(-r/b) * gsl_sf_laguerre_n(n, 2*l+2, 2.*r/b);
 }
 
