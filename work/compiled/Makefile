@@ -2,11 +2,11 @@
 CC = g++
 
 FLAGS = -std=c++11 -fopenmp  -O3
-INCLUDE = -I$(HOME)/include -I$(HOME)/include/armadillo -I$(HOME)/imsrg_backup/work/compiled -I$(HOME)/imsrg_backup/src
+INCLUDE = -I$(HOME)/include -I$(HOME)/include/armadillo -I./compiled -I../../src
 #LIBS = -lIMSRG -lopenblas -llapack -lgsl -lz -lhdf5 -lhdf5_cpp
-LIBS = $(HOME)/imsrg_backup/src/libIMSRG.so -lopenblas  -lgsl -lz -lhdf5 -lhdf5_cpp
+LIBS = $(HOME)/lib/libIMSRG.so -lopenblas  -lgsl -lz -lhdf5 -lhdf5_cpp
 #LIBS = -L$(HOME)/lib64 -L$(HOME)/lib -lopenblas -lgsl -lz -lhdf5 -lhdf5_cpp
-LIBS += -llapack
+LIBS += -lmkl_sequential -lmkl_core -lgomp
 ifeq ($(DEBUG),on)
  FLAGS += -g
 endif

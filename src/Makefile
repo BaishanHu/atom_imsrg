@@ -1,5 +1,6 @@
 #CC = mpiCC
 CC = g++
+#CC = icc
 
 # Compiler flags:
 #  -DNO_ODE=1 compiles without boost/ode package used for flow equation solver
@@ -23,10 +24,10 @@ endif
 
 PYTHONFLAGS = -I/usr/include/python2.7 -lboost_python #-lpython 
 
-THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; elif [ `hostname|grep oak` ]; then echo oak; else echo other; fi)
+THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; elif [ `hostname|grep oak` ]; then echo oak; elif [ `hostname|grep cedar` ]; then echo cedar; else echo other; fi)
 
 ALL =  libIMSRG.so imsrg++
-LIBS = -lopenblas -lgsl -lm -lz -lhdf5_cpp -lhdf5 -fext-numeric-literals -I ~/jsoncpp/dist -fPIC
+LIBS = -lopenblas -lgsl -lm -lz -lhdf5_cpp -lhdf5 -fext-numeric-literals -I -json -fPIC
 
 ifeq ($(HDF5),on)
  LIBS += -lhdf5_cpp -lhdf5
@@ -58,6 +59,13 @@ ifeq ($(THEHOST),oak)
  ifneq ($(PYTHON),off)
   ALL += pyIMSRG.so
   endif
+endif
+
+ifeq ($(THEHOST),cedar)
+ LIBS += -lmkl -lmkl_gnu_thread -lmkl_core -lpthread -lgomp -liomp5 
+ ifneq ($(PYTHON),off)
+  ALL += pyIMSRG.so
+ endif
 endif
 
 ifeq ($(THEHOST),other)  # default options. assumes boost and python are set up nicely.

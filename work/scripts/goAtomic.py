@@ -36,7 +36,8 @@ elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS =
 ### The code uses OpenMP and benefits from up to at least 24 threads
 NTHREADS=24
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
-exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
+#exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'  # Oak
+exe = '/home/dlivermo/projects/def-holt/dlivermo/atom_imsrg/work/compiled/Atomic' # Cedar
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
@@ -105,7 +106,7 @@ FILECONTENT = """#!/bin/bash
 #PBS -N %s
 #PBS -q oak
 #PBS -d %s
-#PBS -l walltime=192:00:00
+#PBS -l walltime=72:00:00
 #PBS -l nodes=1:ppn=%d
 #PBS -l vmem=60gb
 #PBS -m abe
@@ -130,7 +131,7 @@ l_stop =0
 l_iter =1
 
 hwstart=1
-hwstop =10
+hwstop =1
 hwiter =1
 
 ### Loops!
@@ -143,16 +144,17 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['valence_space'] 	= 'He4'
 			ARGS['reference'] 	= 'He4'
 			#ARGS['systemBasis']	= 'hydrogen'
-			ARGS['systemBasis']	= 'harmonic'
+			ARGS['systemBasis']	= 'L'
 			ARGS['smax']		= '200'
 			#ARGS['method']		= 'magnus'
 			ARGS['basis']		= 'HF'
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'
 			ARGS['2bme']		= ''
+			#ARGS['account']		= 'rrg-holt'
 			if ARGS['systemBasis'] == 'hydrogen':
 				jobname		= "ref_{0}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax)
-			elif ARGS['systemBasis'] == 'harmonic':
+			elif ARGS['systemBasis'] == 'harmonic' or 'L':
 				jobname		= "ref_{0}_basis_{1}_emax_{2}_hw_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,hw)
 			"""all_the_flags		= "emax={0} e3max={1} method={2} valence_space={3} hw={4} smax={5} omega_norm_max={6}
 						   reference={7} Operators={8} Lmax={9} file2e1max={10} file2e2max={11} file2lmax={12}
@@ -164,13 +166,19 @@ for emax in range(e_start,e_stop+1,e_iter):
 			logname = jobname +"_{:.3}".format(13*random.random()+random.random()) + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
 			cmd = ' '.join([exe] + ['%s=%s'%(x,ARGS[x]) for x in ARGS])
 			if batch_mode==True:
-				print "Submitting to cluster..."
+				print "Submitting to cluster: jobname=" + jobname+".batch"
 				for c in cmd.split():
 					print c
 				sfile = open(jobname+'.batch','w')
 				sfile.write(FILECONTENT%(jobname,environ['PWD'],NTHREADS,mail_address,logname,logname,NTHREADS,cmd))
 				sfile.close()
-				call(['qsub', jobname+'.batch'])
+				if path.isfile(jobname+'.batch'):
+					if BATCHSYS is 'PBS':
+						call(['qsub', jobname+'.batch'])
+					elif BATCHSYS is 'SLURM':
+						call(['srun', jobname+'.batch'])
+				else:
+					print("Unable to locate .batch file!")
 			else:
 				call(cmd.split())
 			with open(csv_fn, 'a+') as csvfile:
