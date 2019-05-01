@@ -42,7 +42,7 @@ exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
 #batch_mode=False
-#batch_mode=True
+batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
 ### Don't forget to change this. I don't want emails about your calculations...
@@ -120,10 +120,10 @@ export OMP_NUM_THREADS=%d
 """
 
 ### Loop parameters
-batch_mode = True
+#batch_mode = True
 
-e_start=4
-e_stop =4
+e_start=16
+e_stop =16
 e_iter =2
 
 l_start=0
@@ -131,9 +131,9 @@ l_stop =0
 l_iter =1
 
 hwstart=1
-hwstop =4
+hwstop =1
 hwiter =1
-hwN    =4
+hwN    =1
 hw_vec = np.linspace(hwstart, hwstop, hwN)
 
 ### Loops!
@@ -153,7 +153,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'
 			#ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
-			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax16_hw1_Apr25_2019.me2j'
+			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax4_hw1_May1_2019.me2j'
 			if ARGS['systemBasis'] == 'hydrogen':
 				jobname		= "ref_{0}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax)
 			elif ARGS['systemBasis'] == 'harmonic':

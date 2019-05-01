@@ -535,14 +535,14 @@ double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
                 double temp = SixJ( o1.j2*0.5,o2.j2*0.5,J, o4.j2*0.5,o3.j2*0.5,L );
                 if (temp == 0)
                 {
-                	cout << "SixJs Returned Zero! L=" << L << " J=" << J << endl;
-                        cout << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;
+                	// cout << "SixJs Returned Zero! L=" << L << " J=" << J << endl;
+                        // cout << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;
                         continue;
                 }
                 temp *= ThreeJ( o1.j2*0.5,L,o3.j2*0.5, -0.5,0,0.5) * ThreeJ( o2.j2*0.5,L,o4.j2*0.5, -0.5,0,0.5);
                 if (temp == 0)
                 {
-                	cout << "ThreeJs returned zero!" << endl;
+                	// cout << "ThreeJs returned zero!" << endl;
                         continue;
                 }
 
@@ -550,11 +550,13 @@ double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
                 double val;
                 double err;
                 hcubature(1, &cs_RabRcd, &int_params, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val, &err);
-/*		cout << "L=" << L << endl;
+		/*		
+		cout << "L=" << L << endl;
 		cout << "val=" << val << endl;
 		cout << "sixj=" << SixJ( o1.j2*0.5,o2.j2*0.5,J, o4.j2*0.5,o3.j2*0.5,L ) << endl;
 		cout << "3j ac=" << ThreeJ( o1.j2*0.5,L,o3.j2*0.5, -0.5,0,0.5) << endl;
-		cout << "3j bd=" << ThreeJ( o2.j2*0.5,L,o4.j2*0.5, -0.5,0,0.5) << endl; */
+		cout << "3j bd=" << ThreeJ( o2.j2*0.5,L,o4.j2*0.5, -0.5,0,0.5) << endl;
+		*/
 		me += temp*val;
 	}
 	return me;
@@ -568,7 +570,7 @@ Operator CSTwoBody(ModelSpace& modelspace)
 	double b = modelspace.GetHbarOmega();
 	double Ha = 1; // 27.21138602;
 
-	//#pragma omp parallel for
+	#pragma omp parallel for
 	for (int ch = 0; ch <= nchan; ch++)
 	{
 		TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
@@ -596,18 +598,20 @@ Operator CSTwoBody(ModelSpace& modelspace)
 
 				// cout << "Indices:" << endl;
 				// cout << o1.index << o2.index << o3.index << o4.index << endl;
-				
-				me = Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o3.j2)*0.5+tbc.J) * csTwoBodyME(o1, o2, o3, o4, tbc.J, b);
-				//if ( o3.index != o4.index )
-				//{
+				me = csTwoBodyME(o1, o2, o3, o4, tbc.J, b);
+				double me_norm = Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o3.j2)*0.5+tbc.J);
+				if ( o3.index != o4.index )
+				{
 					asym_me = csTwoBodyME(o1, o2, o4, o3, tbc.J, b) * Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J);
-				//} else {
-				//	asym_me = me;
-				//}
+				} else {
+					asym_me = me * Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J);
+				}
+				me *= me_norm;
 				/*
 				cout << endl;
 				cout << "s me=" << me*sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o3.j2)*0.5+tbc.J) << endl;
-				cout << "a me=" << asym_me *sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J)<< endl; */
+				cout << "a me=" << asym_me *sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J)<< endl;
+				*/
 				me = me - pow(-1,(o3.j2+o4.j2)*0.5-tbc.J) * asym_me;
 				double tbme = me * 1/sqrt( (1+d12)*(1+d34) );
 				// cout << "Setting tbme to=" << tbme << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;

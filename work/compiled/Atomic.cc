@@ -150,7 +150,7 @@ int main(int argc, char** argv)
     #pragma omp section
     {
     if (fmt2 == "me2j")
-      rw.ReadBareTBME_Darmstadt(inputtbme, Hbare,eMax, 2*eMax, 2*eMax );
+      rw.ReadBareTBME_Darmstadt(inputtbme, Hbare, 4, 2*4, 2*4 );
     else if (fmt2 == "navratil" or fmt2 == "Navratil")
       rw.ReadBareTBME_Navratil(inputtbme, Hbare);
     else if (fmt2 == "oslo" )
@@ -174,8 +174,8 @@ int main(int argc, char** argv)
 //  }
   //cout << "Modelspace has this many tbc: " << modelspace.nTwoBodyChannels << endl;
   //rw.ReadBareTBME_Darmstadt( inputtbme, Hbare, file2e1max, file2e2max, file2lmax);
-//  Operator Diff = Operator(modelspace);
-//  Operator twoBody = Operator(modelspace);
+  Operator Diff = Operator(modelspace);
+  Operator twoBody = Operator(modelspace);
   if (systemBasis == "harmonic") {
     cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << min(4*(2*eMax + 1*Lmax),170) << endl;
     modelspace.GenerateFactorialList( min(4*(2*eMax + 1*Lmax),170) );
@@ -188,11 +188,11 @@ int main(int argc, char** argv)
     cout << "TargetZ=" << modelspace.GetTargetZ() << endl;
     //cout << "Adding InvR to Hbare." << endl;
     //Hbare += InverseR_Op(modelspace);
-    cout << "Adding CSOneBody..." << endl;
-    Hbare += CSOneBody( modelspace );
-    cout << "Adding CSTwoBody..." << endl;
-    Hbare += CSTwoBody( modelspace );
-    //twoBody = CSTwoBody( modelspace );
+    //cout << "Adding CSOneBody..." << endl;
+    //Hbare += CSOneBody( modelspace );
+    //cout << "Adding CSTwoBody..." << endl;
+    //Hbare += CSTwoBody( modelspace );
+    twoBody = CSTwoBody( modelspace );
     //Hbare += twoBody;
     //cout << "Added InvR; adding KE." << endl;
     //cout << "Invr=" << endl << Hbare.OneBody << endl;
@@ -212,14 +212,15 @@ int main(int argc, char** argv)
 //    if (modelspace.GetTargetZ() > 1)
     //{
 
-//	cout << "Writing twobody..." << endl;
-//	std:: stringstream fn_me2j;
-//	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_Apr25_2019.me2j";
-//	rw.Write_me2j( fn_me2j.str(), twoBody, -1, -1, -1 );
-//	cout << "Added Twobody, moving on." << endl;
-//	cout << "ME2J written, reading back." << endl;
-//	rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
-//	Diff = twoBody - Hbare;
+	cout << "Writing twobody..." << endl;
+	std:: stringstream fn_me2j;
+	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May1_2019.me2j";
+	rw.Write_me2j( fn_me2j.str(), twoBody, -1, -1, -1 );
+	cout << "Added Twobody, moving on." << endl;
+	//cout << "ME2J written, reading back." << endl;
+	//rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
+	//Diff = twoBody - Hbare;
+	cout << "Difference calculated." << endl;
 //	return 0;
     //} 
   //} else if (systemBasis == "slater") {
@@ -245,9 +246,9 @@ int main(int argc, char** argv)
   }
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
-/*
+
   cout << "Diff TwoBody=" << endl;
-  for (int ch = 0; ch < min(Hbare.nChannels,5); ch++) { // only first 10 channels
+  for (int ch = 0; ch < min(Hbare.nChannels,3); ch++) { // only first 10 channels
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     Diff.PrintTwoBody(ch);
     cout << endl;
@@ -255,8 +256,9 @@ int main(int argc, char** argv)
     cout << endl;
     twoBody.PrintTwoBody(ch);
     cout << endl;
-  } */
+  } 
 
+  return 0;
 
   if (abs(BetaCM) > 1e-3)
   {
