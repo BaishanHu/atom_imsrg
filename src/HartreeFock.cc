@@ -23,7 +23,7 @@
 HartreeFock::HartreeFock(Operator& hbare)
   : Hbare(hbare), modelspace(hbare.GetModelSpace()), 
     KE(Hbare.OneBody), energies(Hbare.OneBody.diag()),
-    tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0), freeze_occupations(true), learning_rate(0.95)
+    tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0), freeze_occupations(true), learning_rate(0.90)
 {
    int norbits = modelspace->GetNumberOrbits();
 
@@ -65,7 +65,7 @@ HartreeFock::HartreeFock(Operator& hbare)
 void HartreeFock::Solve()
 {
    iterations = 0; // counter so we don't go on forever
-   int maxiter = 1000;
+   int maxiter = 10000;
 
    for (iterations=0; iterations<maxiter; ++iterations)
    {
@@ -95,6 +95,8 @@ void HartreeFock::Solve()
       std::cout << "!!!! Last " << convergence_EHF.size() << "  EHF values: ";
       for (auto& x : convergence_EHF ) std::cout << x << " ";
       std::cout << std::endl;
+      std::cout << "Density Matrix:" << endl;
+      std::cout << rho << endl;
    }
    PrintEHF();
 }
@@ -364,7 +366,7 @@ void HartreeFock::UpdateDensityMatrix()
   } else {
     rho = rho_n;
   }
-
+  
   //cout << "Rho:" << endl;
   //cout << rho << endl;
 }

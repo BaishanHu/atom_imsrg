@@ -395,27 +395,55 @@ Operator CSOneBody(ModelSpace& modelspace)
 			if (oi.l != oj.l || oi.j2 != oj.j2) continue;
 			op.OneBody(i,j) = 0;
 			double d2_dr2 = 0;
+			double del = 0;
 			double rd_dr = 0;
 			double L2 = 0;
 			double V = 0;
 			if (oi.l == oj.l) 
 			{
 				int l = oi.l;
+				// float j = oi.j2*1./2;
 				int np= oi.n;
 				int n = oj.n;
 
-				if (np >= n+1) // d^2/dr^2 term
+				if (np >= n+1) // del term
 				{
-					double num = (4*n+2*l+6);
-					double den = (2*l+3);
-					d2_dr2 = -num/den * sqrt( gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2)/(gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2)) );
+					double num = (4.*n + 4.*l + 6.);
+					double den = (2.*l + 3.);
+					del = -num/den * sqrt( gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2)*1./( gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2) ) );
 				} else if (np == n) {
-					d2_dr2 = -( 4.0*n+2.0*l+3.0 ) / ( 2.0*l+3.0 ); // Fucking ints masquerading as doubles...
+					del = -( 4.0*n + 2.0*l + 3.0 ) / ( 2.0*l + 3.0 ); // Fucking ints masquerading as doubles...
 				} else {
-                                        double num = (4*np+2*l+6);
-                                        double den = (2*l+3);
-                                        d2_dr2 = -num/den * sqrt( ( gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2))/(gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2) ) );
-				} // d^2/dr^2 term
+                                        double num = (4.*np + 4.*l + 6.);
+                                        double den = (2.*l + 3.);
+                                        del = -num/den * sqrt( gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2)*1./( gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2) ) );
+				} // del term
+
+				if (np >= n+1) // d2_dr2 term
+				{
+					double num = (2*l+4)*(2*l+1)*n - 2*l*(2*l+3)*np + (2*l+3)*(2*l+2);
+					double den = (2*l+3) * (2*l+1);
+					d2_dr2 = -num/den * sqrt( gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2)*1./(gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2)) );
+				} else if (np == n) {
+					double num = 4*n*(l+1) + 2*l + 3;
+					double den = (2*l+3) * (2*l+1);
+					d2_dr2 = -num/den;
+				} else {
+					double num = (2*l+4)*(2*l+1)*np - 2*l*(2*l+3)*n	+ (2*l+3)*(2*l+2);
+                                        double den = (2*l+3) * (2*l+1);
+                                        d2_dr2 = -num/den * sqrt( gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2)*1./(gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2)) );
+				} // d2_dr2
+
+				if (np >= n) //  1/r^2 term
+				{
+					double num = 2*np*(2*l+3) - 2*n*(2*l+1) + 4*l + 6;
+					double den = (l+1) * (2*l+1) * (2*l+3);
+					L2 = num/den * sqrt( gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2)*1./(gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2)) ) * l*(l+1);
+				} else {
+                                        double num = 2*n*(2*l+1) - 2*np*(2*l+3)	+ 4*l + 6;
+                                        double den = (l+1) * (2*l+1) * (2*l+3);
+                                        L2 = num/den * sqrt( gsl_sf_fact(n)*gsl_sf_fact(np+2*l+2)*1./(gsl_sf_fact(np)*gsl_sf_fact(n+2*l+2)) ) * l*(l+1);
+				} // 1/r^2 term
 
 				if (np >= n) // 1/r term
 				{
@@ -425,15 +453,13 @@ Operator CSOneBody(ModelSpace& modelspace)
 				} // 1/r term
 				
 				// Factors of b from Change of variables
-				d2_dr2 = Ha* (-0.5*d2_dr2)*(b*b); 
-				V = Ha* ( -Z*V)*b;
-				double me = (d2_dr2 + V);
-				// me = me *sqrt(2*l+1); 
+				d2_dr2 = -0.5*(del)*(b*b); 
+				V =  -Z*V*b;
+				double me = (d2_dr2 + V) * Ha;
 				//cout << "Writing T=" << d2_dr2 << " to <" << oi.n << oi.l << oi.j2 << "|O|" << oj.n << oj.l << oj.j2 << ">" << endl;
 				//cout << "V=" << V << endl;
 				op.OneBody(i,j) = me;
 				op.OneBody(j,i) = op.OneBody(i,j);
-				// op.OneBody(i,j) = ( HBARC*HBARC/(M_ELECTRON) * 0.5*(d2_dr2 + L2*l*(l+1)) - V*Z*HBARC*(1./137) ) * sqrt(2*l+1);
 			} // oi.l == oj.l
 			else if (oi.l != oj.l) continue;
 			// TODO: IMplement oi.l != oj.j, actually, no ortho in l
@@ -451,8 +477,9 @@ struct cs_RabRcd_params { int na; int la;
 
 double cs_Rnl(double r, int n, int l, double b)
 {
-	double norm = sqrt( pow(2./b,3) *gsl_sf_fact(n)/gsl_sf_fact(n+2*l+2) );
-	return norm * pow(2.*r/b, l+1) * exp(-r/b) * gsl_sf_laguerre_n(n, 2*l+2, 2.*r/b);
+	double x = 2.*b*r;
+	double norm = sqrt( pow(2*b,3) *gsl_sf_fact(n)/gsl_sf_fact(n+2*l+2) );
+	return norm * pow(x, l) * exp(-x*0.5) * gsl_sf_laguerre_n(n, 2*l+2, x);
 }
 
 int cs_RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double *fval)
@@ -473,7 +500,7 @@ int cs_RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double
 
     int lp = (params->lp);
 
-    double b = 1./(params->b);
+    double b = (params->b);
 
     double r1 = x[0]/(1-x[0]);
     double r2 = x[1]/(1-x[1]);
@@ -481,12 +508,12 @@ int cs_RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double
     double rmin = min(r1,r2);
     double rmax = max(r1,r2);
 
-    double Ra = cs_Rnl(r1,na,la,b);
-    double Rb = cs_Rnl(r2,nb,lb,b);
-    double Rc = cs_Rnl(r1,nc,lc,b);
-    double Rd = cs_Rnl(r2,nd,ld,b);
+    double Ra = cs_Rnl(r1, na, la, b);
+    double Rb = cs_Rnl(r2, nb, lb, b);
+    double Rc = cs_Rnl(r1, nc, lc, b);
+    double Rd = cs_Rnl(r2, nd, ld, b);
 
-    fval[0] = Ra*Rb*Rc*Rd * pow(rmin,lp) *1./ pow(rmax,lp+1) * 1./pow(1-x[0],2) * 1./pow(1-x[1],2);
+    fval[0] = Ra*Rb*Rc*Rd * pow(rmin,lp) *1./ pow(rmax,lp+1) * 1./pow(1-x[0],2) * 1./pow(1-x[1],2) * r1*r1*r2*r2;
 
     return 0;
 }
@@ -498,21 +525,21 @@ double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
         int max_iter = 1e4;
         double max_err = 1e-4;
 
-	double me = 0;
-        double asym_me = 0;
-        int Lmin = max( abs(o1.j2-o3.j2), abs(o2.j2-o4.j2) )*1./2;
-        int Lmax = min( o1.j2+o3.j2, o2.j2+o4.j2 )*1./2;
+	double me = 0.;
+        double asym_me = 0.;
+        int Lmin = max( abs(o1.j2-o3.j2), abs(o2.j2-o4.j2) )*0.5;
+        int Lmax = min( o1.j2+o3.j2, o2.j2+o4.j2 )*0.5;
         for (int L = Lmin; L<= Lmax; L++)
         {
         	if ( (o1.l+o3.l+L)%2 !=0 || (o2.l+o4.l+L)%2 != 0) continue;
-                double temp = SixJ( o1.j2*1./2.,o2.j2*1./2.,J, o4.j2*1./2,o3.j2*1./2,L );
+                double temp = SixJ( o1.j2*0.5,o2.j2*0.5,J, o4.j2*0.5,o3.j2*0.5,L );
                 if (temp == 0)
                 {
-                	// cout << "SixJs Returned Zero! L=" << L << " J=" << J << endl;
-                        // cout << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l <<$
+                	cout << "SixJs Returned Zero! L=" << L << " J=" << J << endl;
+                        cout << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;
                         continue;
                 }
-                temp *= ThreeJ( o1.j2*1./2,L,o3.j2*1./2, -0.5,0,0.5) * ThreeJ( o2.j2*1./2,L,o4.j2*1./2, -0.5,0,0.5);
+                temp *= ThreeJ( o1.j2*0.5,L,o3.j2*0.5, -0.5,0,0.5) * ThreeJ( o2.j2*0.5,L,o4.j2*0.5, -0.5,0,0.5);
                 if (temp == 0)
                 {
                 	cout << "ThreeJs returned zero!" << endl;
@@ -523,7 +550,11 @@ double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
                 double val;
                 double err;
                 hcubature(1, &cs_RabRcd, &int_params, 2, xmin, xmax, max_iter, 0, max_err, ERROR_INDIVIDUAL, &val, &err);
-	
+/*		cout << "L=" << L << endl;
+		cout << "val=" << val << endl;
+		cout << "sixj=" << SixJ( o1.j2*0.5,o2.j2*0.5,J, o4.j2*0.5,o3.j2*0.5,L ) << endl;
+		cout << "3j ac=" << ThreeJ( o1.j2*0.5,L,o3.j2*0.5, -0.5,0,0.5) << endl;
+		cout << "3j bd=" << ThreeJ( o2.j2*0.5,L,o4.j2*0.5, -0.5,0,0.5) << endl; */
 		me += temp*val;
 	}
 	return me;
@@ -537,7 +568,7 @@ Operator CSTwoBody(ModelSpace& modelspace)
 	double b = modelspace.GetHbarOmega();
 	double Ha = 1; // 27.21138602;
 
-	#pragma omp parallel for
+	//#pragma omp parallel for
 	for (int ch = 0; ch <= nchan; ch++)
 	{
 		TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
@@ -545,31 +576,40 @@ Operator CSTwoBody(ModelSpace& modelspace)
 		if (nkets == 0) continue;
 		for (int iket=0; iket < nkets; iket++)
 		{
-			Ket& ket = modelspace.GetKet(iket);
-			Orbit & o3 = modelspace.GetOrbit(ket.p);
-			Orbit & o4 = modelspace.GetOrbit(ket.q);
+			// cout << "iket=" << iket << endl;
+			Ket& ket = tbc.GetKet(iket);
+			Orbit o3 = modelspace.GetOrbit(ket.p);
+			Orbit o4 = modelspace.GetOrbit(ket.q);
 			for (int jbra=0; jbra <= iket; jbra++)
 			{
-				Ket& bra = modelspace.GetKet(jbra);
+				Ket& bra = tbc.GetKet(jbra);
+				// cout << "jbra=" << jbra << endl;
 				Orbit & o1 = modelspace.GetOrbit(bra.p);
 				Orbit & o2 = modelspace.GetOrbit(bra.q);
-				double me = 0;
-				double asym_me = 0;
+				double me = 0.;
+				double asym_me = 0.;
 
 				float d12 = 0.;
                                 float d34 = 0.;
                                 if ( o1.index == o2.index ) d12 = 1.;
                                 if ( o3.index == o4.index ) d34 = 1.;
+
+				// cout << "Indices:" << endl;
+				// cout << o1.index << o2.index << o3.index << o4.index << endl;
 				
-				me = csTwoBodyME(o1, o2, o3, o4, tbc.J, b);
-				if ( o3.index != o4.index )
-				{
-					asym_me = csTwoBodyME(o1, o2, o4, o3, tbc.J, b);
-				} else {
-					asym_me = me;
-				}
-				me = (me - pow(-1,(o3.j2+o4.j2)*1./2.-tbc.J)*asym_me);
-				double tbme = Ha * me * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o2.j2)*1./2+tbc.J) * 1./sqrt( (1.+d12)*(1.+d34) );
+				me = Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o3.j2)*0.5+tbc.J) * csTwoBodyME(o1, o2, o3, o4, tbc.J, b);
+				//if ( o3.index != o4.index )
+				//{
+					asym_me = csTwoBodyME(o1, o2, o4, o3, tbc.J, b) * Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J);
+				//} else {
+				//	asym_me = me;
+				//}
+				/*
+				cout << endl;
+				cout << "s me=" << me*sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o3.j2)*0.5+tbc.J) << endl;
+				cout << "a me=" << asym_me *sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J)<< endl; */
+				me = me - pow(-1,(o3.j2+o4.j2)*0.5-tbc.J) * asym_me;
+				double tbme = me * 1/sqrt( (1+d12)*(1+d34) );
 				// cout << "Setting tbme to=" << tbme << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;
 				op.TwoBody.SetTBME(ch, iket, jbra, tbme);
 				op.TwoBody.SetTBME(ch, jbra, iket, tbme);

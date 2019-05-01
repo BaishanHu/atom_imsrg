@@ -41,7 +41,7 @@ exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
-batch_mode=False
+#batch_mode=False
 #batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
@@ -120,20 +120,20 @@ export OMP_NUM_THREADS=%d
 """
 
 ### Loop parameters
-#batch_mode = True
+batch_mode = True
 
-e_start=2
-e_stop =2
+e_start=4
+e_stop =4
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=2
-hwstop =2
+hwstart=1
+hwstop =4
 hwiter =1
-hwN    =1
+hwN    =4
 hw_vec = np.linspace(hwstart, hwstop, hwN)
 
 ### Loops!
