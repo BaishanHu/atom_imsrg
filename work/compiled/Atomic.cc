@@ -144,13 +144,13 @@ int main(int argc, char** argv)
   cout << "Reading interactions..." << endl;
 
   cout << "inputtbme=" << inputtbme << endl;
-/*
+
   #pragma omp parallel sections 
   {
     #pragma omp section
     {
     if (fmt2 == "me2j")
-      rw.ReadBareTBME_Darmstadt(inputtbme, Hbare, 4, 2*4, 2*4 );
+      rw.ReadBareTBME_Darmstadt(inputtbme, Hbare, eMax, 2*eMax, 2*eMax );
     else if (fmt2 == "navratil" or fmt2 == "Navratil")
       rw.ReadBareTBME_Navratil(inputtbme, Hbare);
     else if (fmt2 == "oslo" )
@@ -164,7 +164,7 @@ int main(int argc, char** argv)
   //Hbare.PrintTwoBody(0);
   //Hbare *= sqrt( modelspace.GetHbarOmega() ); // HO scaling factor
   Hbare *= pow( modelspace.GetHbarOmega(), 1); // Laguerre scaling factor
-*/
+
 //    #pragma omp section
 //    if (Hbare.particle_rank >=3)
 //    {
@@ -188,11 +188,11 @@ int main(int argc, char** argv)
     cout << "TargetZ=" << modelspace.GetTargetZ() << endl;
     //cout << "Adding InvR to Hbare." << endl;
     //Hbare += InverseR_Op(modelspace);
-    //cout << "Adding CSOneBody..." << endl;
-    //Hbare += CSOneBody( modelspace );
-    //cout << "Adding CSTwoBody..." << endl;
+    cout << "Adding CSOneBody..." << endl;
+    Hbare += CSOneBody( modelspace );
+    cout << "Adding CSTwoBody..." << endl;
     //Hbare += CSTwoBody( modelspace );
-    twoBody = CSTwoBody( modelspace );
+    //twoBody = CSTwoBody( modelspace );
     //Hbare += twoBody;
     //cout << "Added InvR; adding KE." << endl;
     //cout << "Invr=" << endl << Hbare.OneBody << endl;
@@ -211,16 +211,17 @@ int main(int argc, char** argv)
     //Hbare += ElectronTwoBody( modelspace );
 //    if (modelspace.GetTargetZ() > 1)
     //{
-
+/*
 	cout << "Writing twobody..." << endl;
 	std:: stringstream fn_me2j;
-	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May1_2019.me2j";
+	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May3_2019.me2j";
 	rw.Write_me2j( fn_me2j.str(), twoBody, -1, -1, -1 );
 	cout << "Added Twobody, moving on." << endl;
-	//cout << "ME2J written, reading back." << endl;
-	//rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
-	//Diff = twoBody - Hbare;
+	cout << "ME2J written, reading back." << endl;
+	rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
+	Diff = twoBody - Hbare;
 	cout << "Difference calculated." << endl;
+*/
 //	return 0;
     //} 
   //} else if (systemBasis == "slater") {
@@ -248,7 +249,7 @@ int main(int argc, char** argv)
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
 
   cout << "Diff TwoBody=" << endl;
-  for (int ch = 0; ch < min(Hbare.nChannels,3); ch++) { // only first 10 channels
+  for (int ch = 0; ch < min(Hbare.nChannels,3); ch++) { // only first handful of channels
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     Diff.PrintTwoBody(ch);
     cout << endl;
@@ -258,7 +259,7 @@ int main(int argc, char** argv)
     cout << endl;
   } 
 
-  return 0;
+  //return 0;
 
   if (abs(BetaCM) > 1e-3)
   {

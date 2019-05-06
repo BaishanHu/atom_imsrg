@@ -723,6 +723,7 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
   vector<int> orbits_remap;
 
   if (emax < 0)  emax = modelspace->Emax;
+  if (Emax < 0)  Emax = 2*emax;
   if (lmax < 0)  lmax = emax;
 
   for (int e=0; e<=min(emax,modelspace->Emax); ++e)
@@ -1452,7 +1453,7 @@ void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int E
   vector<int> orbits_remap;
 
   if (emax < 0)  emax = modelspace->GetEmax();
-  if (lmax < 0)  lmax = emax;
+  if (lmax < 0)  lmax = 2*emax;
   if (Emax < 0)  Emax = 2*emax;
 
   for (int e=0; e<=min(emax,modelspace->GetEmax()); ++e)

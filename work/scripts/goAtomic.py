@@ -35,7 +35,7 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=24
+NTHREADS=32
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
 exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
@@ -122,16 +122,18 @@ export OMP_NUM_THREADS=%d
 ### Loop parameters
 #batch_mode = True
 
-e_start=16
-e_stop =16
+ARGS['denominator_delta'] = 1
+
+e_start=6
+e_stop =6
 e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=1
-hwstop =1
+hwstart=3
+hwstop =3
 hwiter =1
 hwN    =1
 hw_vec = np.linspace(hwstart, hwstop, hwN)
@@ -143,21 +145,21 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'He4'
-			ARGS['reference'] 	= 'He4'
+			ARGS['valence_space'] 	= 'Ne10'
+			ARGS['reference'] 	= 'Ne10'
 			#ARGS['systemBasis']	= 'hydrogen'
 			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '200'
 			#ARGS['method']		= 'magnus'
 			ARGS['basis']		= 'HF'
-			ARGS['omega_norm_max']	= '0.25'
+			ARGS['omega_norm_max']	= '0.5'
 			ARGS['e3max']		= '0'
 			#ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
-			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax4_hw1_May1_2019.me2j'
+			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax6_hw1_May3_2019.me2j'
 			if ARGS['systemBasis'] == 'hydrogen':
-				jobname		= "ref_{0}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax)
+				jobname		= "ref_{0}_val_{4}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax,ARGS['valence_space'])
 			elif ARGS['systemBasis'] == 'harmonic':
-				jobname		= "ref_{0}_basis_{1}_emax_{2}_hw_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,hw)
+				jobname		= "ref_{0}_val_{4}_basis_{1}_emax_{2}_hw_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,hw,ARGS['valence_space'])
 			"""all_the_flags		= "emax={0} e3max={1} method={2} valence_space={3} hw={4} smax={5} omega_norm_max={6}
 						   reference={7} Operators={8} Lmax={9} file2e1max={10} file2e2max={11} file2lmax={12}
 						   2bme={13} systemBasis={14}  systemtype={15} use_brueckner_bch=false".format(

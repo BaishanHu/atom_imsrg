@@ -85,7 +85,7 @@ def main(run_number):
 	try:
 		try:
 			run_writer = csv.writer( csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL )
-			run_writer.writerow(["Element","Emax","hw","IM-SRG Energy (eV)", "HF Energy (eV)", "HF Converged?", "Compute Time (s)"])
+			run_writer.writerow(["Element","Emax","hw","IMSRG", "HF", "Converged?", "Time"])
 			for filename in filenames:
 				emax,hw,element = get_info_from_filename(filename)
 				imsrg_energy, hf_energy, hf_has_converged, real_time = get_energy(filename)
