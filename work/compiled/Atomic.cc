@@ -98,7 +98,8 @@ int main(int argc, char** argv)
   //if (eMax == 0) eMax = 4;
   if (reference == "default") reference = "He4";
   //if (valence_space == "016")
-  ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, Lmax, SystemType, systemBasis);
+  //ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, Lmax, SystemType, systemBasis);
+  ModelSpace modelspace = ModelSpace(eMax, valence_space, "../scripts/occ_file",0,SystemType,systemBasis);
   cout << "Default modelspace constructed, setting SystemType." << endl;
   modelspace.SetSystemType(SystemType);
   modelspace.SetSystemBasis(systemBasis);
@@ -144,7 +145,7 @@ int main(int argc, char** argv)
   cout << "Reading interactions..." << endl;
 
   cout << "inputtbme=" << inputtbme << endl;
-
+/*
   #pragma omp parallel sections 
   {
     #pragma omp section
@@ -164,7 +165,7 @@ int main(int argc, char** argv)
   //Hbare.PrintTwoBody(0);
   //Hbare *= sqrt( modelspace.GetHbarOmega() ); // HO scaling factor
   Hbare *= pow( modelspace.GetHbarOmega(), 1); // Laguerre scaling factor
-
+*/
 //    #pragma omp section
 //    if (Hbare.particle_rank >=3)
 //    {
@@ -186,12 +187,12 @@ int main(int argc, char** argv)
     cout << "Read in interaction, moving to precalculating moshinsky." << endl;
     cout << "Adding T and V to Hbare; emax=" << modelspace.GetEmax() << endl;
     cout << "TargetZ=" << modelspace.GetTargetZ() << endl;
-    //cout << "Adding InvR to Hbare." << endl;
+    cout << "Adding InvR to Hbare." << endl;
     //Hbare += InverseR_Op(modelspace);
     cout << "Adding CSOneBody..." << endl;
     Hbare += CSOneBody( modelspace );
     cout << "Adding CSTwoBody..." << endl;
-    //Hbare += CSTwoBody( modelspace );
+    Hbare += CSTwoBody( modelspace );
     //twoBody = CSTwoBody( modelspace );
     //Hbare += twoBody;
     //cout << "Added InvR; adding KE." << endl;
@@ -214,13 +215,13 @@ int main(int argc, char** argv)
 /*
 	cout << "Writing twobody..." << endl;
 	std:: stringstream fn_me2j;
-	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May3_2019.me2j";
+	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May10_2019.me2j";
 	rw.Write_me2j( fn_me2j.str(), twoBody, -1, -1, -1 );
 	cout << "Added Twobody, moving on." << endl;
 	cout << "ME2J written, reading back." << endl;
-	rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
-	Diff = twoBody - Hbare;
-	cout << "Difference calculated." << endl;
+	//rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
+	//Diff = twoBody - Hbare;
+	//cout << "Difference calculated." << endl;
 */
 //	return 0;
     //} 
@@ -274,12 +275,12 @@ int main(int argc, char** argv)
   cout << "About to create hf(Hbare)" << endl;
   HartreeFock hf(Hbare);
   hf.freeze_occupations = false;
-  cout << "done Converting Hbare to HF basis" << endl;
   hf.Solve();
+  cout << "Done solving HF." << endl;
   cout << "EHF = " << hf.EHF << endl;
 
-  Hbare -= BetaCM * 1.5*hw;
-  cout << "Hbare 0b:"<< Hbare.ZeroBody << endl;
+  //Hbare -= BetaCM * 1.5*hw;
+  //cout << "Hbare 0b:"<< Hbare.ZeroBody << endl;
 
   cout << "In Atomic, about to normal order Hbare." << endl;
   if (basis == "HF" and method !="HF")

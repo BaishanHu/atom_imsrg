@@ -526,7 +526,7 @@ double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
         double max_err = 1e-4;
 
 	double me = 0.;
-        double asym_me = 0.;
+        double me_err = 0.;
         int Lmin = max( abs(o1.j2-o3.j2), abs(o2.j2-o4.j2) )*0.5;
         int Lmax = min( o1.j2+o3.j2, o2.j2+o4.j2 )*0.5;
         for (int L = Lmin; L<= Lmax; L++)
@@ -558,7 +558,9 @@ double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
 		cout << "3j bd=" << ThreeJ( o2.j2*0.5,L,o4.j2*0.5, -0.5,0,0.5) << endl;
 		*/
 		me += temp*val;
+		me_err += temp*err;
 	}
+	//cout << "me=" << me << " error=" << me_err << endl;
 	return me;
 }
 
@@ -609,14 +611,20 @@ Operator CSTwoBody(ModelSpace& modelspace)
 				me *= me_norm;
 				/*
 				cout << endl;
-				cout << "s me=" << me*sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o3.j2)*0.5+tbc.J) << endl;
-				cout << "a me=" << asym_me *sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J)<< endl;
+				cout << "s me=" << me << endl;
+				cout << "a me=" << asym_me << endl;
 				*/
 				me = me - pow(-1,(o3.j2+o4.j2)*0.5-tbc.J) * asym_me;
-				double tbme = me * 1/sqrt( (1+d12)*(1+d34) );
+				double tbme = me * 1./sqrt( (1.+d12)*(1.+d34) );
+				std:stringstream me_string;
+				//me_string << o1.index << " " << o2.index << " " << o3.index << " " << o4.index << " " << tbc.J << " " << tbme;
+				//cout << me_string.str() << endl;
+				//cout << iket << " " << jbra << " " << ch << endl;
+				cout << o1.index << " " << o2.index << " " << o3.index << " " << o4.index << " " << tbc.J << " " << tbme << endl;
 				// cout << "Setting tbme to=" << tbme << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n << o4.l << o4.j2 << ")>" << endl;
 				op.TwoBody.SetTBME(ch, iket, jbra, tbme);
 				op.TwoBody.SetTBME(ch, jbra, iket, tbme);
+				//cout << op.TwoBody.GetTBME_norm(ch, ch, iket, jbra) << endl;
 			} // for (int jbra
 		} // for (int iket
 	} // for (int ch...
