@@ -98,8 +98,8 @@ int main(int argc, char** argv)
   //if (eMax == 0) eMax = 4;
   if (reference == "default") reference = "He4";
   //if (valence_space == "016")
-  //ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, Lmax, SystemType, systemBasis);
-  ModelSpace modelspace = ModelSpace(eMax, valence_space, "../scripts/occ_file",0,SystemType,systemBasis);
+  ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, Lmax, SystemType, systemBasis);
+  //ModelSpace modelspace = ModelSpace(eMax, reference, valence_space, "../scripts/occ_file");
   cout << "Default modelspace constructed, setting SystemType." << endl;
   modelspace.SetSystemType(SystemType);
   modelspace.SetSystemBasis(systemBasis);
@@ -188,16 +188,16 @@ int main(int argc, char** argv)
     cout << "Adding T and V to Hbare; emax=" << modelspace.GetEmax() << endl;
     cout << "TargetZ=" << modelspace.GetTargetZ() << endl;
     cout << "Adding InvR to Hbare." << endl;
-    //Hbare += InverseR_Op(modelspace);
-    cout << "Adding CSOneBody..." << endl;
-    Hbare += CSOneBody( modelspace );
-    cout << "Adding CSTwoBody..." << endl;
-    Hbare += CSTwoBody( modelspace );
+    Hbare += InverseR_Op(modelspace);
+    //cout << "Adding CSOneBody..." << endl;
+    //Hbare += CSOneBody( modelspace );
+    //cout << "Adding CSTwoBody..." << endl;
+    //Hbare += CSTwoBody( modelspace );
     //twoBody = CSTwoBody( modelspace );
     //Hbare += twoBody;
-    //cout << "Added InvR; adding KE." << endl;
+    cout << "Added InvR; adding KE." << endl;
     //cout << "Invr=" << endl << Hbare.OneBody << endl;
-    //Hbare += KineticEnergy_Op(modelspace);
+    Hbare += KineticEnergy_Op(modelspace);
     //cout << "Added one-body KE..." << endl;
     //Hbare -= TCM_Op(modelspace);
     //cout << "Added TCM KE..." << endl;
@@ -215,15 +215,15 @@ int main(int argc, char** argv)
 /*
 	cout << "Writing twobody..." << endl;
 	std:: stringstream fn_me2j;
-	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May10_2019.me2j";
+	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May10_2019v2.me2j";
 	rw.Write_me2j( fn_me2j.str(), twoBody, -1, -1, -1 );
 	cout << "Added Twobody, moving on." << endl;
 	cout << "ME2J written, reading back." << endl;
 	//rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
 	//Diff = twoBody - Hbare;
 	//cout << "Difference calculated." << endl;
-*/
-//	return 0;
+
+	return 0; */
     //} 
   //} else if (systemBasis == "slater") {
   //	Hbare += SlaterOneBody(modelspace);
@@ -248,7 +248,7 @@ int main(int argc, char** argv)
   }
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
-
+/*
   cout << "Diff TwoBody=" << endl;
   for (int ch = 0; ch < min(Hbare.nChannels,3); ch++) { // only first handful of channels
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
@@ -259,7 +259,7 @@ int main(int argc, char** argv)
     twoBody.PrintTwoBody(ch);
     cout << endl;
   } 
-
+*/
   //return 0;
 
   if (abs(BetaCM) > 1e-3)
@@ -274,7 +274,7 @@ int main(int argc, char** argv)
 
   cout << "About to create hf(Hbare)" << endl;
   HartreeFock hf(Hbare);
-  hf.freeze_occupations = false;
+  hf.freeze_occupations = true;
   hf.Solve();
   cout << "Done solving HF." << endl;
   cout << "EHF = " << hf.EHF << endl;

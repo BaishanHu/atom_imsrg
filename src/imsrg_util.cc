@@ -564,6 +564,12 @@ double csTwoBodyME(Orbit& o1, Orbit& o2, Orbit& o3, Orbit& o4, int J, double b)
 	return me;
 }
 
+struct me_params { int ch;
+                   int iket;
+                   int jbra;
+                   int tbcJ; };
+
+
 Operator CSTwoBody(ModelSpace& modelspace)
 {
 	Operator op(modelspace);
@@ -571,7 +577,78 @@ Operator CSTwoBody(ModelSpace& modelspace)
 	int nchan = modelspace.GetNumberTwoBodyChannels();
 	double b = modelspace.GetHbarOmega();
 	double Ha = 1; // 27.21138602;
+	vector<me_params> params_vec;
+	
+	for (int ch=0; ch<=nchan; ch++)
+	{
+		TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+                int nkets = tbc.GetNumberKets();
+                if (nkets == 0) continue;
+		for (int iket=0; iket < nkets; iket++)
+                {
+                        // cout << "iket=" << iket << endl;
+                        // Ket& ket = tbc.GetKet(iket);
+                        for (int jbra=0; jbra <= iket; jbra++)
+                        {
+				//Ket& bra = tbc.GetKet
+				me_params temp = {ch,iket,jbra,tbc.J};
+				params_vec.push_back(temp);
+			} // jbra
+		} // iket
+	} // ch
 
+	#pragma omp parallel for
+	for(unsigned i = 0; i < params_vec.size(); ++i) {
+  		me_params temp = params_vec[i];
+		int J    = temp.tbcJ;
+		int iket = temp.iket;
+		int jbra = temp.jbra;
+		int ch   = temp.ch;
+		TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+		Ket& ket = tbc.GetKet(iket);
+		Ket& bra = tbc.GetKet(jbra);
+		Orbit & o3 = modelspace.GetOrbit(ket.p);
+                Orbit & o4 = modelspace.GetOrbit(ket.q);
+		Orbit & o1 = modelspace.GetOrbit(bra.p);
+                Orbit & o2 = modelspace.GetOrbit(bra.q);
+
+		double me = 0.;
+                double asym_me = 0.;
+
+                float d12 = 0.;
+                float d34 = 0.;
+                if ( o1.index == o2.index ) d12 = 1.;
+                if ( o3.index == o4.index ) d34 = 1.;
+
+                // cout << "Indices:" << endl;
+                // cout << o1.index << o2.index << o3.index << o4.index << endl;
+                me = csTwoBodyME(o1, o2, o3, o4, tbc.J, b);
+                double me_norm = Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o3.j2)*0.5+tbc.J);
+                if ( o3.index != o4.index )
+                {
+                	asym_me = csTwoBodyME(o1, o2, o4, o3, tbc.J, b) * Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J);
+                } else {
+                	asym_me = me * Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J);
+                }
+                me *= me_norm;
+                /*
+                cout << endl;
+                cout << "s me=" << me << endl;
+                cout << "a me=" << asym_me << endl;
+                */
+                me = me - pow(-1,(o3.j2+o4.j2)*0.5-tbc.J) * asym_me;
+                double tbme = me * 1./sqrt( (1.+d12)*(1.+d34) );
+                //std:stringstream me_string;
+                //me_string << o1.index << " " << o2.index << " " << o3.index << " " << o4.index << " " << tbc.J << " " << tbme;
+                //cout << me_string.str() << endl;
+                //cout << iket << " " << jbra << " " << ch << endl;
+                //cout << o1.index << " " << o2.index << " " << o3.index << " " << o4.index << " " << tbc.J << " " << tbme << endl;
+                // cout << "Setting tbme to=" << tbme << " <(" << o1.n << o1.l << o1.j2 << ")(" << o2.n << o2.l << o2.j2 << ")" << tbc.J << "|V|(" << o3.n << o3.l << o3.j2 << ")(" << o4.n$
+                op.TwoBody.SetTBME(ch, iket, jbra, tbme);
+                op.TwoBody.SetTBME(ch, jbra, iket, tbme);
+	} // unsigned i
+
+	/*
 	#pragma omp parallel for
 	for (int ch = 0; ch <= nchan; ch++)
 	{
@@ -609,11 +686,11 @@ Operator CSTwoBody(ModelSpace& modelspace)
 					asym_me = me * Ha * sqrt( (o1.j2+1.)*(o2.j2+1.)*(o3.j2+1.)*(o4.j2+1.) ) * pow(-1, (o1.j2+o4.j2)*0.5+tbc.J);
 				}
 				me *= me_norm;
-				/*
+				
 				cout << endl;
 				cout << "s me=" << me << endl;
 				cout << "a me=" << asym_me << endl;
-				*/
+				
 				me = me - pow(-1,(o3.j2+o4.j2)*0.5-tbc.J) * asym_me;
 				double tbme = me * 1./sqrt( (1.+d12)*(1.+d34) );
 				std:stringstream me_string;
@@ -628,6 +705,7 @@ Operator CSTwoBody(ModelSpace& modelspace)
 			} // for (int jbra
 		} // for (int iket
 	} // for (int ch...
+	*/
 	op.profiler.timer["CoulombSturmianTwoBody"] += omp_get_wtime() - t_start;
 	return op;
 }

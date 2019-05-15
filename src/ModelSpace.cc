@@ -378,6 +378,46 @@ ModelSpace::ModelSpace(int emax, string valence, int Lmax, string SystemType, st
 }
 
 
+ModelSpace::ModelSpace(int emax, string valence, string reference, string occ_file)
+: Emax(emax), E2max(2*emax), E3max(3*emax), Lmax(emax), Lmax2(emax*2), Lmax3(emax*3), OneBodyJmax(0), TwoBodyJmax(0), ThreeBodyJmax(0), hbar_omega(1), SystemType("atomic"), systemBasis("harmonic")
+{
+	cout << "About to Init_Laguerre." << endl;
+	auto itval = ValenceSpaces.find(valence);
+	if (itval != ValenceSpaces.end() ) // We've got a valence space
+		Init_Laguerre(emax, reference, valence, occ_file);
+	else // No Valence space
+		Init_Laguerre(emax, reference, reference, occ_file);
+
+}
+
+void ModelSpace::Init_Laguerre(int emax, string reference, string valence, string occ_file)
+{
+  index_t orb;
+  double occ;
+  std::map<index_t,double> hole_list;
+
+  std::ifstream infile(occ_file);
+  if (!infile.good())
+  {
+    std::cout << std::endl << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+    std::cout << "Trouble reading file: " << occ_file << std::endl;
+    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl << std::endl;
+  }
+
+  while( infile >> orb >> occ )
+  {
+    if ( hole_list.find(orb) != hole_list.end() and  std::abs( hole_list[orb] -occ) > 1e-6) // the minus sign is for a test. Change it back.
+    {
+        std::cout << "Warning: in file " << occ_file << ", redefinition of occupation of orbit "
+             << orb << "  " << hole_list[orb] << " => " << occ << std::endl;
+    }
+    std::cout << "from occ file: " << std::endl;
+    hole_list[orb] = occ;
+    std::cout << orb << " " << occ << std::endl;
+  }
+
+  Init(emax,hole_list,valence);
+}
 
 // Specify the reference and either the core or valence
 // This is the most convenient interface
@@ -750,6 +790,7 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
 	    if (z == Z) return holesE; // We're all done here.
     	} // for (N=
       } else { */
+        
 	for (int N=0; N<=Emax; ++N)
 	{
     	    for (int g=2*N+1;g>=-2*N;g-=4)
@@ -776,6 +817,31 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
 	    } // for (int g=2
     	} // for (int N=0
 	if (z == Z) return holesE;
+        /*
+	//int count = 0;
+        for (int E=0; E<=Emax; ++E)
+	{
+		for (int l=0; l<=E; ++l)
+		{
+			for (int n=0; n<=E-l; ++n)
+			{
+				for (int j2=abs(2*l-1); j2<=2*l+1; ++j2)
+				{
+					if (z < Z)
+					{
+						int dz = min(Z-z,j2+1);
+						//int indx = Index(n,l,j2,-1);
+						holesE[count] = dz/(j2+1);
+						cout << "n=" << n << " l=" << l << " j2=" << j2 << " dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << " indx=" << count << endl;
+						z += dz;
+						if (z == Z) return holesE;
+						count++;
+					} // z < Z
+				} // j2
+			} // n
+		} // l
+	} // E
+	*/
     // } 
     cout << "Didn't set ModelSpace big enough to fill Z=" << Z << " with emax = " << Emax << endl;
     return holesE;

@@ -35,14 +35,14 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=1
+NTHREADS=32
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
 exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
-batch_mode=False
-#batch_mode=True
+#batch_mode=False
+batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
 ### Don't forget to change this. I don't want emails about your calculations...
@@ -108,7 +108,7 @@ FILECONTENT = """#!/bin/bash
 #PBS -d %s
 #PBS -l walltime=192:00:00
 #PBS -l nodes=1:ppn=%d
-#PBS -l vmem=60gb
+#PBS -l vmem=250gb
 #PBS -m abe
 #PBS -M %s
 #PBS -j oe
@@ -124,18 +124,18 @@ export OMP_NUM_THREADS=%d
 
 ARGS['denominator_delta'] = 0
 
-e_start=4
-e_stop =4
+e_start=20
+e_stop =20
 e_iter =4
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=8
-hwstop =8
+hwstart=50
+hwstop =250
 hwiter =1
-hwN    =1
+hwN    =11
 hw_vec = np.linspace(hwstart, hwstop, hwN)
 
 ### Loops!
@@ -145,8 +145,8 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'Ar40'
-			ARGS['reference'] 	= 'Ar40'
+			ARGS['valence_space'] 	= 'He4'
+			ARGS['reference'] 	= 'He4'
 			#ARGS['systemBasis']	= 'hydrogen'
 			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '200'
