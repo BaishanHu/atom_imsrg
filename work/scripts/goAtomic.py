@@ -42,8 +42,8 @@ exe = '/home/dlivermo/projects/def-holt/dlivermo/atom_imsrg/work/compiled/Atomic
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
-batch_mode=False
-#batch_mode=True
+#batch_mode=False
+batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
 ### Don't forget to change this. I don't want emails about your calculations...
@@ -129,15 +129,15 @@ elif BATCHSYS is 'SLURM':
 #SBATCH --job-name={0}
 #SBATCH --output={1}/pbslog/{2}
 export OMP_NUM_THREADS={3}
-
+#SBATCH --thread-spec={3}
 {4}
 """
 
 ### Loop parameters
 #batch_mode = True
 
-e_start=10
-e_stop =10
+e_start=4
+e_stop =4
 ARGS['denominator_delta'] = 0
 
 e_iter =2
@@ -170,7 +170,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['e3max']		= '0'
 			#ARGS['account']		= 'rrg-holt'
 			#ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
-			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax12_hw1_May10_2019v2.me2j'
+			ARGS['2bme']		= '/home/dlivermo/scratch/ME_emax4_whatever'
 			if ARGS['systemBasis'] == 'hydrogen':
 				jobname		= "ref_{0}_val_{4}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax,ARGS['valence_space'])
 			elif ARGS['systemBasis'] == 'harmonic':

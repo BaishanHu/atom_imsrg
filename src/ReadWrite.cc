@@ -1461,9 +1461,35 @@ struct me_params { int ch;
                    int jbra;
                    int tbcJ; };
 
+uint getHashParams( livermore_params a)
+{
+	uint val_a = 0;
+	val_a = a.n1*7;
+        val_a = 7*(a.l1 + val_a);
+        val_a = 7*(a.j21+ val_a);
+	val_a = 7*(a.n2 + val_a);
+        val_a = 7*(a.l2 + val_a);
+        val_a = 7*(a.j22+ val_a);
+	val_a = 7*(a.n3 + val_a);
+        val_a = 7*(a.l3 + val_a);
+        val_a = 7*(a.j23+ val_a);
+	val_a = 7*(a.n4 + val_a);
+        val_a = 7*(a.l4 + val_a);
+        val_a = 7*(a.j24+ val_a);
+	val_a = 7*(a.ch + val_a);
+
+	return val_a;
+}
+
+// LessThanComparable
+bool operator< ( livermore_params a, livermore_params b )
+{
+	return getHashParams(a) < getHashParams(b);
+}
+
 void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, int Emax, int lmax)
 {
-	ofstream outlife(outfilename);
+	ofstream outfile(outfilename);
 	if ( !outfile.good() )
 	{
 		cerr << "************************************" << endl
@@ -1488,23 +1514,23 @@ void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, 
 	// Step two: write n1,l1,j21,n2,...,ch:ME to file
 
 	//map<livermore_params, double> params_map;
-	int nchan = modelspace.GetNumberTwoBodyChannels();
+	int nchan = modelspace->GetNumberTwoBodyChannels();
 
         for (int ch=0; ch<=nchan; ch++)
         {
                 TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
                 int nkets = tbc.GetNumberKets();
                 if (nkets == 0) continue;
-                for (int iket=0; iket < nkets; iket++)
+                for (int jket=0; jket < nkets; jket++)
                 {
                         // cout << "iket=" << iket << endl;
                         // Ket& ket = tbc.GetKet(iket);
-                        for (int jbra=0; jbra <= iket; jbra++)
+                        for (int ibra=0; ibra <= jket; ibra++)
                         {
 				double ME = Hbare.TwoBody.GetTBME_norm( ch, ch, ibra, jket );
 
 				Ket& bra = modelspace->GetKet(ibra);
-				Ket& ket = modelspace->GetKet(jbra);
+				Ket& ket = modelspace->GetKet(jket);
 
 				Orbit o1 = *bra.op;
 				Orbit o2 = *bra.oq;
@@ -1524,7 +1550,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 	ifstream infile;
 	map<livermore_params, double> param_map;
 	infile.open( filename );
-	while ( !infile.eof )
+	while ( !infile.eof() )
 	{
 		livermore_params temp_params;
 		double ME;
@@ -1532,7 +1558,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 		infile >> temp_params.n2 >> temp_params.l2 >> temp_params.j22;
 		infile >> temp_params.n3 >> temp_params.l3 >> temp_params.j23;
 		infile >> temp_params.n4 >> temp_params.l4 >> temp_params.j24;
-		infile >> temp_params.cd >> ME;
+		infile >> temp_params.ch >> ME;
 		param_map[temp_params] = ME;
 	} // while ( !...
 	infile.close();
@@ -1545,7 +1571,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 
         for (int ch=0; ch<=nchan; ch++)
         {
-                TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+                TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
                 int nkets = tbc.GetNumberKets();
                 if (nkets == 0) continue;
                 for (int iket=0; iket < nkets; iket++)
@@ -1572,7 +1598,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
                 int jbra = temp.jbra;
                 int ch   = temp.ch;
 
-                TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+                TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
 
                 Ket& ket = tbc.GetKet(iket);
                 Ket& bra = tbc.GetKet(jbra);
