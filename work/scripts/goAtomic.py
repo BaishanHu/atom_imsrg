@@ -35,14 +35,14 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=32
+NTHREADS=8
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
 exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
-#batch_mode=False
-batch_mode=True
+batch_mode=False
+#batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
 ### Don't forget to change this. I don't want emails about your calculations...
@@ -124,18 +124,18 @@ export OMP_NUM_THREADS=%d
 
 ARGS['denominator_delta'] = 0
 
-e_start=20
-e_stop =20
-e_iter =4
+e_start=4
+e_stop =4
+e_iter =2
 
 l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=50
-hwstop =250
+hwstart=5
+hwstop =5
 hwiter =1
-hwN    =11
+hwN    =1
 hw_vec = np.linspace(hwstart, hwstop, hwN)
 
 ### Loops!
@@ -145,8 +145,8 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'He4'
-			ARGS['reference'] 	= 'He4'
+			ARGS['valence_space'] 	= 'Ne18'
+			ARGS['reference'] 	= 'Ne18'
 			#ARGS['systemBasis']	= 'hydrogen'
 			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '200'
@@ -155,7 +155,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'
 			#ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
-			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax6_hw1_May3_2019.me2j'
+			ARGS['2bme']		= '/global/scratch/dlivermore/ME_laguerre_emax12_hw1_May10_2019v2.me2j'
 			if ARGS['systemBasis'] == 'hydrogen':
 				jobname		= "ref_{0}_val_{4}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax,ARGS['valence_space'])
 			elif ARGS['systemBasis'] == 'harmonic':
@@ -167,7 +167,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 						   ARGS['reference'],ARGS['Operators'],lmax,ARGS['file2e1max'],ARGS['file2e2max'],ARGS['file2lmax'],
 						   '',ARGS['systemBasis'],'Atomic') """
 
-			logname = jobname +"_{}".format( datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log' ) )
+			logname = jobname +"{}".format( datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log' ) )
 			cmd = ' '.join([exe] + ['%s=%s'%(x,ARGS[x]) for x in ARGS])
 			if batch_mode==True:
 				print "Submitting to cluster..."

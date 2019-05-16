@@ -725,7 +725,7 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
   if (emax < 0)  emax = modelspace->Emax;
   if (Emax < 0)  Emax = 2*emax;
   if (lmax < 0)  lmax = emax;
-
+  
   for (int e=0; e<=min(emax,modelspace->Emax); ++e)
   {
     int lmin = e%2;
@@ -748,6 +748,19 @@ void ReadWrite::ReadBareTBME_Darmstadt_from_stream( T& infile, Operator& Hbare, 
       }
     }
   }
+  /*
+  int count = 0;
+  for (int n=0; n<=emax; n++)
+  {
+	for (int l=0; l<=emax-n; n++)
+	{
+		for (int j2=abs(2*l-1); j2<=2*l+1); j2+=2)
+		{
+			
+		} int j2
+	} // int l
+  } // int n
+  */
   int nljmax = orbits_remap.size()-1;
   //cout << "In ReadBare...; orbits_remap has been made; here it is:" << endl;
   //for (auto i = orbits_remap.begin(); i != orbits_remap.end(); ++i)

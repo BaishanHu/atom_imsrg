@@ -592,6 +592,7 @@ Operator CSTwoBody(ModelSpace& modelspace)
                         {
 				//Ket& bra = tbc.GetKet
 				me_params temp = {ch,iket,jbra,tbc.J};
+				cout << "Adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
 				params_vec.push_back(temp);
 			} // jbra
 		} // iket
@@ -607,10 +608,10 @@ Operator CSTwoBody(ModelSpace& modelspace)
 		TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
 		Ket& ket = tbc.GetKet(iket);
 		Ket& bra = tbc.GetKet(jbra);
-		Orbit & o3 = modelspace.GetOrbit(ket.p);
-                Orbit & o4 = modelspace.GetOrbit(ket.q);
-		Orbit & o1 = modelspace.GetOrbit(bra.p);
-                Orbit & o2 = modelspace.GetOrbit(bra.q);
+		Orbit o3 = *ket.op;
+                Orbit o4 = *ket.oq;
+		Orbit o1 = *bra.op;
+                Orbit o2 = *bra.oq;
 
 		double me = 0.;
                 double asym_me = 0.;
