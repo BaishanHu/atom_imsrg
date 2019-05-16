@@ -23,7 +23,7 @@
 HartreeFock::HartreeFock(Operator& hbare)
   : Hbare(hbare), modelspace(hbare.GetModelSpace()), 
     KE(Hbare.OneBody), energies(Hbare.OneBody.diag()),
-    tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0), freeze_occupations(true), learning_rate(0.90)
+    tolerance(1e-8), convergence_ediff(7,0), convergence_EHF(7,0), freeze_occupations(true), learning_rate(0.0)
 {
    int norbits = modelspace->GetNumberOrbits();
 
@@ -66,6 +66,9 @@ void HartreeFock::Solve()
 {
    iterations = 0; // counter so we don't go on forever
    int maxiter = 10000;
+   
+   CalcEHF();
+   PrintEHF();
 
    for (iterations=0; iterations<maxiter; ++iterations)
    {
