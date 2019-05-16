@@ -1119,11 +1119,11 @@ void ModelSpace::SetupKets(string Sys)
 	   index = Index2(p,q);
 	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
 	} // else
-        cout << "index=" << index << " p=" << p << " q=" << q << endl;
+        //cout << "index=" << index << " p=" << p << " q=" << q << endl;
         Orbit& orbp = GetOrbit(p);
-	cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
+	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
 	Orbit& orbq = GetOrbit(q);
-	cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
+	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         
      } // int p=q
    } // int p=0

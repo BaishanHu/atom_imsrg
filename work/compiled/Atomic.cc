@@ -193,7 +193,7 @@ int main(int argc, char** argv)
     Hbare += CSOneBody( modelspace );
     //cout << "Adding CSTwoBody..." << endl;
     //Hbare += CSTwoBody( modelspace );
-    //twoBody = CSTwoBody( modelspace );
+    twoBody = CSTwoBody( modelspace );
     //Hbare += twoBody;
     //cout << "Added InvR; adding KE." << endl;
     //cout << "Invr=" << endl << Hbare.OneBody << endl;

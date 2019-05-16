@@ -35,15 +35,15 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=32
+NTHREADS=8
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
-#exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'  # Oak
-exe = '/home/dlivermo/projects/def-holt/dlivermo/atom_imsrg/work/compiled/Atomic' # Cedar
-#exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
+exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'  # Oak
+#exe = '/home/dlivermo/projects/def-holt/dlivermo/atom_imsrg/work/compiled/Atomic' # Cedar
+#exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic' # Cougar
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
-#batch_mode=False
-batch_mode=True
+batch_mode=False
+#batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
 ### Don't forget to change this. I don't want emails about your calculations...
@@ -136,8 +136,8 @@ export OMP_NUM_THREADS={3}
 ### Loop parameters
 #batch_mode = True
 
-e_start=4
-e_stop =4
+e_start=2
+e_stop =2
 ARGS['denominator_delta'] = 0
 
 e_iter =2
@@ -146,8 +146,8 @@ l_start=0
 l_stop =0
 l_iter =1
 
-hwstart=5
-hwstop =5
+hwstart=2
+hwstop =2
 hwiter =1
 hwN    =1
 hw_vec = np.linspace(hwstart, hwstop, hwN)
@@ -159,8 +159,8 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'Ne18'
-			ARGS['reference'] 	= 'Ne18'
+			ARGS['valence_space'] 	= 'He4'
+			ARGS['reference'] 	= 'He4'
 			#ARGS['systemBasis']	= 'hydrogen'
 			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '200'
@@ -168,9 +168,10 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['basis']		= 'HF'
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'
-			#ARGS['account']		= 'rrg-holt'
-			#ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
-			ARGS['2bme']		= '/home/dlivermo/scratch/ME_emax4_whatever'
+			#ARGS['account']	= 'rrg-holt'
+			ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
+			#ARGS['2bme']		= '/home/dlivermo/scratch/ME_emax4_whatever'
+			#ARGS['2bme']		= ''
 			if ARGS['systemBasis'] == 'hydrogen':
 				jobname		= "ref_{0}_val_{4}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax,ARGS['valence_space'])
 			elif ARGS['systemBasis'] == 'harmonic':
@@ -207,6 +208,8 @@ for emax in range(e_start,e_stop+1,e_iter):
 					print("Unable to locate .batch file!")
 			else:
 				if BATCHSYS is 'PBS':
+					for c in cmd.split():
+						print(c)
 					call(cmd.split())
 				elif BATCHSYS is 'SLURM':
 					call(['srun', jobname+'.batch'])

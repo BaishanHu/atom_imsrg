@@ -9,9 +9,9 @@
 #include <chrono>
 #include <ctime>
 #include <unordered_map>
-#include "json/json-forwards.h"
-#include "json/json.h"
-#include "json/jsoncpp.cpp"
+//#include "json/json-forwards.h"
+//#include "json/json.h"
+//#include "json/jsoncpp.cpp"
 
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
@@ -1191,7 +1191,7 @@ void ReadWrite::ReadTensorOperator_Nathan( string filename1b, string filename2b,
 
 
 }
-
+/*
 void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version )
 {
     cout << "Entering WriteOperatorToJSON." << endl;
@@ -1225,13 +1225,13 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 	    //JsOp["data"]["onebody"]
 	    JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1] = Op.OneBody(i,j); // Save everything as qn, not indicies
 	} // j
-    } // i */
+    } // i
 
     // Save TwoBody parts
     int nchan = modelspace->GetNumberTwoBodyChannels();
     cout << "About to write TwoBody." << endl;
 
-    /*for ( int w=0; w < norb; w++ )
+    for ( int w=0; w < norb; w++ )
     {
 	Orbit& wo = modelspace->GetOrbit(w);
 	for ( int x=0; x < norb; x++ )
@@ -1248,7 +1248,7 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 		}
 	    }
 	}
-    } */
+    } 
     //#pragma omp parallel for // Should be tread-safe
     for ( int ch=0; ch < nchan; ch++)
     {
@@ -1280,7 +1280,7 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
 		    } // z
 		} // y
 	    } // x
-	} // w */
+	} // w 
 	for (int ibra = 0; ibra < nkets; ++ibra)
 	{
 	    //cout << "----- ibra is " << ibra << " -----" << endl;
@@ -1357,7 +1357,8 @@ void ReadWrite::WriteOperatorToJSON( string filename, Operator & Op, int emax, i
     outfile << writer.write( JsOp );
     cout << "File written, leaving WriteToJSON." << endl;
 }
-
+*/
+/*
 void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, int e2max, int lmax, float version )
 {
     cout << "Entering ReadOperatorFromJSON." << endl;
@@ -1378,7 +1379,7 @@ void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, 
     int norb = modelspace->norbits;
     //cout << "About to read OneBody." << endl;
     // Save OneBody parts; Confirmed reading of onebody works.
-    /*for (int i=0; i < Op.OneBody.n_cols;  i++)
+    for (int i=0; i < Op.OneBody.n_cols;  i++)
     {
 	Orbit & oi = modelspace->GetOrbit(i);
 	for (int j=0; j < Op.OneBody.n_rows; j++)
@@ -1388,7 +1389,7 @@ void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, 
 	    Op.OneBody(i,j) = JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1].asDouble();
 	    //JsOp["data"]["onebody"][oi.n][oi.l][oi.j2][oi.tz2+1][oj.n][oj.l][oj.j2][oi.tz2+1] = Op.OneBody(i,j); // Save everything as qn, not indicies
 	} // j
-    } // i */
+    } // i 
 
     // Save TwoBody parts
     int nchan = modelspace->GetNumberTwoBodyChannels();
@@ -1449,43 +1450,140 @@ void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, 
     //outfile << writer.write( JsOp );
     cout << "Leaving ReadFromTBME." << endl;
 }
-
-struct livermore_params {int n1; int l1; int j21;
+*/
+struct livermore_params {
+			 int n1; int l1; int j21;
 			 int n2; int l2; int j22;
 			 int n3; int l3; int j23;
 			 int n4; int l4; int j24;
-			 int ch;};
+			 int ch;
+	// LessThanComparable
+	bool operator< ( const livermore_params &b ) const
+	{
+	/*
+        	if (n1  < b.n1 ) return true;
+        	if (n2  < b.n2 ) return true;
+        	if (n3  < b.n3 ) return true;
+        	if (n4  < b.n4 ) return true;
+        	if (l1  < b.l1 ) return true;
+        	if (l2  < b.l2 ) return true;
+        	if (l3  < b.l3 ) return true;
+        	if (l4  < b.l4 ) return true;
+        	if (j21 < b.j21) return true;
+        	if (j22 < b.j22) return true;
+        	if (j23 < b.j23) return true;
+        	if (j24 < b.j24) return true;
+        	if (ch  < b.ch ) return true;
+        	return false;
+	*/
+		uint num = 0;
+		num = num*10 + n1;
+		num = num*10 + n2;
+                num = num*10 + n3;
+                num = num*10 + n4;
+
+                num = num*10 + l1;
+                num = num*10 + l2;
+                num = num*10 + l3;
+                num = num*10 + l4;
+
+                num = num*10 + j21; 
+                num = num*10 + j22;
+                num = num*10 + j23;
+                num = num*10 + j24;
+
+		num = num*10 + ch;
+
+                uint numb = 0; 
+                numb = numb*10 + b.n1;
+                numb = numb*10 + b.n2;
+                numb = numb*10 + b.n3;
+                numb = numb*10 + b.n4;
+
+                numb = numb*10 + b.l1;
+                numb = numb*10 + b.l2;
+                numb = numb*10 + b.l3;
+                numb = numb*10 + b.l4;
+
+                numb = numb*10 + b.j21;
+                numb = numb*10 + b.j22;
+                numb = numb*10 + b.j23;
+                numb = numb*10 + b.j24;
+
+                numb = numb*10 + b.ch;
+
+		return num < numb;
+
+		//return n1 < b.n1 && n2 < b.n2 && n3 < b.n3 && n4 < b.n4 && l1 < b.l1 && l2 < b.l2 && l3 < b.l3 && l4 < b.l4 && j21 < b.j21 && j22 < b.j22 && j23 < b.j23 && j24 < b.j24 && ch < b.ch;
+	}
+
+	bool operator==( const livermore_params &b) const
+	{
+		return n1 == b.n1 && n2 == b.n2 && n3 == b.n3 && n4 == b.n4 && l1 == b.l1 && l2 == b.l2 && l3 == b.l3 && l4 == b.l4 && j21 == b.j21 && j22 == b.j22 && j23 == b.j23 && j24 == b.j24 && ch == b.ch;
+	}
+
+};
+
+/*
+livermore_params getMinLivermoreParams( livermore_params a )
+{
+	livermore_params temp_params;
+
+	int E1 = a.n1 + a.l1 + a.j21;
+	int E2 = a.n2 + a.l2 + a.j22;
+	int E3 = a.n3 + a.l3 + a.j23;
+	int E4 = a.n4 + a.l4 + a.j24;
+	if (E1+E2 < E3+E4) {
+		if (E1 < E2) {
+			// E1 is the smallest, it goes first
+			temp_params.n1 = a.n1;
+			temp_params.l1 = a.l1;
+			temp_params.j21= a.j21;
+                        temp_params.n2 = a.n2;
+                        temp_params.l2 = a.l2;
+                        temp_params.j22= a.j22;
+		} else {
+                        temp_params.n1 = a.n2;
+                        temp_params.l1 = a.l2;
+                        temp_params.j21= a.j22;
+                        temp_params.n2 = a.n1;
+                        temp_params.l2 = a.l1;
+                        temp_params.j22= a.j21;
+		}
+	} else {
+		break;
+	}
+	return temp_params;
+}
+*/
 
 struct me_params { int ch;
                    int iket;
                    int jbra;
                    int tbcJ; };
 
-uint getHashParams( livermore_params a)
+
+uint getHashParams( livermore_params a )
 {
-	uint val_a = 0;
-	val_a = a.n1*7;
-        val_a = 7*(a.l1 + val_a);
-        val_a = 7*(a.j21+ val_a);
-	val_a = 7*(a.n2 + val_a);
-        val_a = 7*(a.l2 + val_a);
-        val_a = 7*(a.j22+ val_a);
-	val_a = 7*(a.n3 + val_a);
-        val_a = 7*(a.l3 + val_a);
-        val_a = 7*(a.j23+ val_a);
-	val_a = 7*(a.n4 + val_a);
-        val_a = 7*(a.l4 + val_a);
-        val_a = 7*(a.j24+ val_a);
-	val_a = 7*(a.ch + val_a);
+	uint hash_prime = 31;
+	uint val_a = 17;
+	val_a = hash_prime*a.n1 + val_a;
+        val_a = hash_prime*a.l1 + val_a;
+        val_a = hash_prime*a.j21+ val_a;
+	val_a = hash_prime*a.n2 + val_a;
+        val_a = hash_prime*a.l2 + val_a;
+        val_a = hash_prime*a.j22+ val_a;
+	val_a = hash_prime*a.n3 + val_a;
+        val_a = hash_prime*a.l3 + val_a;
+        val_a = hash_prime*a.j23+ val_a;
+	val_a = hash_prime*a.n4 + val_a;
+        val_a = hash_prime*a.l4 + val_a;
+        val_a = hash_prime*a.j24+ val_a;
+	val_a = hash_prime*a.ch + val_a;
 
 	return val_a;
 }
 
-// LessThanComparable
-bool operator< ( livermore_params a, livermore_params b )
-{
-	return getHashParams(a) < getHashParams(b);
-}
 
 void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, int Emax, int lmax)
 {
@@ -1521,30 +1619,34 @@ void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, 
                 TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
                 int nkets = tbc.GetNumberKets();
                 if (nkets == 0) continue;
-                for (int jket=0; jket < nkets; jket++)
+                for (int iket=0; iket < nkets; iket++)
                 {
                         // cout << "iket=" << iket << endl;
                         // Ket& ket = tbc.GetKet(iket);
-                        for (int ibra=0; ibra <= jket; ibra++)
+                        for (int jbra=0; jbra <= iket; jbra++)
                         {
-				double ME = Hbare.TwoBody.GetTBME_norm( ch, ch, ibra, jket );
+				double ME = Hbare.TwoBody.GetTBME_norm( ch, ch, jbra, iket );
 
-				Ket& bra = modelspace->GetKet(ibra);
-				Ket& ket = modelspace->GetKet(jket);
+				Ket& bra = tbc.GetKet(jbra);
+				Ket& ket = tbc.GetKet(iket);
 
 				Orbit o1 = *bra.op;
 				Orbit o2 = *bra.oq;
 				Orbit o3 = *ket.op;
 				Orbit o4 = *ket.oq;
 
-				outfile << o1.n << " " << o1.l << " << o1.j2 << " " << o2.n << " " << o2.l << " << o2.j2 << " " << o3.n << " " << o3.l << " << o3.j2 << " " << o4.n << " " << o4.l << " << o4.j2 << " " << ch << " " << ME << endl;
+				stringstream outData;
+				outData << o1.n << " " << o1.l << " " << o1.j2 << " " << o2.n << " " << o2.l << " " << o2.j2 << " " << o3.n << " " << o3.l << " " << o3.j2 << " " << o4.n << " " << o4.l << " " << o4.j2 << " " << ch << " " << ME << endl;
+				cout << outData.str();
+				outfile << outData.str();
 			}
 		}
 	}
+	cout << "File written, returning." << endl;
 	return;
 }
 
-void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int Emax, int lmax)
+void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int Emax, int lmax )
 {
 	//std:string temp;
 	ifstream infile;
@@ -1554,12 +1656,12 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 	{
 		livermore_params temp_params;
 		double ME;
-		infile >> temp_params.n1 >> temp_params.l1 >> temp_params.j21;
-		infile >> temp_params.n2 >> temp_params.l2 >> temp_params.j22;
-		infile >> temp_params.n3 >> temp_params.l3 >> temp_params.j23;
-		infile >> temp_params.n4 >> temp_params.l4 >> temp_params.j24;
-		infile >> temp_params.ch >> ME;
-		param_map[temp_params] = ME;
+		infile >> temp_params.n1 >> temp_params.l1 >> temp_params.j21 >> temp_params.n2 >> temp_params.l2 >> temp_params.j22 >> temp_params.n3 >> temp_params.l3 >> temp_params.j23 >> temp_params.n4 >> temp_params.l4 >> temp_params.j24 >> temp_params.ch >> ME;
+		cout << temp_params.n1 << " " << temp_params.l1 << " " << temp_params.j21 << " " << temp_params.n2 << " " << temp_params.l2 << " " << temp_params.j22 << " " << temp_params.n3 << " " << temp_params.l3 << " " << temp_params.j23 << " " << temp_params.n4 << " " << temp_params.l4 << " " << temp_params.j24 << " " << temp_params.ch << " " << ME << endl;
+		//param_map.insert( {temp_params, ME} );
+		//param_map[temp_params] = ME;
+		param_map.emplace(temp_params, ME);
+		cout << param_map[temp_params] << endl;
 	} // while ( !...
 	infile.close();
 
@@ -1581,32 +1683,34 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
                         for (int jbra=0; jbra <= iket; jbra++)
                         {
                                 //Ket& bra = tbc.GetKet
-                                me_params temp = {ch,iket,jbra,tbc.J};
-                                //cout << "Adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
+                                me_params temp = { ch, iket, jbra, tbc.J };
+                                cout << "params_vec adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
                                 params_vec.push_back(temp);
                         } // jbra
                 } // iket
         } // ch
+	cout << "File read, filling TBME." << endl;
 
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(unsigned i = 0; i < params_vec.size(); ++i) {
 
                 me_params temp = params_vec[i];
 
-                int J    = temp.tbcJ;
+                //int J    = temp.tbcJ;
                 int iket = temp.iket;
                 int jbra = temp.jbra;
                 int ch   = temp.ch;
+		//cout << "Reading ME at iket=" << iket << " jbra=" << jbra << " in channel=" << ch << endl;
 
                 TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
 
                 Ket& ket = tbc.GetKet(iket);
                 Ket& bra = tbc.GetKet(jbra);
 
-                Orbit o3 = *ket.op;
-                Orbit o4 = *ket.oq;
                 Orbit o1 = *bra.op;
                 Orbit o2 = *bra.oq;
+                Orbit o3 = *ket.op;
+                Orbit o4 = *ket.oq;
 
 		livermore_params lv_params =   {o1.n,o1.l,o1.j2,
 						o2.n,o2.l,o2.j2,
@@ -1615,10 +1719,13 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 						ch};
 
 		double tbme = param_map[lv_params];
+		//cout << "Retrieved " << tbme << " from param_map[lv_params] at index=" << i << endl;
+		cout << lv_params.n1 << " " << 	lv_params.l1 <<	" " << 	lv_params.j21 << " " << lv_params.n2 <<	" " << 	lv_params.l2 << " " << 	lv_params.j22 << " " <<lv_params.n3 <<	" " << 	lv_params.l3 << " " << 	lv_params.j23 << " " <<lv_params.n4 <<	" " << 	lv_params.l4 << " " << 	lv_params.j24 << " " << lv_params.ch << " " << param_map[lv_params] << endl;
 		Hbare.TwoBody.SetTBME(ch, iket, jbra, tbme);
 		Hbare.TwoBody.SetTBME(ch, jbra, iket, tbme); // I've assumed Hermiticity.
 	}
-	
+
+	cout << "TBME written, returning." << endl;	
 	return;
 }
 

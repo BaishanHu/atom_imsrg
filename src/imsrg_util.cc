@@ -592,7 +592,7 @@ Operator CSTwoBody(ModelSpace& modelspace)
                         {
 				//Ket& bra = tbc.GetKet
 				me_params temp = {ch,iket,jbra,tbc.J};
-				cout << "Adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
+				//cout << "Adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
 				params_vec.push_back(temp);
 			} // jbra
 		} // iket
