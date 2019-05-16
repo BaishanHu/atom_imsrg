@@ -1450,6 +1450,151 @@ void ReadWrite::ReadOperatorFromJSON( string filename, Operator & Op, int emax, 
     cout << "Leaving ReadFromTBME." << endl;
 }
 
+struct livermore_params {int n1; int l1; int j21;
+			 int n2; int l2; int j22;
+			 int n3; int l3; int j23;
+			 int n4; int l4; int j24;
+			 int ch;};
+
+struct me_params { int ch;
+                   int iket;
+                   int jbra;
+                   int tbcJ; };
+
+void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, int Emax, int lmax)
+{
+	ofstream outlife(outfilename);
+	if ( !outfile.good() )
+	{
+		cerr << "************************************" << endl
+ 		     << "**    Trouble opening file  !!!   **" << endl
+          	     << "************************************" << endl;
+     		goodstate = false;
+     		return;
+	}
+
+	ModelSpace * modelspace = Hbare.GetModelSpace();
+	if (emax < 0) emax = modelspace->GetEmax();
+	if (lmax < 0) lmax = emax;
+	if (Emax < 0) Emax = 2*emax;
+
+	
+	// Proposed 'Read' Algorithm:
+	// Step one: load entire file to memory using livermore_params mapping
+	// Step two: iterate, in parallel through a dummy operator finding each ME and loading from map
+
+	// Proposed 'Write' Algorithm:
+	// Step one: Iterate through operator Hbare getting livermore_params for each ME
+	// Step two: write n1,l1,j21,n2,...,ch:ME to file
+
+	//map<livermore_params, double> params_map;
+	int nchan = modelspace.GetNumberTwoBodyChannels();
+
+        for (int ch=0; ch<=nchan; ch++)
+        {
+                TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
+                int nkets = tbc.GetNumberKets();
+                if (nkets == 0) continue;
+                for (int iket=0; iket < nkets; iket++)
+                {
+                        // cout << "iket=" << iket << endl;
+                        // Ket& ket = tbc.GetKet(iket);
+                        for (int jbra=0; jbra <= iket; jbra++)
+                        {
+				double ME = Hbare.TwoBody.GetTBME_norm( ch, ch, ibra, jket );
+
+				Ket& bra = modelspace->GetKet(ibra);
+				Ket& ket = modelspace->GetKet(jbra);
+
+				Orbit o1 = *bra.op;
+				Orbit o2 = *bra.oq;
+				Orbit o3 = *ket.op;
+				Orbit o4 = *ket.oq;
+
+				outfile << o1.n << " " << o1.l << " << o1.j2 << " " << o2.n << " " << o2.l << " << o2.j2 << " " << o3.n << " " << o3.l << " << o3.j2 << " " << o4.n << " " << o4.l << " << o4.j2 << " " << ch << " " << ME << endl;
+			}
+		}
+	}
+	return;
+}
+
+void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int Emax, int lmax)
+{
+	//std:string temp;
+	ifstream infile;
+	map<livermore_params, double> param_map;
+	infile.open( filename );
+	while ( !infile.eof )
+	{
+		livermore_params temp_params;
+		double ME;
+		infile >> temp_params.n1 >> temp_params.l1 >> temp_params.j21;
+		infile >> temp_params.n2 >> temp_params.l2 >> temp_params.j22;
+		infile >> temp_params.n3 >> temp_params.l3 >> temp_params.j23;
+		infile >> temp_params.n4 >> temp_params.l4 >> temp_params.j24;
+		infile >> temp_params.cd >> ME;
+		param_map[temp_params] = ME;
+	} // while ( !...
+	infile.close();
+
+	ModelSpace * modelspace = Hbare.GetModelSpace();
+	
+        int nchan = modelspace->GetNumberTwoBodyChannels();
+
+        vector<me_params> params_vec;
+
+        for (int ch=0; ch<=nchan; ch++)
+        {
+                TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+                int nkets = tbc.GetNumberKets();
+                if (nkets == 0) continue;
+                for (int iket=0; iket < nkets; iket++)
+                {
+                        // cout << "iket=" << iket << endl;
+                        // Ket& ket = tbc.GetKet(iket);
+                        for (int jbra=0; jbra <= iket; jbra++)
+                        {
+                                //Ket& bra = tbc.GetKet
+                                me_params temp = {ch,iket,jbra,tbc.J};
+                                //cout << "Adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
+                                params_vec.push_back(temp);
+                        } // jbra
+                } // iket
+        } // ch
+
+        #pragma omp parallel for
+        for(unsigned i = 0; i < params_vec.size(); ++i) {
+
+                me_params temp = params_vec[i];
+
+                int J    = temp.tbcJ;
+                int iket = temp.iket;
+                int jbra = temp.jbra;
+                int ch   = temp.ch;
+
+                TwoBodyChannel& tbc = modelspace.GetTwoBodyChannel(ch);
+
+                Ket& ket = tbc.GetKet(iket);
+                Ket& bra = tbc.GetKet(jbra);
+
+                Orbit o3 = *ket.op;
+                Orbit o4 = *ket.oq;
+                Orbit o1 = *bra.op;
+                Orbit o2 = *bra.oq;
+
+		livermore_params lv_params =   {o1.n,o1.l,o1.j2,
+						o2.n,o2.l,o2.j2,
+						o3.n,o3.l,o3.j2,
+						o4.n,o4.l,o4.j2,
+						ch};
+
+		double tbme = param_map[lv_params];
+		Hbare.TwoBody.SetTBME(ch, iket, jbra, tbme);
+		Hbare.TwoBody.SetTBME(ch, jbra, iket, tbme); // I've assumed Hermiticity.
+	}
+	
+	return;
+}
 
 void ReadWrite::Write_me2j( string outfilename, Operator& Hbare, int emax, int Emax, int lmax)
 {

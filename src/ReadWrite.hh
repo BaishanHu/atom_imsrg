@@ -42,6 +42,10 @@ class ReadWrite
    void WriteOperatorHuman(Operator& op, string filename);
    void ReadOperator(Operator& op, string filename); 
    void CompareOperators(Operator& op1, Operator& op2, string filename);
+	
+   void Write_Livermore( string outfilename, Operator& Hbare, int emax, int Emax, int lmax);
+   void Read_Livermore( string filename, Operator& Hbare, int emax, int Emax, int lmax);
+
    void ReadOneBody_Takayuki(string filename, Operator& Hbare);
    void ReadTwoBody_Takayuki(string filename, Operator& Hbare);
    void WriteOneBody_Takayuki(string filename, Operator& Hbare);
