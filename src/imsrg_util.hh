@@ -34,6 +34,8 @@ namespace imsrg_util
 
  Operator CSOneBody(ModelSpace& modelspace);
  Operator CSTwoBody(ModelSpace& modelspace);
+ Operator CSRadius(ModelSpace& modelspace);
+ Operator CSRadiusSquared(ModelSpace& modelspace);
  Operator HarmonicOneBody(ModelSpace& modelspace);
  Operator InverseR_Op(ModelSpace& modelspace);
  Operator KineticEnergy_Op(ModelSpace& modelspace);

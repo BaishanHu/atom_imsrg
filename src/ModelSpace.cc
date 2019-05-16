@@ -526,7 +526,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
        		{
           	    for (int tz : {-1, 1} )
          	    {
-			if (tz != +1) continue;
+			if (tz != -1) continue;
             	    	double occ = 0;
             	    	int cvq = 2;
             	    	int indx = Index1(n,l,j2,tz);
@@ -586,7 +586,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
      Orbit& oh = GetOrbit(h);
      //cout << "oh.n=" << oh.n << " oh.l=" << oh.l << " oh.j2=" << oh.j2 << "oh.tz=" << oh.tz2 << " oh.index=" << oh.index << endl;
      Aref += (oh.j2+1)*oh.occ;
-     if (oh.tz2 > 0) Zref += (oh.j2+1)*oh.occ;
+     if (oh.tz2 < 0) Zref += (oh.j2+1)*oh.occ;
    }
    //cout << "Setting up kets; Zref=" << GetZref() << " Aref=" << GetAref() << endl;
    if (systemBasis != ""){
@@ -763,7 +763,7 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
             	if (z < Z)
             	{
         	    int dz = min(Z-z,j2+1);
-        	    int indx = Index1(n,l,j2,+1);
+        	    int indx = Index1(n,l,j2,-1);
         	    //holesE[count] = dz/(j2+1.0);
 		    holesE[indx] = dz/(j2+1.);
 		    cout << "n=" << n << " l=" << l << " j2=" << j2 << " dz=" << dz << " z=" << z << " dz/(j2+1.0)=" << dz/(j2+1.0) << " indx=" << indx << endl;
@@ -1034,38 +1034,33 @@ void ModelSpace::SetupKets(string Sys)
 	{
 	   index = Index2(p,q);
 	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
-	}
+	} // else
         //cout << "index=" << index << " p=" << p << " q=" << q << endl;
         Orbit& orbp = GetOrbit(p);
 	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
 	Orbit& orbq = GetOrbit(q);
 	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         
-     }
-   }
+     } // int p=q
+   } // int p=0
   
-  cout << "Set up Kets[], moving to Ket& ket; Kets[].size()=" << Kets.size() << endl;
-  //for (index_t index=0;index<Kets.size();++index) // replace with for (auto& ket in kets) indx = Index2(ket.p.index,ket.q.index)
-  for (auto& ket : Kets)
+  for (index_t index=0;index<Kets.size();++index)
   {
-    //cout << "index=" << index << endl;
-    //Ket& ket = Kets[index];
-    int index = Index2(ket.p,ket.q);
-    //cout << "Got the ket, checking parity and Tz." << endl;
+    Ket& ket = Kets[index];
+    // cout << "Kets[index] =" << index << endl;
     int Tz = (ket.op->tz2 + ket.oq->tz2)/2;
     int parity = (ket.op->l + ket.oq->l)%2;
-    if (ket.op->l == -1 || ket.oq->l == -1) continue;
-    //cout << "ket.op->l=" << ket.op->l << " ket.oq->l=" << ket.oq->l << endl;
-    //cout << "About to add MonopoleKet with Tz=" << Tz << " parity=" << parity << " at index=" << index << endl;
-    MonopoleKets[Tz+1][parity][index] = MonopoleKets[Tz+1][parity].size()-1;
-    //cout << "Added MonopoleKet." << endl;
+//   The old way this was written led to undefined behavior, depending on when the structure was expanded.
+//    MonopoleKets[Tz+1][parity][index] = MonopoleKets[Tz+1][parity].size()-1;
+    index_t size = MonopoleKets[Tz+1][parity].size();
+    MonopoleKets[Tz+1][parity][index] = size;
     double occp = ket.op->occ;
     double occq = ket.oq->occ;
     int cvq_p = ket.op->cvq;
     int cvq_q = ket.oq->cvq;
     if (cvq_p+cvq_q==0)      KetIndex_cc.push_back(index); // 00
     if (cvq_p+cvq_q==1)      KetIndex_vc.push_back(index); // 01
-    if (abs(cvq_p-cvq_q)==2) KetIndex_qc.push_back(index); // 02
+    if (std::abs(cvq_p-cvq_q)==2) KetIndex_qc.push_back(index); // 02
     if (cvq_p*cvq_q==1)      KetIndex_vv.push_back(index); // 11
     if (cvq_p+cvq_q==3)      KetIndex_qv.push_back(index); // 12
     if (cvq_p+cvq_q==4)      KetIndex_qq.push_back(index); // 22
@@ -1083,106 +1078,24 @@ void ModelSpace::SetupKets(string Sys)
        Ket_occ_hh.push_back(occp*occq);
        Ket_unocc_hh.push_back((1-occp)*(1-occq));
     }
-    //cout << "About to loop again." << endl;
    }
-   //cout << "Got past Ket&; resizing TB." << endl;
+
    SortedTwoBodyChannels.resize(nTwoBodyChannels);
    SortedTwoBodyChannels_CC.resize(nTwoBodyChannels);
-   //cout << "Resized TB; sorting TB., nTwoBodyChannels=" << nTwoBodyChannels << endl;
    for (int ch=0;ch<nTwoBodyChannels;++ch)
    {
-      TwoBodyChannels.push_back(move(TwoBodyChannel(ch,this)));
-      TwoBodyChannels_CC.push_back(move(TwoBodyChannel_CC(ch,this)));
+      TwoBodyChannels.emplace_back(TwoBodyChannel(ch,this));
+      TwoBodyChannels_CC.emplace_back(TwoBodyChannel_CC(ch,this));
       SortedTwoBodyChannels[ch] = ch;
       SortedTwoBodyChannels_CC[ch] = ch;
-      //cout << "ch=" << ch << " nkets=" << TwoBodyChannels[ch].GetNumberKets() << endl;
-      //cout << "CC_ch=" << ch << " CC_nkets=" << TwoBodyChannels_CC[ch].GetNumberKets() << endl;
    }
-   //cout << "Initialized dem channels." << endl;
    // Sort the two body channels in descending order of matrix dimension and discard the size-0 ones.
    // Hopefully this can help with load balancing.
-   bool isSorted = true;
-   int maxSort = 10000;
-   int count = 0;
-   int temp;
-   do {
-      isSorted = true;
-      for (int i=0; i < nTwoBodyChannels-1; i++) {
-	 count++;
-	 //
-	 if (TwoBodyChannels[i].GetNumberKets() > TwoBodyChannels[i+1].GetNumberKets()) {
-	    temp = SortedTwoBodyChannels[i];
-	    SortedTwoBodyChannels[i] = SortedTwoBodyChannels[i+1];
-	    SortedTwoBodyChannels[i+1] = temp;
-	    isSorted = false;
-	 }
-      }
-   } while (!isSorted and count < maxSort);
-   //for (int i=nTwoBodyChannels-1; i >= 0; i--){
-      //cout << "TwoBodyChannels[" << i << "].GetNumberKets()=" << TwoBodyChannels[i].GetNumberKets() << endl;
-      //if (TwoBodyChannels[i].GetNumberKets() == 0) {
-	// TwoBodyChannels.erase(TwoBodyChannels.begin() + i);
-	 //continue;
-      //}
-   //}
-	 
-   //sort(
-   //   SortedTwoBodyChannels.begin(),
-   //   SortedTwoBodyChannels.end(),
-   //   [this](int i, int j){
-	// int in = TwoBodyChannels[i].GetNumberKets();
-	// int jn = TwoBodyChannels[j].GetNumberKets();
-        // return in > jn;
-     // }
-   //); // Neet to ensure GetNumberKets is handled properly?
-   //cout << "Sorted TwoBodyChannels, moving to _CC." << endl;
-   int temp2;
-   count = 0;
-   isSorted = true;
-   do {
-      isSorted = true;
-      for (int i=0; i < nTwoBodyChannels-1; i++) {
-	 count++;
-	 //if (TwoBodyChannels_CC[i-1].GetNumberKets() == 0) {
-	 //   TwoBodyChannels_CC.erase(TwoBodyChannels_CC.begin() + i-1);
-	 //   continue;
-	 //}
-	 if (TwoBodyChannels_CC[i].GetNumberKets() > TwoBodyChannels_CC[i+1].GetNumberKets()) {
-	    temp2 = SortedTwoBodyChannels_CC[i];
-	    SortedTwoBodyChannels_CC[i] = SortedTwoBodyChannels_CC[i+1];
-	    SortedTwoBodyChannels_CC[i+1] = temp2;
-	    isSorted = false;
-	 }
-      }
-   } while (!isSorted and count < maxSort);
-   //cout << "do { ... } while" << endl;
-   //for (int i=nTwoBodyChannels-1; i >= 0; i--){
-      //cout << "TwoBodyChannels_CC[" << i << "].GetNumberKets()=" << TwoBodyChannels_CC[i].GetNumberKets() << endl;
-      //if (TwoBodyChannels_CC[i].GetNumberKets() == 0) {
-	// SortedTwoBodyChannels_CC.erase(TwoBodyChannels_CC.begin() + i);
-	 //continue;
-      //}
-   //}
-   //sort(
-   //   SortedTwoBodyChannels_CC.begin(),
-   //   SortedTwoBodyChannels_CC.end(),
-   //   [this](int i, int j){ 
-   //      int in = TwoBodyChannels[i].GetNumberKets();
-//	 int jn = TwoBodyChannels[j].GetNumberKets();
-   //      return in > jn;
-   //   }  
-   //); // Neet to ensure GetNumberKets is handled properly?
-   //cout << "About to pop_back." << endl;
+   sort(SortedTwoBodyChannels.begin(),SortedTwoBodyChannels.end(),[this](int i, int j){ return TwoBodyChannels[i].GetNumberKets() > TwoBodyChannels[j].GetNumberKets(); }  );
+   sort(SortedTwoBodyChannels_CC.begin(),SortedTwoBodyChannels_CC.end(),[this](int i, int j){ return TwoBodyChannels_CC[i].GetNumberKets() > TwoBodyChannels_CC[j].GetNumberKets(); }  );
    while (  TwoBodyChannels[ SortedTwoBodyChannels.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels.pop_back();
-   //cout << "done base, doing _CC." << endl;
    while (  TwoBodyChannels_CC[ SortedTwoBodyChannels_CC.back() ].GetNumberKets() <1 ) SortedTwoBodyChannels_CC.pop_back();
-   //for (int i=0; i < SortedTwoBodyChannels.size(); i++){
-   //   cout << "Sorted TwoBodyChannels[" << i << "].GetNumberKets()=" << TwoBodyChannels[i].GetNumberKets() << endl;
-   //}
-   //for (int i=0; i < SortedTwoBodyChannels_CC.size(); i++){
-   //   cout << "Sorted TwoBodyChannels_CC[" << i << "].GetNumberKets()=" << TwoBodyChannels_CC[i].GetNumberKets() << endl;
-   //}
-   //nTwoBodyChannels = TwoBodyChannels.size();
+  
 }
 
 

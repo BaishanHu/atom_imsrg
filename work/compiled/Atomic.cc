@@ -141,23 +141,30 @@ int main(int argc, char** argv)
     cout << "Using Brueckner flavor of BCH" << endl;
   }
 
-//  cout << "Reading interactions..." << endl;
-//
-//  #pragma omp parallel sections 
-//  {
-//    #pragma omp section
-//    {
-//    if (fmt2 == "me2j")
-//      rw.ReadBareTBME_Darmstadt(inputtbme, Hbare,file2e1max,file2e2max,file2lmax);
-//    else if (fmt2 == "navratil" or fmt2 == "Navratil")
-//      rw.ReadBareTBME_Navratil(inputtbme, Hbare);
-//    else if (fmt2 == "oslo" )
-//      rw.ReadTBME_Oslo(inputtbme, Hbare);
-//    else if (fmt2 == "oakridge" )
-//      rw.ReadTBME_OakRidge(inputtbme, Hbare);
-//     cout << "done reading 2N" << endl;
-//    }
-//  
+  cout << "Reading interactions..." << endl;
+
+  cout << "inputtbme=" << inputtbme << endl;
+/*
+  #pragma omp parallel sections 
+  {
+    #pragma omp section
+    {
+    if (fmt2 == "me2j")
+      rw.ReadBareTBME_Darmstadt(inputtbme, Hbare, 4, 2*4, 2*4 );
+    else if (fmt2 == "navratil" or fmt2 == "Navratil")
+      rw.ReadBareTBME_Navratil(inputtbme, Hbare);
+    else if (fmt2 == "oslo" )
+      rw.ReadTBME_Oslo(inputtbme, Hbare);
+    else if (fmt2 == "oakridge" )
+      rw.ReadTBME_OakRidge(inputtbme, Hbare);
+     cout << "done reading 2N" << endl;
+    }
+  }
+  cout << "Done reading from ME2J; scaling 2BME (TBME) to correct oscillator frequency." << endl;
+  //Hbare.PrintTwoBody(0);
+  //Hbare *= sqrt( modelspace.GetHbarOmega() ); // HO scaling factor
+  Hbare *= pow( modelspace.GetHbarOmega(), 1); // Laguerre scaling factor
+*/
 //    #pragma omp section
 //    if (Hbare.particle_rank >=3)
 //    {
@@ -167,7 +174,7 @@ int main(int argc, char** argv)
 //  }
   //cout << "Modelspace has this many tbc: " << modelspace.nTwoBodyChannels << endl;
   //rw.ReadBareTBME_Darmstadt( inputtbme, Hbare, file2e1max, file2e2max, file2lmax);
-//  Operator Diff = Operator(modelspace);
+  Operator Diff = Operator(modelspace);
   Operator twoBody = Operator(modelspace);
   if (systemBasis == "harmonic") {
     cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << min(4*(2*eMax + 1*Lmax),170) << endl;
@@ -179,33 +186,43 @@ int main(int argc, char** argv)
     cout << "Read in interaction, moving to precalculating moshinsky." << endl;
     cout << "Adding T and V to Hbare; emax=" << modelspace.GetEmax() << endl;
     cout << "TargetZ=" << modelspace.GetTargetZ() << endl;
-    cout << "Adding InvR to Hbare." << endl;
+    //cout << "Adding InvR to Hbare." << endl;
     //Hbare += InverseR_Op(modelspace);
     cout << "Adding CSOneBody..." << endl;
     Hbare += CSOneBody( modelspace );
     cout << "Adding CSTwoBody..." << endl;
     Hbare += CSTwoBody( modelspace );
-    cout << "Added InvR; adding KE." << endl;
+    //twoBody = CSTwoBody( modelspace );
+    //Hbare += twoBody;
+    //cout << "Added InvR; adding KE." << endl;
     //cout << "Invr=" << endl << Hbare.OneBody << endl;
     //Hbare += KineticEnergy_Op(modelspace);
-    cout << "Added one-body KE..." << endl;
+    //cout << "Added one-body KE..." << endl;
     //Hbare -= TCM_Op(modelspace);
     //cout << "Added TCM KE..." << endl;
     //cout << "Adding HO energies..." << endl;
     //Hbare += HarmonicOneBody(modelspace);
-    cout << "Onebodies added,";
-//    Operator eeC = CorrE2b(modelspace);
+    //cout << "Onebodies added,";
+    //Operator eeC = CorrE2b(modelspace);
     //Hbare += CorrE2b(modelspace);
   //  Operator New = CorrE2b( modelspace );
-    // Operator Diff= Operator( modelspace);
+  //   twoBody = CorrE2b( modelspace );
+     //Operator Diff= twoBody - Hbare;
     //Hbare += ElectronTwoBody( modelspace );
 //    if (modelspace.GetTargetZ() > 1)
     //{
-//	cout << "Writing twobody..." << endl;
-//	std:: stringstream fn_me2j;
-//	fn_me2j << "/global/scratch/dlivermore/ME_emax" << eMax << "_hw" << hw << "_Apr2_2019.me2j";
-//	rw.Write_me2j( fn_me2j.str(), eeC, eMax, 2*eMax, 2*eMax );
+/*
+	cout << "Writing twobody..." << endl;
+	std:: stringstream fn_me2j;
+	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May1_2019.me2j";
+	rw.Write_me2j( fn_me2j.str(), twoBody, -1, -1, -1 );
 	cout << "Added Twobody, moving on." << endl;
+	//cout << "ME2J written, reading back." << endl;
+	//rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
+	//Diff = twoBody - Hbare;
+	cout << "Difference calculated." << endl;
+//	return 0;
+*/
     //} 
   //} else if (systemBasis == "slater") {
   //	Hbare += SlaterOneBody(modelspace);
@@ -230,26 +247,19 @@ int main(int argc, char** argv)
   }
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
+
   cout << "Diff TwoBody=" << endl;
-  for (int ch = 0; ch < Hbare.nChannels; ch++) {
-    //cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
-    //Diff.PrintTwoBody(ch);
+  for (int ch = 0; ch < min(Hbare.nChannels,3); ch++) { // only first 10 channels
+    cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
+    Diff.PrintTwoBody(ch);
     cout << endl;
     Hbare.PrintTwoBody(ch);
     cout << endl;
-    //twoBody.PrintTwoBody(ch);
-    //cout << endl;
+    twoBody.PrintTwoBody(ch);
+    cout << endl;
   } 
 
-  //cout << "Adding ElectronTwoBody to Hbare." << endl;
-  //Hbare += CorrE2b(modelspace);
-  //Hbare += ElectronTwoBody(modelspace);
-  //cout << "Added ElectronTwoBody to Hbare." << endl;
-  //cout << "OneBody=" << Hbare.OneBody << endl;
-  //for (auto& i : K.OneBodyChannels)
-  //{
-     
-  //}
+  //return 0;
 
   if (abs(BetaCM) > 1e-3)
   {
@@ -294,6 +304,8 @@ int main(int argc, char** argv)
   Hbare.OneBody.print();
   cout << "Two-body J=0:" << endl;
   Hbare.PrintTwoBody(0);
+
+  return 0;
 
   cout << "About to calculate all of the operators." << endl;
   // Calculate all the desired operators

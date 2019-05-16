@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 ##########################################################################
 ##  goAtomic.py
@@ -19,6 +19,7 @@ from datetime import datetime
 import argparse
 import csv
 import random
+import numpy as np
 
 csv_fn = "data_log.csv"
 
@@ -34,15 +35,15 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=24
+NTHREADS=32
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
 #exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'  # Oak
 exe = '/home/dlivermo/projects/def-holt/dlivermo/atom_imsrg/work/compiled/Atomic' # Cedar
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic'
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
-batch_mode=False
-#batch_mode=True
+#batch_mode=False
+batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
 ### Don't forget to change this. I don't want emails about your calculations...
@@ -102,7 +103,8 @@ ARGS['ode_tolerance'] = '1e-5'
 ARGS['Operators'] = '' #'Trel_Op,InverseR,KineticEnergy,TCM_Op'
 
 ### Create the 'script' that we need for execution
-FILECONTENT = """#!/bin/bash
+if BATCHSYS is 'PBS':
+	FILECONTENT = """#!/bin/bash
 #PBS -N %s
 #PBS -q oak
 #PBS -d %s
@@ -118,12 +120,24 @@ cd $PBS_O_WORKDIR
 export OMP_NUM_THREADS=%d
 %s
 """
+	
+elif BATCHSYS is 'SLURM':
+	FILECONTENT = """#!/bin/bash
+#SBATCH --account=rrg-holt
+#SBATCH --time=72:00:00
+#SBATCH --mem=10G
+#SBATCH --job-name={0}
+#SBATCH --output={1}/pbslog/{2}
+export OMP_NUM_THREADS={3}
+
+{4}
+"""
 
 ### Loop parameters
-batch_mode = True
+#batch_mode = True
 
-e_start=2
-e_stop =2
+e_start=10
+e_stop =10
 e_iter =2
 
 l_start=0
@@ -133,18 +147,20 @@ l_iter =1
 hwstart=1
 hwstop =1
 hwiter =1
+hwN    =1
+hw_vec = np.linspace(hwstart, hwstop, hwN)
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
 	for Lmax in range(l_start,l_stop+1,l_iter):
-		for hw in range(hwstart,hwstop+1,hwiter):
+		for hw in hw_vec:
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
 			ARGS['valence_space'] 	= 'He4'
 			ARGS['reference'] 	= 'He4'
 			#ARGS['systemBasis']	= 'hydrogen'
-			ARGS['systemBasis']	= 'L'
+			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '200'
 			#ARGS['method']		= 'magnus'
 			ARGS['basis']		= 'HF'
@@ -163,24 +179,34 @@ for emax in range(e_start,e_stop+1,e_iter):
 						   ARGS['reference'],ARGS['Operators'],lmax,ARGS['file2e1max'],ARGS['file2e2max'],ARGS['file2lmax'],
 						   '',ARGS['systemBasis'],'Atomic') """
 
-			logname = jobname +"_{:.3}".format(13*random.random()+random.random()) + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
+			logname = jobname + datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log')
 			cmd = ' '.join([exe] + ['%s=%s'%(x,ARGS[x]) for x in ARGS])
 			if batch_mode==True:
 				print "Submitting to cluster: jobname=" + jobname+".batch"
 				for c in cmd.split():
 					print c
-				sfile = open(jobname+'.batch','w')
-				sfile.write(FILECONTENT%(jobname,environ['PWD'],NTHREADS,mail_address,logname,logname,NTHREADS,cmd))
-				sfile.close()
+				if BATCHSYS is 'PBS':
+					sfile = open(jobname+'.batch','w')
+					sfile.write(FILECONTENT%(jobname,environ['PWD'],NTHREADS,mail_address,logname,logname,NTHREADS,cmd))
+					sfile.close()
+				elif BATCHSYS is 'SLURM':
+					sfile = open(jobname+'.batch','w')
+                                        sfile.write(FILECONTENT.format(jobname,environ['PWD'],logname,NTHREADS,cmd))
+                                        sfile.close()
 				if path.isfile(jobname+'.batch'):
 					if BATCHSYS is 'PBS':
 						call(['qsub', jobname+'.batch'])
 					elif BATCHSYS is 'SLURM':
-						call(['srun', jobname+'.batch'])
+						#call(['chmod', '+x', jobname+'.batch'])
+						#cmd = 'sbatch ' + cmd
+						call(['sbatch', jobname+'.batch'])
 				else:
 					print("Unable to locate .batch file!")
 			else:
-				call(cmd.split())
+				if BATCHSYS is 'PBS':
+					call(cmd.split())
+				elif BATCHSYS is 'SLURM':
+					call(['srun', jobname+'.batch'])
 			with open(csv_fn, 'a+') as csvfile:
 				csv_writer = csv.writer(csvfile, delimiter=',',
                             		quotechar='|', quoting=csv.QUOTE_MINIMAL)

@@ -97,7 +97,7 @@ int cs_RabRcd(unsigned ndim, const double *x, void *fdata, unsigned fdim, double
 
     // fval[0] = Ra*Rb*Rc*Rd * pow(rmin,lp) *1./ pow(rmax,lp+1);// * 1./pow(1-x[0],2) * 1./pow(1-x[1],2);
 
-    fval[0] = Ra*Rb*Rc*Rd/r1;// * 1./pow(1-x[0],2) * 1./pow(1-x[1],2);
+    fval[0] = Ra*Rb*Rc*Rd/(r1);// * 1./pow(1-x[0],2) * 1./pow(1-x[1],2);
 
     return 0;
 }

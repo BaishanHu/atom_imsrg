@@ -1,6 +1,5 @@
 #CC = mpiCC
 CC = g++
-#CC = icc
 
 # Compiler flags:
 #  -DNO_ODE=1 compiles without boost/ode package used for flow equation solver
@@ -22,7 +21,7 @@ ifeq ($(DEBUG),on)
  SOFLAGS += -g
 endif
 
-PYTHONFLAGS = -I/usr/include/python2.7 -lboost_python #-lpython 
+PYTHONFLAGS = -I/usr/include/python2.7 #-lpython 
 
 THEHOST = $(shell if [ `hostname|grep jrl` ]; then echo jureca; elif [ `hostname|grep cougar` ]; then echo cougar; elif [ `hostname|grep cronos` ]; then echo cronos; elif [ `hostname|grep oak` ]; then echo oak; elif [ `hostname|grep cedar` ]; then echo cedar; else echo other; fi)
 
@@ -53,7 +52,7 @@ endif
 
 ifeq ($(THEHOST),oak)
 #  FLAGS += -DOLD_BOOST
-#  FLAGS += -DOPENBLAS_NOUSEOMP=1
+  FLAGS += -DOPENBLAS_NOUSEOMP=1
   NEWLIBS := $(filter-out -lopenblas,$(LIBS))
   LIBS = $(NEWLIBS) -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl
  ifneq ($(PYTHON),off)

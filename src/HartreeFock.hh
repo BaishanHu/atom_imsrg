@@ -57,6 +57,7 @@ class HartreeFock
    std::deque<double> convergence_ediff; ///< Save last few convergence checks for diagnostics
    std::deque<double> convergence_EHF; ///< Save last few convergence checks for diagnostics
    bool freeze_occupations;
+   double learning_rate;    ///< Learning rate of the HF calculation
 
 // Methods
    HartreeFock(Operator&  hbare); ///< Constructor
