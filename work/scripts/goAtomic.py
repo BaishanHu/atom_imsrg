@@ -124,12 +124,11 @@ export OMP_NUM_THREADS=%d
 elif BATCHSYS is 'SLURM':
 	FILECONTENT = """#!/bin/bash
 #SBATCH --account=rrg-holt
-#SBATCH --time=72:00:00
+#SBATCH --time=00:30:00
 #SBATCH --mem=10G
 #SBATCH --job-name={0}
 #SBATCH --output={1}/pbslog/{2}
-export OMP_NUM_THREADS={3}
-#SBATCH --thread-spec={3}
+#SBATCH --cpus-per-task={3}
 {4}
 """
 
