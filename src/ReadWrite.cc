@@ -1460,22 +1460,6 @@ struct livermore_params {
 	// LessThanComparable
 	bool operator< ( const livermore_params &b ) const
 	{
-	/*
-        	if (n1  < b.n1 ) return true;
-        	if (n2  < b.n2 ) return true;
-        	if (n3  < b.n3 ) return true;
-        	if (n4  < b.n4 ) return true;
-        	if (l1  < b.l1 ) return true;
-        	if (l2  < b.l2 ) return true;
-        	if (l3  < b.l3 ) return true;
-        	if (l4  < b.l4 ) return true;
-        	if (j21 < b.j21) return true;
-        	if (j22 < b.j22) return true;
-        	if (j23 < b.j23) return true;
-        	if (j24 < b.j24) return true;
-        	if (ch  < b.ch ) return true;
-        	return false;
-	*/
 		uint num = 0;
 		num = num*10 + n1;
 		num = num*10 + n2;
@@ -1487,10 +1471,10 @@ struct livermore_params {
                 num = num*10 + l3;
                 num = num*10 + l4;
 
-                num = num*10 + j21; 
-                num = num*10 + j22;
-                num = num*10 + j23;
-                num = num*10 + j24;
+                num = num*10 + (j21-1)/2; 
+                num = num*10 + (j22-1)/2;
+                num = num*10 + (j23-1)/2;
+                num = num*10 + (j24-1)/2;
 
 		num = num*10 + ch;
 
@@ -1505,16 +1489,14 @@ struct livermore_params {
                 numb = numb*10 + b.l3;
                 numb = numb*10 + b.l4;
 
-                numb = numb*10 + b.j21;
-                numb = numb*10 + b.j22;
-                numb = numb*10 + b.j23;
-                numb = numb*10 + b.j24;
+                numb = numb*10 + (b.j21-1)/2;
+                numb = numb*10 + (b.j22-1)/2;
+                numb = numb*10 + (b.j23-1)/2;
+                numb = numb*10 + (b.j24-1)/2;
 
                 numb = numb*10 + b.ch;
 
 		return num < numb;
-
-		//return n1 < b.n1 && n2 < b.n2 && n3 < b.n3 && n4 < b.n4 && l1 < b.l1 && l2 < b.l2 && l3 < b.l3 && l4 < b.l4 && j21 < b.j21 && j22 < b.j22 && j23 < b.j23 && j24 < b.j24 && ch < b.ch;
 	}
 
 	bool operator==( const livermore_params &b) const
@@ -1524,38 +1506,6 @@ struct livermore_params {
 
 };
 
-/*
-livermore_params getMinLivermoreParams( livermore_params a )
-{
-	livermore_params temp_params;
-
-	int E1 = a.n1 + a.l1 + a.j21;
-	int E2 = a.n2 + a.l2 + a.j22;
-	int E3 = a.n3 + a.l3 + a.j23;
-	int E4 = a.n4 + a.l4 + a.j24;
-	if (E1+E2 < E3+E4) {
-		if (E1 < E2) {
-			// E1 is the smallest, it goes first
-			temp_params.n1 = a.n1;
-			temp_params.l1 = a.l1;
-			temp_params.j21= a.j21;
-                        temp_params.n2 = a.n2;
-                        temp_params.l2 = a.l2;
-                        temp_params.j22= a.j22;
-		} else {
-                        temp_params.n1 = a.n2;
-                        temp_params.l1 = a.l2;
-                        temp_params.j21= a.j22;
-                        temp_params.n2 = a.n1;
-                        temp_params.l2 = a.l1;
-                        temp_params.j22= a.j21;
-		}
-	} else {
-		break;
-	}
-	return temp_params;
-}
-*/
 
 struct me_params { int ch;
                    int iket;
@@ -1637,7 +1587,7 @@ void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, 
 
 				stringstream outData;
 				outData << o1.n << " " << o1.l << " " << o1.j2 << " " << o2.n << " " << o2.l << " " << o2.j2 << " " << o3.n << " " << o3.l << " " << o3.j2 << " " << o4.n << " " << o4.l << " " << o4.j2 << " " << ch << " " << ME << endl;
-				cout << outData.str();
+				//cout << outData.str();
 				outfile << outData.str();
 			}
 		}
@@ -1657,11 +1607,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 		livermore_params temp_params;
 		double ME;
 		infile >> temp_params.n1 >> temp_params.l1 >> temp_params.j21 >> temp_params.n2 >> temp_params.l2 >> temp_params.j22 >> temp_params.n3 >> temp_params.l3 >> temp_params.j23 >> temp_params.n4 >> temp_params.l4 >> temp_params.j24 >> temp_params.ch >> ME;
-		cout << temp_params.n1 << " " << temp_params.l1 << " " << temp_params.j21 << " " << temp_params.n2 << " " << temp_params.l2 << " " << temp_params.j22 << " " << temp_params.n3 << " " << temp_params.l3 << " " << temp_params.j23 << " " << temp_params.n4 << " " << temp_params.l4 << " " << temp_params.j24 << " " << temp_params.ch << " " << ME << endl;
-		//param_map.insert( {temp_params, ME} );
-		//param_map[temp_params] = ME;
 		param_map.emplace(temp_params, ME);
-		cout << param_map[temp_params] << endl;
 	} // while ( !...
 	infile.close();
 
@@ -1684,14 +1630,14 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
                         {
                                 //Ket& bra = tbc.GetKet
                                 me_params temp = { ch, iket, jbra, tbc.J };
-                                cout << "params_vec adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
+                                //cout << "params_vec adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
                                 params_vec.push_back(temp);
                         } // jbra
                 } // iket
         } // ch
 	cout << "File read, filling TBME." << endl;
 
-        //#pragma omp parallel for
+        #pragma omp parallel for
         for(unsigned i = 0; i < params_vec.size(); ++i) {
 
                 me_params temp = params_vec[i];
@@ -1720,7 +1666,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 
 		double tbme = param_map[lv_params];
 		//cout << "Retrieved " << tbme << " from param_map[lv_params] at index=" << i << endl;
-		cout << lv_params.n1 << " " << 	lv_params.l1 <<	" " << 	lv_params.j21 << " " << lv_params.n2 <<	" " << 	lv_params.l2 << " " << 	lv_params.j22 << " " <<lv_params.n3 <<	" " << 	lv_params.l3 << " " << 	lv_params.j23 << " " <<lv_params.n4 <<	" " << 	lv_params.l4 << " " << 	lv_params.j24 << " " << lv_params.ch << " " << param_map[lv_params] << endl;
+		//cout << lv_params.n1 << " " << 	lv_params.l1 <<	" " << 	lv_params.j21 << " " << lv_params.n2 <<	" " << 	lv_params.l2 << " " << 	lv_params.j22 << " " <<lv_params.n3 <<	" " << 	lv_params.l3 << " " << 	lv_params.j23 << " " <<lv_params.n4 <<	" " << 	lv_params.l4 << " " << 	lv_params.j24 << " " << lv_params.ch << " " << param_map[lv_params] << endl;
 		Hbare.TwoBody.SetTBME(ch, iket, jbra, tbme);
 		Hbare.TwoBody.SetTBME(ch, jbra, iket, tbme); // I've assumed Hermiticity.
 	}

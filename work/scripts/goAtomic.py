@@ -136,8 +136,8 @@ export OMP_NUM_THREADS={3}
 ### Loop parameters
 #batch_mode = True
 
-e_start=2
-e_stop =2
+e_start=4
+e_stop =4
 ARGS['denominator_delta'] = 0
 
 e_iter =2
