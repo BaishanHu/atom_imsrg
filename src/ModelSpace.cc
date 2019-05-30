@@ -526,6 +526,13 @@ void ModelSpace::Init_occ_from_file(int emax, string valence, string occ_file, i
   Init(emax, hole_list, valence, Lmax, SystemType, systemBasis);
 }
 
+struct qn {int n; int l; int j2;};
+
+bool operator== (const qn& lhs, const qn& rhs)
+{
+	return (lhs.n == rhs.n && lhs.l == rhs.l && lhs.j2 == rhs.j2);
+}
+
 
 // This is the Init which should inevitably be called
 void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> core_list, vector<index_t> valence_list, int Lmax, string SystemType, string systemBasis)
@@ -555,6 +562,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
    Orbits.resize(norbits);
    int real_norbits = 0;
    int counter = 0;
+   std::vector<struct qn> qn_vec;
    if (systemBasis == "harmonic"){
 	/*
 	for (int N=0; N<=Emax; ++N)
@@ -586,7 +594,7 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
 	//{
 		for (int n=0; n<=Emax; n++)
 		{
-			for (int l=0; l<=n+1 && l<=Emax-n; l++)
+			for (int l=0; l<=n && l<=Emax-n; l++)
 			{
 				for (int j2=abs(2*l-1); j2<=2*l+1; j2+=2)
 				{
@@ -601,6 +609,28 @@ void ModelSpace::Init(int emax, map<index_t,double> hole_list, vector<index_t> c
                         		AddOrbit(n,l,j2,tz,occ,cvq,indx);
                         		real_norbits++;
 					counter++; // probably redundant given real_norbits.
+					qn temp = {n, l, j2};
+					qn_vec.push_back(temp);
+				} // int j2
+			} // int l
+		} // int n
+		for (int n=0; n<=Emax; n++)
+		{
+			for (int l=0; l<=Emax-n; l++)
+			{
+				for (int j2=abs(2*l-1); j2<=2*l+1; j2+=2)
+				{
+					//Orbit temp_orbit = Orbit(n, l, j2, -1, 0, 2, real_norbits);
+					bool already_have_orbit = false;
+					qn temp = {n, l, j2};
+					if (find(qn_vec.begin(), qn_vec.end(),temp) != qn_vec.end()) already_have_orbit = true;
+					if ( already_have_orbit == false )
+					{
+						cout << "Adding extra Laguerre Orbit with n=" << n << " l=" << l << " j2=" << j2 << " tz=" << -1 << " occ=" << 0 << " indx=" << real_norbits << endl;
+                                        	//AddOrbit(temp_orbit);
+						AddOrbit(n,l,j2,-1,0,2,real_norbits);
+                                        	real_norbits++;
+					}
 				} // int j2
 			} // int l
 		} // int n
@@ -841,7 +871,7 @@ map<index_t,double> ModelSpace::GetOrbitsE(int Z, string systemBase)
 	//{
 		for (int n=0; n<=Emax; ++n)
 		{
-			for (int l=0; l<=n+1 && l<=Emax-n; ++l)
+			for (int l=0; l<=n && l<=Emax-n; ++l)
 			{
 				for (int j2=abs(2*l-1); j2<=2*l+1; j2+=2)
 				{
@@ -1119,11 +1149,11 @@ void ModelSpace::SetupKets(string Sys)
 	   index = Index2(p,q);
 	   Kets[index] = Ket(GetOrbit(p),GetOrbit(q));
 	} // else
-        //cout << "index=" << index << " p=" << p << " q=" << q << endl;
+        cout << "index=" << index << " p=" << p << " q=" << q << endl;
         Orbit& orbp = GetOrbit(p);
-	//cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
+	cout << "orb(" << p << ") n=" << orbp.n << " l=" << orbp.l << " j2=" << orbp.j2 << " tz2=" << orbp.tz2 << endl;
 	Orbit& orbq = GetOrbit(q);
-	//cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
+	cout << "orb(" << q << ") n=" << orbq.n << " l=" << orbq.l << " j2=" << orbq.j2 << " tz2=" << orbq.tz2 << endl;
         
      } // int p=q
    } // int p=0
@@ -1131,7 +1161,7 @@ void ModelSpace::SetupKets(string Sys)
   for (index_t index=0;index<Kets.size();++index)
   {
     Ket& ket = Kets[index];
-    // cout << "Kets[index] =" << index << endl;
+    cout << "Kets[index] =" << index << endl;
     int Tz = (ket.op->tz2 + ket.oq->tz2)/2;
     int parity = (ket.op->l + ket.oq->l)%2;
 //   The old way this was written led to undefined behavior, depending on when the structure was expanded.

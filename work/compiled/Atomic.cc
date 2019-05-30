@@ -145,7 +145,7 @@ int main(int argc, char** argv)
   cout << "Reading interactions..." << endl;
 
   cout << "inputtbme=" << inputtbme << endl;
-/*
+
   #pragma omp parallel sections 
   {
     #pragma omp section
@@ -158,6 +158,8 @@ int main(int argc, char** argv)
       rw.ReadTBME_Oslo(inputtbme, Hbare);
     else if (fmt2 == "oakridge" )
       rw.ReadTBME_OakRidge(inputtbme, Hbare);
+    else if (fmt2 == "lv2")
+      rw.Read_Livermore( inputtbme, Hbare, -1, -1, -1);
      cout << "done reading 2N" << endl;
     }
   }
@@ -165,7 +167,7 @@ int main(int argc, char** argv)
   //Hbare.PrintTwoBody(0);
   //Hbare *= sqrt( modelspace.GetHbarOmega() ); // HO scaling factor
   Hbare *= pow( modelspace.GetHbarOmega(), 1); // Laguerre scaling factor
-*/
+
 //    #pragma omp section
 //    if (Hbare.particle_rank >=3)
 //    {
@@ -175,7 +177,7 @@ int main(int argc, char** argv)
 //  }
   //cout << "Modelspace has this many tbc: " << modelspace.nTwoBodyChannels << endl;
   //rw.ReadBareTBME_Darmstadt( inputtbme, Hbare, file2e1max, file2e2max, file2lmax);
-  Operator Diff = Operator(modelspace);
+  //Operator Diff = Operator(modelspace);
   Operator twoBody = Operator(modelspace);
   if (systemBasis == "harmonic") {
     cout << "About to precalculate factorials for m=4*(2*emax + lmax)=" << min(4*(2*eMax + 1*Lmax),170) << endl;
@@ -193,7 +195,7 @@ int main(int argc, char** argv)
     Hbare += CSOneBody( modelspace );
     //cout << "Adding CSTwoBody..." << endl;
     //Hbare += CSTwoBody( modelspace );
-    twoBody = CSTwoBody( modelspace );
+    //twoBody = CSTwoBody( modelspace );
     //Hbare += twoBody;
     //cout << "Added InvR; adding KE." << endl;
     //cout << "Invr=" << endl << Hbare.OneBody << endl;
@@ -212,20 +214,21 @@ int main(int argc, char** argv)
     //Hbare += ElectronTwoBody( modelspace );
 //    if (modelspace.GetTargetZ() > 1)
     //{
-
+/*
 	cout << "Writing twobody..." << endl;
 	std:: stringstream fn_me2j;
-	fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May10_2019v2.me2j";
+	//fn_me2j << "/global/scratch/dlivermore/ME_laguerre_emax" << eMax << "_hw" << hw << "_May10_2019v2.me2j";
+	fn_me2j << "/home/dlivermo/projects/def-holt/dlivermo/ME/ME_Laguerre_emax" << eMax << "_hw" << hw << "_May30_2019.lv2";
 	//rw.Write_me2j( fn_me2j.str(), twoBody, -1, -1, -1 );
 	rw.Write_Livermore( fn_me2j.str(), twoBody, -1, -1, -1);
-	cout << "Added Twobody, moving on." << endl;
-	cout << "ME2J written, reading back." << endl;
+	cout << "Written Twobody, moving on." << endl;
+	//cout << "ME2J written, reading back." << endl;
 	//rw.ReadBareTBME_Darmstadt( fn_me2j.str(), Hbare, eMax, 2*eMax, 2*eMax );
-	rw.Read_Livermore( fn_me2j.str(), Hbare, -1, -1, -1);
-	Diff = twoBody - Hbare;
-	cout << "Difference calculated." << endl;
-//	return 0;
-
+	//rw.Read_Livermore( fn_me2j.str(), Hbare, -1, -1, -1);
+//	Diff = twoBody - Hbare;
+//	cout << "Difference calculated." << endl;
+	return 0;
+*/
     //} 
   //} else if (systemBasis == "slater") {
   //	Hbare += SlaterOneBody(modelspace);
@@ -250,9 +253,9 @@ int main(int argc, char** argv)
   }
 
 //  cout << "OneBody=" << endl << Hbare.OneBody << endl;
-
+/*
   cout << "Diff TwoBody=" << endl;
-  for (int ch = 0; ch < min(Hbare.nChannels,3); ch++) { // only first handful of channels
+  for (int ch = 0; ch < min(Hbare.nChannels,2); ch++) { // only first handful of channels
     cout << "----- Channel " << ch << " with J=" << modelspace.GetTwoBodyChannel(ch).J << "-----" << endl;
     Diff.PrintTwoBody(ch);
     cout << endl;
@@ -261,8 +264,8 @@ int main(int argc, char** argv)
     twoBody.PrintTwoBody(ch);
     cout << endl;
   } 
-
-  return 0;
+*/
+//  return 0;
 
   if (abs(BetaCM) > 1e-3)
   {
@@ -280,6 +283,8 @@ int main(int argc, char** argv)
   hf.Solve();
   cout << "Done solving HF." << endl;
   cout << "EHF = " << hf.EHF << endl;
+
+  //return 0;
 
   //Hbare -= BetaCM * 1.5*hw;
   //cout << "Hbare 0b:"<< Hbare.ZeroBody << endl;
@@ -308,7 +313,7 @@ int main(int argc, char** argv)
   cout << "Two-body J=0:" << endl;
   Hbare.PrintTwoBody(0);
 
-  return 0;
+  //return 0;
 
   cout << "About to calculate all of the operators." << endl;
   // Calculate all the desired operators

@@ -1456,63 +1456,65 @@ struct livermore_params {
 			 int n2; int l2; int j22;
 			 int n3; int l3; int j23;
 			 int n4; int l4; int j24;
-			 int ch;
+			 int J; int p;
 	// LessThanComparable
 	bool operator< ( const livermore_params &b ) const
 	{
-		uint num = 0;
-		num = num*10 + n1;
-		num = num*10 + n2;
-                num = num*10 + n3;
-                num = num*10 + n4;
+		unsigned long long int num = 0;
+		num = num*100 + n1;
+		num = num*100 + n2;
+                num = num*100 + n3;
+                num = num*100 + n4;
 
-                num = num*10 + l1;
-                num = num*10 + l2;
-                num = num*10 + l3;
-                num = num*10 + l4;
+                num = num*100 + l1;
+                num = num*100 + l2;
+                num = num*100 + l3;
+                num = num*100 + l4;
 
-                num = num*10 + (j21-1)/2; 
-                num = num*10 + (j22-1)/2;
-                num = num*10 + (j23-1)/2;
-                num = num*10 + (j24-1)/2;
+                num = num*100 + (j21-1)/2; 
+                num = num*100 + (j22-1)/2;
+                num = num*100 + (j23-1)/2;
+                num = num*100 + (j24-1)/2;
 
-		num = num*10 + ch;
+		num = num*100 + J;
+		num = num*100 + p;
 
-                uint numb = 0; 
-                numb = numb*10 + b.n1;
-                numb = numb*10 + b.n2;
-                numb = numb*10 + b.n3;
-                numb = numb*10 + b.n4;
+                unsigned long long int numb = 0; 
+                numb = numb*100 + b.n1;
+                numb = numb*100 + b.n2;
+                numb = numb*100 + b.n3;
+                numb = numb*100 + b.n4;
 
-                numb = numb*10 + b.l1;
-                numb = numb*10 + b.l2;
-                numb = numb*10 + b.l3;
-                numb = numb*10 + b.l4;
+                numb = numb*100 + b.l1;
+                numb = numb*100 + b.l2;
+                numb = numb*100 + b.l3;
+                numb = numb*100 + b.l4;
 
-                numb = numb*10 + (b.j21-1)/2;
-                numb = numb*10 + (b.j22-1)/2;
-                numb = numb*10 + (b.j23-1)/2;
-                numb = numb*10 + (b.j24-1)/2;
+                numb = numb*100 + (b.j21-1)/2;
+                numb = numb*100 + (b.j22-1)/2;
+                numb = numb*100 + (b.j23-1)/2;
+                numb = numb*100 + (b.j24-1)/2;
 
-                numb = numb*10 + b.ch;
+                numb = numb*100 + b.J;
+		numb = numb*100 + b.p;
 
 		return num < numb;
 	}
 
 	bool operator==( const livermore_params &b) const
 	{
-		return n1 == b.n1 && n2 == b.n2 && n3 == b.n3 && n4 == b.n4 && l1 == b.l1 && l2 == b.l2 && l3 == b.l3 && l4 == b.l4 && j21 == b.j21 && j22 == b.j22 && j23 == b.j23 && j24 == b.j24 && ch == b.ch;
+		return n1 == b.n1 && n2 == b.n2 && n3 == b.n3 && n4 == b.n4 && l1 == b.l1 && l2 == b.l2 && l3 == b.l3 && l4 == b.l4 && j21 == b.j21 && j22 == b.j22 && j23 == b.j23 && j24 == b.j24 && J == b.J && p == b.p;
 	}
 
 };
 
 
-struct me_params { int ch;
+struct me_params { int parity;
                    int iket;
                    int jbra;
                    int tbcJ; };
 
-
+/*
 uint getHashParams( livermore_params a )
 {
 	uint hash_prime = 31;
@@ -1532,7 +1534,7 @@ uint getHashParams( livermore_params a )
 	val_a = hash_prime*a.ch + val_a;
 
 	return val_a;
-}
+} */
 
 
 void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, int Emax, int lmax)
@@ -1585,8 +1587,11 @@ void ReadWrite::Write_Livermore( string outfilename, Operator& Hbare, int emax, 
 				Orbit o3 = *ket.op;
 				Orbit o4 = *ket.oq;
 
+				int J = tbc.J;
+				int p = tbc.parity;
+
 				stringstream outData;
-				outData << o1.n << " " << o1.l << " " << o1.j2 << " " << o2.n << " " << o2.l << " " << o2.j2 << " " << o3.n << " " << o3.l << " " << o3.j2 << " " << o4.n << " " << o4.l << " " << o4.j2 << " " << ch << " " << ME << endl;
+				outData << o1.n << " " << o1.l << " " << o1.j2 << " " << o2.n << " " << o2.l << " " << o2.j2 << " " << o3.n << " " << o3.l << " " << o3.j2 << " " << o4.n << " " << o4.l << " " << o4.j2 << " " << J << " " << p << " " << ME << endl;
 				//cout << outData.str();
 				outfile << outData.str();
 			}
@@ -1606,7 +1611,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 	{
 		livermore_params temp_params;
 		double ME;
-		infile >> temp_params.n1 >> temp_params.l1 >> temp_params.j21 >> temp_params.n2 >> temp_params.l2 >> temp_params.j22 >> temp_params.n3 >> temp_params.l3 >> temp_params.j23 >> temp_params.n4 >> temp_params.l4 >> temp_params.j24 >> temp_params.ch >> ME;
+		infile >> temp_params.n1 >> temp_params.l1 >> temp_params.j21 >> temp_params.n2 >> temp_params.l2 >> temp_params.j22 >> temp_params.n3 >> temp_params.l3 >> temp_params.j23 >> temp_params.n4 >> temp_params.l4 >> temp_params.j24 >> temp_params.J >> temp_params.p >> ME;
 		param_map.emplace(temp_params, ME);
 	} // while ( !...
 	infile.close();
@@ -1629,7 +1634,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
                         for (int jbra=0; jbra <= iket; jbra++)
                         {
                                 //Ket& bra = tbc.GetKet
-                                me_params temp = { ch, iket, jbra, tbc.J };
+                                me_params temp = { tbc.parity, iket, jbra, tbc.J };
                                 //cout << "params_vec adding ch=" << ch << " iket=" << iket << " jbra=" << jbra << endl;
                                 params_vec.push_back(temp);
                         } // jbra
@@ -1642,11 +1647,13 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 
                 me_params temp = params_vec[i];
 
-                //int J    = temp.tbcJ;
+                int J    = temp.tbcJ;
                 int iket = temp.iket;
                 int jbra = temp.jbra;
-                int ch   = temp.ch;
+                int p    = temp.parity;
 		//cout << "Reading ME at iket=" << iket << " jbra=" << jbra << " in channel=" << ch << endl;
+
+		int ch   = modelspace->GetTwoBodyChannelIndex(J,p,-1);
 
                 TwoBodyChannel& tbc = modelspace->GetTwoBodyChannel(ch);
 
@@ -1662,7 +1669,7 @@ void ReadWrite::Read_Livermore( string filename, Operator& Hbare, int emax, int 
 						o2.n,o2.l,o2.j2,
 						o3.n,o3.l,o3.j2,
 						o4.n,o4.l,o4.j2,
-						ch};
+						J, p};
 
 		double tbme = param_map[lv_params];
 		//cout << "Retrieved " << tbme << " from param_map[lv_params] at index=" << i << endl;

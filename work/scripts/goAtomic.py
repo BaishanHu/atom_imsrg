@@ -35,15 +35,15 @@ if call('type '+'qsub', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = '
 elif call('type '+'srun', shell=True, stdout=PIPE, stderr=PIPE) == 0: BATCHSYS = 'SLURM'
 
 ### The code uses OpenMP and benefits from up to at least 24 threads
-NTHREADS=8
+NTHREADS=32
 #exe = '/global/home/dlivermore/imsrg/work/compiled/writeAtomicTBME'#%(environ['HOME'])
-exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'  # Oak
-#exe = '/home/dlivermo/projects/def-holt/dlivermo/atom_imsrg/work/compiled/Atomic' # Cedar
+#exe = '/global/home/dlivermore/imsrg_backup/work/compiled/Atomic'  # Oak
+exe = '/home/dlivermo/projects/def-holt/dlivermo/atom_imsrg/work/compiled/Atomic' # Cedar
 #exe = '/home/dlivermore/ragnar_imsrg/work/compiled/Atomic' # Cougar
 
 ### Flag to switch between submitting to the scheduler or running in the current shell
-batch_mode=False
-#batch_mode=True
+#batch_mode=False
+batch_mode=True
 if 'terminal' in argv[1:]: batch_mode=False
 
 ### Don't forget to change this. I don't want emails about your calculations...
@@ -76,7 +76,7 @@ ARGS['file2e2max'] = 12
 ARGS['file2lmax'] = 6
 
 ### Name of a directory to write Omega operators so they don't need to be stored in memory. If not given, they'll just be stored in memory.
-#ARGS['scratch'] = 'SCRATCH'    
+#ARGS['scratch'] = '/home/dlivermo/scratch'
 
 ### Generator for core decoupling, can be atan, white, imaginary-time.  (atan is default)
 #ARGS['core_generator'] = 'imaginary-time' 
@@ -124,19 +124,21 @@ export OMP_NUM_THREADS=%d
 elif BATCHSYS is 'SLURM':
 	FILECONTENT = """#!/bin/bash
 #SBATCH --account=rrg-holt
-#SBATCH --time=00:30:00
-#SBATCH --mem=10G
+#SBATCH --time=8:00:00
+#SBATCH --mem=30G
 #SBATCH --job-name={0}
 #SBATCH --output={1}/pbslog/{2}
 #SBATCH --cpus-per-task={3}
+#SBATCH --mail-user=dlivermore@triumf.ca
+#SBATCH --mail-type=END
 {4}
 """
 
 ### Loop parameters
 #batch_mode = True
-
+ARGS['fmt2'] = 'lv2'
 e_start=4
-e_stop =4
+e_stop =8
 ARGS['denominator_delta'] = 0
 
 e_iter =2
@@ -146,10 +148,12 @@ l_stop =0
 l_iter =1
 
 hwstart=2
-hwstop =2
+hwstop =12
 hwiter =1
-hwN    =1
+hwN    =6
 hw_vec = np.linspace(hwstart, hwstop, hwN)
+
+time_string = "{}".format( datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log' ) )
 
 ### Loops!
 for emax in range(e_start,e_stop+1,e_iter):
@@ -158,8 +162,8 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['hw'] = str(hw) # Cast as strings, just incase shenanigans ensue
 			ARGS['Lmax'] = str(Lmax)
 			ARGS['emax'] = str(emax)
-			ARGS['valence_space'] 	= 'He4'
-			ARGS['reference'] 	= 'He4'
+			ARGS['valence_space'] 	= 'Kr84'
+			ARGS['reference'] 	= 'Kr84'
 			#ARGS['systemBasis']	= 'hydrogen'
 			ARGS['systemBasis']	= 'harmonic'
 			ARGS['smax']		= '200'
@@ -168,9 +172,9 @@ for emax in range(e_start,e_stop+1,e_iter):
 			ARGS['omega_norm_max']	= '0.25'
 			ARGS['e3max']		= '0'
 			#ARGS['account']	= 'rrg-holt'
-			ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
+			#ARGS['2bme']		= '/global/scratch/dlivermore/ME_emax16_hw1_Apr17_2019v2.me2j'
 			#ARGS['2bme']		= '/home/dlivermo/scratch/ME_emax4_whatever'
-			#ARGS['2bme']		= ''
+			ARGS['2bme']		= '/home/dlivermo/projects/def-holt/dlivermo/ME/ME_Laguerre_emax8_hw1_May29_2019.lv2'
 			if ARGS['systemBasis'] == 'hydrogen':
 				jobname		= "ref_{0}_val_{4}_basis_{1}_emax_{2}_lmax_{3}".format(ARGS['reference'],ARGS['systemBasis'],emax,lmax,ARGS['valence_space'])
 			elif ARGS['systemBasis'] == 'harmonic':
@@ -182,7 +186,7 @@ for emax in range(e_start,e_stop+1,e_iter):
 						   ARGS['reference'],ARGS['Operators'],lmax,ARGS['file2e1max'],ARGS['file2e2max'],ARGS['file2lmax'],
 						   '',ARGS['systemBasis'],'Atomic') """
 
-			logname = jobname +"{}".format( datetime.fromtimestamp(time()).strftime('_%y%m%d%H%M.log' ) )
+			logname = jobname + time_string
 			cmd = ' '.join([exe] + ['%s=%s'%(x,ARGS[x]) for x in ARGS])
 			if batch_mode==True:
 				print "Submitting to cluster: jobname=" + jobname+".batch"
